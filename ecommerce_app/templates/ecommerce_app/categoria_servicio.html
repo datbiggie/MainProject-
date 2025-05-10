@@ -1,0 +1,256 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'categoria_servicio/fonts/icomoon/style.css' %}">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'categoria_servicio/css/bootstrap.min.css' %}">
+    
+    <!-- Style -->
+    <link rel="stylesheet" href="{% static 'categoria_servicio/css/style.css' %}">
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <title>Categoría de Servicios</title>
+  </head>
+  <body>
+  
+  <div class="content">
+    <div class="container">
+      <div class="row align-items-stretch no-gutters contact-wrap">
+        <div class="col-md-8">
+          <div class="form h-100">
+            <h1 class="text-center mb-4" style="color: #0f0f0f; font-weight: 700; letter-spacing: 1px;">CATEGORÍA DE SERVICIO</h1>
+            <form class="mb-5" method="post" id="categoriaForm" name="categoriaForm" action="{% url 'categoria_servicio' %}">
+                {% csrf_token %}
+              <div class="row">
+                <div class="col-md-12 form-group mb-5">
+                  <label for="nombre_categoria" class="col-form-label">Nombre de Categoría *</label>
+                  <input type="text" class="form-control" name="nombre_categoria" id="nombre_categoria" placeholder="Ingrese el nombre de la categoría" style="max-width: 300px;">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12 form-group mb-5">
+                  <label for="descripcion_categoria" class="col-form-label">Descripción Categoría</label>
+                  <textarea class="form-control" name="descripcion_categoria" id="descripcion_categoria" cols="30" rows="3" placeholder="Ingrese la descripción de la categoría" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group mb-5">
+                  <label for="estatus_categoria" class="col-form-label">Estatus Categoría Servicio *</label>
+                  <select class="form-control" name="estatus_categoria" id="estatus_categoria">
+                    <option value="">Seleccione un estatus</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                </div>
+                <div class="col-md-6 form-group mb-5">
+                  <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría Servicio *</label>
+                  <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12 form-group">
+                  <input type="submit" value="Guardar Categoría" class="btn btn-primary rounded-0 py-2 px-4">
+                  <span class="submitting"></span>
+                </div>
+              </div>
+            </form>
+
+            <div id="form-message-warning mt-4"></div> 
+            <div id="form-message-success">
+              ¡Categoría guardada exitosamente!
+            </div>
+
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+            <img src="{% static 'categoria_servicio/images/servicios.jpg' %}" alt="Servicios" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(1.05) contrast(1.05);">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'categoria_servicio/js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'categoria_servicio/js/popper.min.js' %}"></script>
+  <script src="{% static 'categoria_servicio/js/bootstrap.min.js' %}"></script>
+  <script src="{% static 'categoria_servicio/js/jquery.validate.min.js' %}"></script>
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script src="{% static 'categoria_servicio/js/main.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+  <style>
+    .file-upload-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .file-upload-container {
+      position: relative;
+      width: 100%;
+      min-height: 150px;
+      border: 2px dashed #dde3ec;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
+      transition: all 0.3s ease;
+    }
+
+    .file-upload-container:hover {
+      border-color: #6a64f1;
+      background: #f5f7ff;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .file-upload-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: #536387;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .file-upload-placeholder svg {
+      width: 48px;
+      height: 48px;
+    }
+
+    .file-upload-placeholder span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .image-preview {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: white;
+    }
+
+    /* Estilos para el calendario */
+    .flatpickr-calendar {
+      background: #fff;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      border: none;
+    }
+    .flatpickr-day.selected {
+      background: #6a64f1;
+      border-color: #6a64f1;
+    }
+    .flatpickr-day.today {
+      border-color: #6a64f1;
+    }
+    .flatpickr-day:hover {
+      background: #f0f0f0;
+    }
+    .flatpickr-months .flatpickr-month {
+      background: #6a64f1;
+      color: white;
+      border-radius: 8px 8px 0 0;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+      color: white;
+    }
+    .flatpickr-weekday {
+      color: #6a64f1;
+      font-weight: bold;
+    }
+    .flatpickr-day {
+      border-radius: 4px;
+    }
+    .flatpickr-input {
+      background: #f8f9fa;
+      border: 2px solid #dde3ec;
+      border-radius: 8px;
+      padding: 10px 15px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    .flatpickr-input:focus {
+      border-color: #6a64f1;
+      box-shadow: 0 0 0 2px rgba(106, 100, 241, 0.1);
+    }
+  </style>
+  <script>
+    function previewImage(input) {
+      const preview = document.getElementById('imagePreview');
+      const file = input.files[0];
+      
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+          preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+      } else {
+        preview.innerHTML = '';
+        preview.style.display = 'none';
+      }
+    }
+
+    // Inicializar flatpickr con configuración mejorada
+    flatpickr("#fecha_creacion", {
+      dateFormat: "d/m/Y",
+      locale: "es",
+      allowInput: true,
+      altInput: true,
+      altFormat: "d/m/Y",
+      disableMobile: "true",
+      // Configuraciones adicionales
+      minDate: "today",
+      maxDate: new Date().fp_incr(365), // Un año desde hoy
+      enableTime: false,
+      time_24hr: true,
+      showMonths: 1,
+      static: true,
+      position: "auto",
+      monthSelectorType: "static",
+      prevArrow: "<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M15 18L9 12L15 6' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+      nextArrow: "<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M9 18L15 12L9 6' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+      onOpen: function(selectedDates, dateStr, instance) {
+        instance.set("position", "auto");
+      }
+    });
+  </script>
+
+  </body>
+</html>

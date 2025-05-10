@@ -1,0 +1,482 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Empresa</title>
+    <link rel="stylesheet" href="{% static 'registrar_empresa/css/main.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        
+    </style>
+</head>
+<body>
+<div class="top-bar-ecommerce">
+	<!-- Aquí puedes agregar un ícono más adelante -->
+  </div>
+<div class="formbold-main-wrapper">
+  <!-- Author: FormBold Team -->
+  <!-- Learn More: https://formbold.com -->
+  <div class="formbold-form-wrapper">
+    
+   <!-- <img src="your-image-url-here.jpg">-->
+
+    <form action="" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+      <div class="formbold-form-title">
+        <h2 class="" style="text-align: center;">Registrarse Empresa</h2>
+      </div>
+
+      <div class="formbold-input-flex">
+        <div>
+          <label for="nombre_empresa" class="formbold-form-label">
+            Nombre Empresa
+          </label>
+          <input
+            type="text"
+            name="nombre_empresa"
+            id="firstname"
+            class="formbold-form-input" required
+          />
+        </div>
+        <div>
+          <label for="email" class="formbold-form-label"> Email Empresa </label>
+          <input
+            type="email"
+            name="email"
+            id="email"
+            class="formbold-form-input"
+          />
+        </div>
+      </div>
+
+      <div class="formbold-input-flex">
+        <div>
+          <label for="phone" class="formbold-form-label"> Número Teléfono </label>
+          <input
+            type="text"
+            name="phone"
+            id="phone"
+            class="formbold-form-input"
+          />
+        </div>
+        <div>
+          <label for="direccion_empresa" class="formbold-form-label">
+            Dirección Empresa
+          </label>
+          <input
+            type="text"
+            name="direccion_empresa"
+            id="direccion_empresa"
+            class="formbold-form-input"
+            placeholder="Dirección de la empresa..."
+          />
+        </div>
+      </div>
+
+      <div class="formbold-input-flex">
+        <div>
+          <label for="pais_empresa" class="formbold-form-label"> País </label>
+          <input type="text" name="pais_empresa" id="country" class="formbold-form-input" value="Venezuela" readonly />
+        </div>
+        <div>
+          <label for="estado_empresa" class="formbold-form-label"> Estado </label>
+          <select
+            name="estado_empresa"
+            id="state"
+            class="formbold-form-input select2"
+            data-placeholder="Selecciona un estado"
+            style="height: 45px;"
+          >
+            <option value=""></option>
+            <option value="AM">Amazonas</option>
+            <option value="AN">Anzoátegui</option>
+            <option value="AP">Apure</option>
+            <option value="AR">Aragua</option>
+            <option value="BA">Barinas</option>
+            <option value="BO">Bolívar</option>
+            <option value="CA">Carabobo</option>
+            <option value="CA">Caracas</option>
+            <option value="CO">Cojedes</option>
+            <option value="DA">Delta Amacuro</option>
+            <option value="DC">Distrito Capital</option>
+            <option value="FA">Falcón</option>
+            <option value="GU">Guárico</option>
+            <option value="LA">Lara</option>
+            <option value="ME">Mérida</option>
+            <option value="MI">Miranda</option>
+            <option value="MO">Monagas</option>
+            <option value="NE">Nueva Esparta</option>
+            <option value="PO">Portuguesa</option>
+            <option value="SU">Sucre</option>
+            <option value="TA">Táchira</option>
+            <option value="TR">Trujillo</option>
+            <option value="VA">Vargas</option>
+            <option value="YA">Yaracuy</option>
+            <option value="ZU">Zulia</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="formbold-mb-3">
+        <label for="descripcion_empresa" class="formbold-form-label"> Descripción Empresa </label>
+        <textarea
+          name="descripcion_empresa"
+          id="descripcion_empresa"
+          class="formbold-form-input descripcion-textarea"
+          rows="4"
+          placeholder="Describe a tu empresa y sus valores..."
+        ></textarea>
+      </div>
+
+      <div class="formbold-mb-3">
+        <label for="tipo_empresa" class="formbold-form-label"> Tipo de Empresa </label>
+        <select
+          name="tipo_empresa"
+          id="tipo_empresa"
+          class="formbold-form-input select2"
+          data-placeholder="Selecciona el tipo de empresa"
+        >
+          <option value=""></option>
+          <option value="pequena">Pequeña Empresa</option>
+          <option value="mediana">Mediana Empresa</option>
+          <option value="grande">Grande Empresa</option>
+        </select>
+      </div>
+
+      <div class="formbold-mb-3">
+        <label class="formbold-form-label">Ubicación de la Empresa</label>
+        <div class="map-container">
+          <div class="search-container" style="margin-bottom: 10px;">
+            <div class="formbold-input-flex">
+              <div style="flex: 1;">
+                <input
+                  type="text"
+                  name="direccion_empresa_mapa"
+                  id="direccion_empresa_mapa"
+                  class="formbold-form-input"
+                  placeholder="Dirección de la empresa..."
+                />
+              </div>
+              <div style="margin-left: 10px;">
+                <button type="button" id="currentLocationButton" class="formbold-form-input" style="background-color: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+                  Obtener Mi Ubicación
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="map" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+          <div class="formbold-input-flex" style="margin-top: 15px;">
+            <div>
+              <label for="latitud" class="formbold-form-label">Latitud</label>
+              <input
+                type="text"
+                name="latitud"
+                id="latitud"
+                class="formbold-form-input"
+                readonly
+              />
+            </div>
+            <div>
+              <label for="longitud" class="formbold-form-label">Longitud</label>
+              <input
+                type="text"
+                name="longitud"
+                id="longitud"
+                class="formbold-form-input"
+                readonly
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="formbold-mb-3">
+        <label for="logo_empresa" class="formbold-form-label">
+          Logo Empresa
+        </label>
+        <div class="file-upload-wrapper">
+          <div class="file-upload-container">
+            <input
+              type="file"
+              name="logo_empresa"
+              id="logo_empresa"
+              class="formbold-form-input file-input"
+              accept="image/*"
+              onchange="previewImage(this)"
+            />
+            <div class="file-upload-placeholder">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 8L12 3L7 8" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 3V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Seleccionar imagen</span>
+            </div>
+            <div class="image-preview" id="imagePreview"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="formbold-checkbox-wrapper">
+        <label for="supportCheckbox" class="formbold-checkbox-label">
+          <div class="formbold-relative">
+            <input
+              type="checkbox"
+              id="supportCheckbox"
+              class="formbold-input-checkbox"
+            />
+            <div class="formbold-checkbox-inner">
+              <span class="formbold-opacity-0">
+                <svg
+                  width="11"
+                  height="8"
+                  viewBox="0 0 11 8"
+                  fill="none"
+                  class="formbold-stroke-current"
+                >
+                  <path
+                    d="M10.0915 0.951972L10.0867 0.946075L10.0813 0.940568C9.90076 0.753564 9.61034 0.753146 9.42927 0.939309L4.16201 6.22962L1.58507 3.63469C1.40401 3.44841 1.11351 3.44879 0.932892 3.63584C0.755703 3.81933 0.755703 4.10875 0.932892 4.29224L0.932878 4.29225L0.934851 4.29424L3.58046 6.95832C3.73676 7.11955 3.94983 7.2 4.1473 7.2C4.36196 7.2 4.55963 7.11773 4.71406 6.9584L10.0468 1.60234C10.2436 1.4199 10.2421 1.1339 10.0915 0.951972ZM4.2327 6.30081L4.2317 6.2998C4.23206 6.30015 4.23237 6.30049 4.23269 6.30082L4.2327 6.30081Z"
+                    stroke-width="0.4"
+                  ></path>
+                </svg>
+              </span>
+            </div>
+          </div>
+          I agree to the defined
+          <a href="#"> terms, conditions, and policies</a>
+        </label>
+      </div>
+
+      <div class="container-login100-form-btn">
+        <button class="login100-form-btn" type="submit">
+          Registrarse
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap" async defer></script>
+
+
+<script>
+  let map;
+  let marker;
+  let geocoder;
+
+  function initMap() {
+    // Crear el mapa inicialmente centrado en Venezuela
+    const venezuela = { lat: 6.42375, lng: -66.58973 };
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: venezuela,
+        zoom: 6
+    });
+
+    // Inicializar el geocoder
+    geocoder = new google.maps.Geocoder();
+
+    // Crear el marcador inicial
+    marker = new google.maps.Marker({
+        position: venezuela,
+        map: map,
+        draggable: true
+    });
+
+    // Configurar el botón de ubicación actual
+    document.getElementById('currentLocationButton').addEventListener('click', function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    map.setCenter(userLocation);
+                    map.setZoom(15);
+                    marker.setPosition(userLocation);
+                    document.getElementById('latitud').value = userLocation.lat;
+                    document.getElementById('longitud').value = userLocation.lng;
+
+                    // Obtener la dirección actual
+                    geocoder.geocode({ 'location': userLocation }, function(results, status) {
+                        if (status === 'OK' && results[0]) {
+                            document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
+                            document.getElementById('direccion_empresa').value = results[0].formatted_address;
+                        }
+                    });
+                },
+                function(error) {
+                    alert('Error al obtener la ubicación: ' + error.message);
+                }
+            );
+        } else {
+            alert('Tu navegador no soporta geolocalización');
+        }
+    });
+
+    // Actualizar coordenadas cuando se arrastra el marcador
+    google.maps.event.addListener(marker, 'dragend', function() {
+        const position = marker.getPosition();
+        document.getElementById('latitud').value = position.lat();
+        document.getElementById('longitud').value = position.lng();
+
+        // Obtener la dirección al soltar el marcador
+        geocoder.geocode({ 'location': position }, function(results, status) {
+            if (status === 'OK' && results[0]) {
+                document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
+                document.getElementById('direccion_empresa').value = results[0].formatted_address;
+            }
+        });
+    });
+  }
+
+  // Manejar errores de carga de la API de Google Maps
+  window.onerror = function(msg, url, lineNo, columnNo, error) {
+    if (msg.includes('Google Maps')) {
+      document.getElementById('map').innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px;">
+          <h3>Error al cargar el mapa</h3>
+          <p>Por favor, verifica tu conexión a internet y recarga la página.</p>
+          <p>Si el problema persiste, contacta al administrador.</p>
+        </div>
+      `;
+    }
+    return false;
+  };
+
+  $(document).ready(function() {
+    // Inicializar Select2 para estados
+    $('#state').select2({
+      theme: 'bootstrap-5',
+      width: '100%',
+      placeholder: 'Selecciona un estado',
+      allowClear: true,
+      minimumResultsForSearch: -1,
+      language: {
+        noResults: function() {
+          return "No se encontraron resultados";
+        },
+        searching: function() {
+          return "Buscando...";
+        }
+      },
+      dropdownCssClass: 'select2-dropdown-custom'
+    });
+
+    // Asegurar que el contenedor de Select2 tenga la misma altura
+    $('.select2-container').css('height', '45px');
+    $('.select2-selection').css('height', '45px');
+    $('.select2-selection__rendered').css('line-height', '45px');
+
+    // Evento para enfocar el campo de búsqueda cuando se abre el select
+    $('#state').on('select2:open', function() {
+      setTimeout(function() {
+        document.querySelector('.select2-search__field').focus();
+      }, 0);
+    });
+
+    // Inicializar Select2 para tipo de empresa
+    $('#tipo_empresa').select2({
+      theme: 'bootstrap-5',
+      width: '100%',
+      placeholder: 'Selecciona el tipo de empresa',
+      allowClear: true,
+      minimumResultsForSearch: -1,
+      language: {
+        noResults: function() {
+          return "No se encontraron resultados";
+        },
+        searching: function() {
+          return "Buscando...";
+        }
+      },
+      dropdownCssClass: 'select2-dropdown-custom'
+    });
+
+    // Asegurar que el contenedor de Select2 tenga la misma altura
+    $('.select2-container').css('height', '45px');
+    $('.select2-selection').css('height', '45px');
+    $('.select2-selection__rendered').css('line-height', '45px');
+
+    // Manejar cambio de país
+    $('#country').on('change', function() {
+      const countryCode = $(this).val();
+      const stateSelect = $('#state');
+      
+      if (countryCode === 'VE') {
+        stateSelect.prop('disabled', false);
+        stateSelect.select2('enable');
+      } else {
+        stateSelect.prop('disabled', true);
+        stateSelect.select2('disable');
+        stateSelect.val('').trigger('change');
+      }
+    });
+  });
+
+  function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    const file = input.files[0];
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        preview.style.display = 'block';
+      }
+      reader.readAsDataURL(file);
+    } else {
+      preview.innerHTML = '';
+      preview.style.display = 'none';
+    }
+  }
+
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Mensaje de éxito al crear empresa
+    if (urlParams.get('success') === 'true') {
+        Swal.fire({
+            title: '¡Empresa Registrada!',
+            text: 'La empresa ha sido creada correctamente.',
+            icon: 'success',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#3b82f6'
+        });
+    } else if (urlParams.has('updated')) {
+        Swal.fire({
+            title: '¡Éxito!',
+            text: 'La empresa ha sido actualizada correctamente',
+            icon: 'success',
+            confirmButtonText: 'Aceptar'
+        });
+    } else if (urlParams.has('deleted')) {
+        Swal.fire({
+            title: '¡Éxito!',
+            text: 'La empresa ha sido eliminada correctamente',
+            icon: 'success',
+            confirmButtonText: 'Aceptar'
+        });
+    } else if (urlParams.has('error')) {
+        Swal.fire({
+            title: 'Error',
+            text: 'Ha ocurrido un error al procesar la solicitud',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+        });
+    }
+  });
+
+</script>
+</body>
+</html>

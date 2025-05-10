@@ -1,0 +1,443 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Sucursales</title>
+<link rel="stylesheet" href="{% static 'sucursal/css/main.css' %}">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+</head>
+<body>
+<div class="top-bar-ecommerce">
+    <!-- Aquí puedes agregar un ícono más adelante -->
+</div>
+<div class="container-xl">
+	<div class="table-responsive">
+		<div class="table-wrapper">
+			<div class="table-title">
+				<div class="row">
+					<div class="col-sm-6">
+						<h2> <b>Sucursales</b></h2>
+					</div>
+					<div class="col-sm-6">
+						<a href="#addEmployeeModal" class="btn btn-primary" data-bs-toggle="modal"><i class="material-icons">&#xE147;</i> <span>Agregar Sucursal</span></a>
+						<form id="formEliminarTodas" method="POST" action="{% url 'eliminar_todas_sucursales' %}" style="display:inline;">
+							{% csrf_token %}
+							<button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAllModal">
+								<i class="material-icons">&#xE15C;</i> <span>Eliminar Todo</span>
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+			<table class="table table-striped table-hover">
+				<thead>
+					<tr>
+						<th>
+							<span class="custom-checkbox">
+								<input type="checkbox" id="selectAll">
+								<label for="selectAll"></label>
+							</span>
+						</th>
+						<th>Sucursal</th>
+						<th>Dirección</th>
+						<th>Telefono</th>
+						<th>Estado</th>
+					</tr>
+				</thead>
+				<tbody>
+                    {% for sucursal in sqlsucursal %}
+					<tr>
+						<td>
+							<span class="custom-checkbox">
+								<input type="checkbox" id="checkbox1" name="options[]" value="1">
+								<label for="checkbox1"></label>
+							</span>
+						</td>
+						<td>{{ sucursal.nombre_sucursal }}</td>
+						<td>{{ sucursal.direccion_sucursal }}</td>
+						<td>{{ sucursal.telefono_sucursal }}</td>
+						<td>{{ sucursal.estado_sucursal }}</td>
+						<td>
+							<a href="#editEmployeeModal" class="edit" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" data-latitud="{{ sucursal.latitud_sucursal }}" data-longitud="{{ sucursal.longitud_sucursal }}"><i class="material-icons" data-bs-toggle="tooltip" title="Edit">&#xE254;</i></a>
+							<a href="#deleteEmployeeModal" class="delete" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}"><i class="material-icons" data-bs-toggle="tooltip" title="Delete">&#xE872;</i></a>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+			<div class="clearfix">
+				<div class="hint-text">Showing <b>5</b> out of <b>25</b> entries</div>
+				<ul class="pagination">
+					<li class="page-item disabled"><a href="#">Previous</a></li>
+					<li class="page-item"><a href="#" class="page-link">1</a></li>
+					<li class="page-item"><a href="#" class="page-link">2</a></li>
+					<li class="page-item active"><a href="#" class="page-link">3</a></li>
+					<li class="page-item"><a href="#" class="page-link">4</a></li>
+					<li class="page-item"><a href="#" class="page-link">5</a></li>
+					<li class="page-item"><a href="#" class="page-link">Next</a></li>
+				</ul>
+			</div>
+		</div>
+	</div>        
+</div>
+<!-- Agregar Sucursal --------------------------------------->
+<div id="addEmployeeModal" class="modal fade">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<form method="POST" action="" id="sucursalForm">
+				{% csrf_token %}
+				<div class="modal-header">						
+					<h4 class="modal-title">Agregar Sucursal</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>Sucursal</label>
+								<input type="text" class="form-control" name="nombre_sucursal" required>
+							</div>
+							<div class="form-group">
+								<label>Teléfono</label>
+								<input type="text" class="form-control" name="telefono_sucursal" required>
+							</div>
+							<div class="form-group">
+								<label>Estado</label>
+								<select class="form-control" name="estado_sucursal" required>
+									<option value="">Seleccione un estado</option>
+									<option value="AM">Amazonas</option>
+									<option value="AN">Anzoátegui</option>
+									<option value="AP">Apure</option>
+									<option value="AR">Aragua</option>
+									<option value="BA">Barinas</option>
+									<option value="BO">Bolívar</option>
+									<option value="CA">Carabobo</option>
+									<option value="CA">Caracas</option>
+									<option value="CO">Cojedes</option>
+									<option value="DA">Delta Amacuro</option>
+									<option value="DC">Distrito Capital</option>
+									<option value="FA">Falcón</option>
+									<option value="GU">Guárico</option>
+									<option value="LA">Lara</option>
+									<option value="ME">Mérida</option>
+									<option value="MI">Miranda</option>
+									<option value="MO">Monagas</option>
+									<option value="NE">Nueva Esparta</option>
+									<option value="PO">Portuguesa</option>
+									<option value="SU">Sucre</option>
+									<option value="TA">Táchira</option>
+									<option value="TR">Trujillo</option>
+									<option value="VA">Vargas</option>
+									<option value="YA">Yaracuy</option>
+									<option value="ZU">Zulia</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Dirección</label>
+								<textarea class="form-control" name="direccion_sucursal" required style="height: 100px;"></textarea>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>Ubicación de la Sucursal</label>
+								<div class="map-container">
+									<div class="search-container" style="margin-bottom: 10px;">
+										<div class="formbold-input-flex">
+											<div style="flex: 1;">
+												<input
+													type="text"
+													name="direccion_sucursal_mapa"
+													id="direccion_sucursal_mapa"
+													class="form-control"
+													placeholder="Dirección de la sucursal..."
+												/>
+											</div>
+											<div style="margin-left: 10px;">
+												<button type="button" id="currentLocationButton" class="btn btn-primary">
+													Obtener Mi Ubicación
+												</button>
+											</div>
+										</div>
+									</div>
+									<div id="map" style="height: 200px; width: 100%; border-radius: 8px;"></div>
+									<div class="formbold-input-flex" style="margin-top: 15px;">
+										<div class="form-group d-none" style="flex: 1; margin-right: 10px;">
+											<label>Latitud</label>
+											<input
+												type="text"
+												name="latitud_sucursal"
+												id="latitud"
+												class="form-control"
+												readonly
+											/>
+										</div>
+										<div class="form-group d-none" style="flex: 1;">
+											<label>Longitud</label>
+											<input
+												type="text"
+												name="longitud_sucursal"
+												id="longitud"
+												class="form-control"
+												readonly
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-primary">Guardar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<!-- __________________________________________________________ -->
+<!-- Editar sucursal -------------------------------------------------------------------->
+<div id="editEmployeeModal" class="modal fade">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<form method="POST" action="{% url 'editar_sucursal' %}">
+				{% csrf_token %}
+				<input type="hidden" name="id_sucursal" id="edit_id_sucursal">
+				<div class="modal-header">						
+					<h4 class="modal-title">Editar Sucursal 2</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>Sucursal</label>
+								<input type="text" class="form-control" name="nombre_sucursal" id="edit_nombre_sucursal" required>
+							</div>
+							<div class="form-group">
+								<label>Teléfono</label>
+								<input type="text" class="form-control" name="telefono_sucursal" id="edit_telefono_sucursal" required>
+							</div>
+							<div class="form-group">
+								<label>Estado</label>
+								<select class="form-control" name="estado_sucursal" id="edit_estado_sucursal" required>
+									<option value="">Seleccione un estado</option>
+									<option value="AM">Amazonas</option>
+									<option value="AN">Anzoátegui</option>
+									<option value="AP">Apure</option>
+									<option value="AR">Aragua</option>
+									<option value="BA">Barinas</option>
+									<option value="BO">Bolívar</option>
+									<option value="CA">Carabobo</option>
+									<option value="CA">Caracas</option>
+									<option value="CO">Cojedes</option>
+									<option value="DA">Delta Amacuro</option>
+									<option value="DC">Distrito Capital</option>
+									<option value="FA">Falcón</option>
+									<option value="GU">Guárico</option>
+									<option value="LA">Lara</option>
+									<option value="ME">Mérida</option>
+									<option value="MI">Miranda</option>
+									<option value="MO">Monagas</option>
+									<option value="NE">Nueva Esparta</option>
+									<option value="PO">Portuguesa</option>
+									<option value="SU">Sucre</option>
+									<option value="TA">Táchira</option>
+									<option value="TR">Trujillo</option>
+									<option value="VA">Vargas</option>
+									<option value="YA">Yaracuy</option>
+									<option value="ZU">Zulia</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Dirección</label>
+								<textarea class="form-control" name="direccion_sucursal" id="edit_direccion_sucursal" required style="height: 100px;"></textarea>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>Ubicación de la Sucursal</label>
+								<div class="map-container">
+									<div class="search-container" style="margin-bottom: 10px;">
+										<div class="formbold-input-flex">
+											<div style="flex: 1;">
+												<input
+													type="text"
+													name="direccion_sucursal_mapa"
+													id="edit_direccion_sucursal_mapa"
+													class="form-control"
+													placeholder="Dirección de la sucursal..."
+												/>
+											</div>
+											<div style="margin-left: 10px;">
+												<button type="button" id="edit_currentLocationButton" class="btn btn-primary">
+													Obtener Mi Ubicación
+												</button>
+											</div>
+										</div>
+									</div>
+									<div id="edit_map" style="height: 200px; width: 100%; border-radius: 8px;"></div>
+									<div class="formbold-input-flex" style="margin-top: 15px;">
+										<div class="form-group" style="flex: 1; margin-right: 10px;">
+											<input
+												type="hidden"
+												name="latitud_sucursal"
+												id="edit_latitud"
+												class="form-control"
+												readonly
+											 />
+										</div>
+										<div class="form-group" style="flex: 1;">
+											<input
+												type="hidden"
+												name="longitud_sucursal"
+												id="edit_longitud"
+												class="form-control"
+												readonly
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-primary">Guardar Cambios2</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<!-- Delete Modal HTML -->
+<div id="deleteEmployeeModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form method="POST" action="{% url 'eliminar_sucursal' %}">
+				{% csrf_token %}
+				<input type="hidden" name="id_sucursal" id="delete_id_sucursal">
+				<div class="modal-header">						
+					<h4 class="modal-title">Eliminar Sucursal</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">					
+					<p>¿Estás seguro que deseas eliminar esta sucursal?</p>
+					<p class="text-warning"><small>Esta acción no se puede deshacer.</small></p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-danger">Eliminar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Modal de Confirmación de eliminación de todas las sucursales -->
+<div id="deleteAllModal" class="modal fade" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formEliminarTodas" method="POST" action="{% url 'eliminar_todas_sucursales' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteAllModalLabel">Eliminar todas las Sucursales</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro que deseas eliminar todas las sucursales?</p>
+                    <p class="text-warning"><small>Esta acción no se puede deshacer.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Todas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+<script src="{% static 'sucursal/js/main.js' %}"></script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap" async defer></script>
+
+<script>
+// Función para cargar los datos en el modal de edición
+function cargarDatosEdicion(sucursal) {
+    // Cargar datos básicos
+    document.getElementById('edit_id_sucursal').value = sucursal.id_sucursal;
+    document.getElementById('edit_nombre_sucursal').value = sucursal.nombre_sucursal;
+    document.getElementById('edit_telefono_sucursal').value = sucursal.telefono_sucursal;
+    document.getElementById('edit_estado_sucursal').value = sucursal.estado_sucursal;
+    document.getElementById('edit_direccion_sucursal').value = sucursal.direccion_sucursal;
+    
+    // Cargar coordenadas
+    const latitud = parseFloat(sucursal.latitud_sucursal);
+    const longitud = parseFloat(sucursal.longitud_sucursal);
+    
+    document.getElementById('edit_latitud').value = latitud;
+    document.getElementById('edit_longitud').value = longitud;
+    document.getElementById('edit_direccion_sucursal_mapa').value = sucursal.direccion_sucursal;
+    
+    // Actualizar el mapa
+    const position = { lat: latitud, lng: longitud };
+    editMap.setCenter(position);
+    editMap.setZoom(15); // Aumentar el zoom para mejor visualización
+    editMarker.setPosition(position);
+    
+    // Obtener la dirección actualizada
+    geocoder.geocode({ 'location': position }, function(results, status) {
+        if (status === 'OK' && results[0]) {
+            document.getElementById('edit_direccion_sucursal_mapa').value = results[0].formatted_address;
+            document.getElementById('edit_direccion_sucursal').value = results[0].formatted_address;
+        }
+    });
+}
+</script>
+</body>
+</html>

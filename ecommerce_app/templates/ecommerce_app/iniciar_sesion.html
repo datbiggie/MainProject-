@@ -1,0 +1,488 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>INICIAR SESIÓN</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--===============================================================================================-->	
+	<link rel="icon" href="{% static 'iniciar_sesion/images/icons/favicon.ico' %}"/>
+<!--===============================================================================================-->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!--===============================================================================================-->
+	<link rel="stylesheet" href="{% static 'iniciar_sesion/fonts/font-awesome-4.7.0/css/font-awesome.min.css' %}">
+<!--===============================================================================================-->
+	<link rel="stylesheet"  href="{% static 'iniciar_sesion/fonts/iconic/css/material-design-iconic-font.min.css' %}">
+<!--===============================================================================================-->
+	
+<!--===============================================================================================-->
+	<link rel="stylesheet"  href="{% static 'iniciar_sesion/css/util.css' %}">
+    <link rel="stylesheet" href="{% static 'iniciar_sesion/css/main.css' %}">
+    <!--===============================================================================================-->
+<style>
+    .top-bar-ecommerce {
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+        height: 65px;
+        display: flex;
+        align-items: center;
+        padding: 0 30px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .top-bar-ecommerce img {
+        height: 100px;
+        width: auto;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        transition: transform 0.3s ease;
+        
+
+    }
+    .top-bar-ecommerce img:hover {
+        transform: scale(1.05);
+    }
+    html, body {
+        height: 100%;
+        overflow: hidden;
+        margin-top: 50px;
+    }
+    .contenedor-general {
+        height: 100vh;
+        overflow-y: hidden;
+        position: relative;
+    }
+    .limiter {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .button-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+        margin-top: 20px;
+    }
+    .top-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        width: 100%;
+    }
+    .custom-button {
+        font-size: 13px;
+        padding: 8px 16px;
+        height: 38px;
+        width: 120px;
+        border: none;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .dropdown .custom-button {
+        width: 140px;
+        padding: 8px 20px;
+    }
+    .google-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        color: #3c4043;
+        cursor: pointer;
+        font-family: 'Google Sans', arial, sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        height: 40px;
+        letter-spacing: 0.25px;
+        padding: 0 12px;
+        text-align: center;
+        transition: background-color 0.218s, box-shadow 0.218s;
+        width: 240px;
+    }
+    .google-button:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    }
+    .google-button:active {
+        background-color: #f1f3f4;
+    }
+    .google-icon {
+        margin-right: 12px;
+        width: 18px;
+        height: 18px;
+    }
+    .dropdown-toggle::after {
+        content: "";
+        display: inline-block;
+        width: 0;
+        height: 0;
+        margin-left: 8px;
+        vertical-align: middle;
+        border-top: 5px solid white;
+        border-right: 5px solid transparent;
+        border-left: 5px solid transparent;
+        transition: transform 0.3s ease;
+    }
+    .dropdown-toggle:hover::after {
+        transform: rotate(180deg);
+    }
+    .dropdown-menu {
+        min-width: 130px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border: none;
+        padding: 8px 0;
+    }
+    .dropdown-item {
+        font-size: 13px;
+        padding: 8px 16px;
+        color: #333;
+        transition: all 0.2s ease;
+    }
+    .dropdown-item:hover {
+        background-color: #f5f5f5;
+        color: #1976D2;
+    }
+
+    /* Media Queries para Responsive */
+    @media screen and (max-width: 1200px) {
+        .wrap-login100 {
+            padding: 0 30px !important;
+        }
+        .container-login100 {
+            width: 90% !important;
+        }
+    }
+
+    @media screen and (max-width: 992px) {
+        .wrap-login100 {
+            padding: 0 25px !important;
+        }
+        .container-login100 {
+            width: 95% !important;
+        }
+        .custom-button {
+            width: 110px;
+            font-size: 12px;
+        }
+        .dropdown .custom-button {
+            width: 130px;
+        }
+        .google-button {
+            width: 220px;
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        .wrap-login100 {
+            padding: 0 20px !important;
+        }
+        .container-login100 {
+            width: 100% !important;
+            padding: 0 15px;
+        }
+        .custom-button {
+            width: 100px;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        .dropdown .custom-button {
+            width: 120px;
+        }
+        .google-button {
+            width: 200px;
+            font-size: 13px;
+        }
+        .button-container {
+            gap: 10px;
+        }
+        .top-buttons {
+            gap: 10px;
+        }
+        .login100-form-title {
+            font-size: 28px !important;
+        }
+    }
+
+    @media screen and (max-width: 576px) {
+        .wrap-login100 {
+            padding: 0 15px !important;
+        }
+        .custom-button {
+            width: 90px;
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+        .dropdown .custom-button {
+            width: 110px;
+        }
+        .google-button {
+            width: 180px;
+            font-size: 12px;
+        }
+        .login100-form-title {
+            font-size: 24px !important;
+        }
+        .input100 {
+            font-size: 14px !important;
+        }
+        .label-input100 {
+            font-size: 14px !important;
+        }
+    }
+
+    @media screen and (max-width: 320px) {
+        .custom-button {
+            width: 80px;
+            font-size: 10px;
+        }
+        .dropdown .custom-button {
+            width: 100px;
+        }
+        .google-button {
+            width: 160px;
+            font-size: 11px;
+        }
+        .top-buttons {
+            flex-direction: column;
+            gap: 8px;
+        }
+        .login100-form-title {
+            font-size: 22px !important;
+        }
+        .input100 {
+            font-size: 13px !important;
+        }
+        .label-input100 {
+            font-size: 13px !important;
+        }
+    }
+    .login100-form-title {
+        color: black !important;
+    }
+    .input-container {
+        position: relative;
+        width: 100%;
+        min-height: 80px;
+        margin-bottom: 15px;
+        margin-top: -15px;
+    }
+
+    .input-field {
+        position: absolute;
+        width: 100%;
+        transition: all 0.5s ease;
+        opacity: 1;
+        transform: translateY(0);
+        left: 0;
+        right: 0;
+    }
+
+    .input-field.hidden {
+        opacity: 0;
+        transform: translateY(-20px);
+        pointer-events: none;
+    }
+
+    .input-field.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .login100-form-title {
+        transition: all 0.5s ease;
+        margin-bottom: 20px;
+    }
+
+    .login100-form-title.slide-up {
+        transform: translateY(-20px);
+    }
+
+    .button-container {
+        margin-top: 20px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Ajuste para el label */
+    .label-input100 {
+        position: relative;
+        top: -5px;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    /* Ajuste para el contenedor principal */
+    .wrap-login100 {
+        padding-top: 45px !important;
+        padding-bottom: 34px !important;
+    }
+</style>
+<div class="top-bar-ecommerce">
+    <img src="{% static 'iniciar_sesion/images/logo.png' %}" alt="Logo">
+</div>
+  
+</head>
+<body>
+	<div class="contenedor-general">
+		<img class="gif-login" src="{% static 'iniciar_sesion/images/1.jpg' %}" alt="GIF animado">
+  <form method="POST" id="loginForm">
+    {% csrf_token %}
+	<div class="limiter">
+		<div class="container-login100" >
+			<div class="wrap-login100 p-l-55 p-r-55 p-t-65 p-b-54">
+				<form class="login100-form validate-form">
+                  
+					<span class="login100-form-title p-b-49">
+						Iniciar sesión
+						
+					</span>
+
+					<div class="input-container">
+						<div class="input-field" id="emailField">
+							<div class="wrap-input100 validate-input m-b-23" data-validate="Email is required">
+								<label for="email" class="formbold-form-label" style="color: #1a1a1a; font-weight: 600;"> Correo electrónico </label>
+								<input class="input100" type="email" name="email" id="email" placeholder="Ingrese su correo electrónico" required>
+								<span class="focus-input100" data-symbol="&#xf206;"></span>
+							</div>
+						</div>
+
+						<div class="input-field hidden" id="passwordField">
+							<div class="wrap-input100 validate-input m-b-23" data-validate="Password is required">
+								<span class="label-input100">Contraseña</span>
+								<input class="input100" type="password" name="password" id="password" placeholder="Ingrese su contraseña">
+								<span class="focus-input100" data-symbol="&#xf190;"></span>
+							</div>
+						</div>
+					</div>
+					
+					<div class="button-container">
+						<div class="top-buttons">
+							<button type="button" class="custom-button" id="nextButton">
+								Siguiente
+							</button>
+							
+							<div class="dropdown">
+								<button class="custom-button dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+									Crear cuenta
+								</button>
+								<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+									<li><a class="dropdown-item" href="{% url 'registrar_persona' %}">Persona</a></li>
+									<li><a class="dropdown-item" href="{% url 'registrar_empresa' %}">Empresa</a></li>
+								</ul>
+							</div>
+						</div>
+						
+						<button class="google-button">
+							<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="google-icon" alt="Google">
+							Continuar con Google
+						</button>
+					</div>
+					
+					
+					
+
+				
+				</form>
+			</div>
+		</div>
+	</div>
+</form>
+	
+</div>
+	
+
+
+
+
+	
+
+	<script src="{% static 'iniciar_sesion/js/main.js' %}"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			// Inicializar el dropdown
+			const dropdownElementList = document.querySelectorAll('.dropdown-toggle');
+			const dropdownList = [...dropdownElementList].map(dropdownToggleEl => new bootstrap.Dropdown(dropdownToggleEl));
+
+			// Manejar clics en los items del dropdown
+			document.querySelectorAll('.dropdown-item').forEach(item => {
+				item.addEventListener('click', function(e) {
+					const href = this.getAttribute('href');
+					if (href) {
+						window.location.href = href;
+					}
+				});
+			});
+
+			// Código existente para el manejo del email y contraseña
+			const emailInput = document.getElementById('email');
+			const emailField = document.getElementById('emailField');
+			const passwordField = document.getElementById('passwordField');
+			const nextButton = document.getElementById('nextButton');
+			const loginForm = document.getElementById('loginForm');
+			const title = document.querySelector('.login100-form-title');
+
+			nextButton.addEventListener('click', function() {
+				const email = emailInput.value;
+				
+				if (!email.includes('@')) {
+					alert('Por favor ingrese un correo electrónico válido');
+					return;
+				}
+
+				fetch('/ecommerce/validate-email/', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+					},
+					body: JSON.stringify({ email: email })
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.exists) {
+						title.classList.add('slide-up');
+						emailField.classList.add('hidden');
+						
+						setTimeout(() => {
+							passwordField.classList.remove('hidden');
+							passwordField.classList.add('visible');
+							nextButton.textContent = 'Iniciar Sesión';
+							nextButton.type = 'submit';
+						}, 300);
+					} else {
+						alert('El correo electrónico no está registrado');
+					}
+				})
+				.catch(error => {
+					console.error('Error:', error);
+					alert('Ocurrió un error al validar el correo');
+				});
+			});
+		});
+	</script>
+
+		
+	
+
+
+</body>
+</html>
