@@ -97,6 +97,25 @@ class categoria_servicio(models.Model):
     
 
 
+class producto(models.Model):
+    ESTATUS_CHOICES = [
+        ('Activo', 'Activo'),
+        ('Inactivo', 'Inactivo'),
+    ]
 
+    id_producto = models.AutoField(primary_key=True)
+    nombre_producto = models.CharField(max_length=150)
+    descripcion_producto = models.TextField(blank=True, null=True)
+    marca_producto = models.CharField(max_length=100, blank=True, null=True)
+    modelo_producto = models.CharField(max_length=100, blank=True, null=True)
+    imagen_producto = models.ImageField(upload_to='imagenes_productos/', blank=True, null=True)
+    caracteristicas_generales = models.TextField(blank=True, null=True)
+    estatus_producto = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
+    fecha_creacion_producto = models.DateTimeField(auto_now_add=True)
+    id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='productos')
+    id_categoria_prod_fk = models.ForeignKey('categoria_producto', on_delete=models.SET_NULL, null=True, related_name='productos')
 
+    def __str__(self):
+        return self.nombre_producto
+    
 
