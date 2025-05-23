@@ -238,8 +238,36 @@ def eliminar_sucursal(request):
 
 
 
-def producto(request):
-    return render(request, 'ecommerce_app/producto.html')
+def producto_funcion(request):
+    empresa_obj = empresa.objects.get(id_empresa=8)
+    categoria_producto_obj = categoria_producto.objects.get(id_categoria_prod=8)
+    categoria_producto_all = categoria_producto.objects.all()
+    if request.method == 'POST':
+        logger.info(f"Datos recibidos: {request.POST}")
+        nombre_producto = request.POST.get('nombre_producto')
+        descripcion_producto = request.POST.get('descripcion_producto')
+        marca_producto = request.POST.get('marca_producto')
+        modelo_producto = request.POST.get('modelo_producto')
+        imagen_producto = request.FILES.get('imagen_producto')
+        caracteristicas_generales = request.POST.get('caracteristicas_generales')
+        estatus_producto = request.POST.get('estatus_producto')
+        
+        nuevo_producto = producto(
+            nombre_producto=nombre_producto,
+            descripcion_producto=descripcion_producto,
+            marca_producto=marca_producto,
+            modelo_producto=modelo_producto,
+            imagen_producto=imagen_producto,    
+            caracteristicas_generales=caracteristicas_generales,
+            estatus_producto=estatus_producto,
+            id_empresa_fk=empresa_obj,
+            id_categoria_prod_fk=categoria_producto_obj
+        )
+        nuevo_producto.save()
+        logger.info(f"Producto guardado exitosamente: {nuevo_producto.nombre_producto}")
+        return redirect('/ecommerce/producto/?success=true')
+    
+    return render(request, 'ecommerce_app/producto.html', {'categoria_producto_all': categoria_producto_all})
 
 def servicio_funcion(request):
     return render(request, 'ecommerce_app/servicio.html')
@@ -309,3 +337,5 @@ def categoria_servicio_funcion(request):
         return redirect('/ecommerce/categoria_servicio/?success=true')
 
     return render(request, 'ecommerce_app/categoria_servicio.html')
+
+
