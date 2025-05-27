@@ -1,69 +1,35 @@
-$(function() {
-
-	'use strict';
-
-	// Form
-
-	var contactForm = function() {
-
-		if ($('#contactForm').length > 0 ) {
-			$( "#contactForm" ).validate( {
-				rules: {
-					name: "required",
-					email: {
-						required: true,
-						email: true
-					},
-					message: {
-						required: true,
-						minlength: 5
-					}
-				},
-				messages: {
-					name: "Please enter your name",
-					email: "Please enter a valid email address",
-					message: "Please enter a message"
-				},
-				/* submit via ajax */
-				submitHandler: function(form) {		
-					var $submit = $('.submitting'),
-						waitText = 'Submitting...';
-
-					$.ajax({   	
-				      type: "POST",
-				      url: "php/send-email.php",
-				      data: $(form).serialize(),
-
-				      beforeSend: function() { 
-				      	$submit.css('display', 'block').text(waitText);
-				      },
-				      success: function(msg) {
-		               if (msg == 'OK') {
-		               	$('#form-message-warning').hide();
-				            setTimeout(function(){
-		               		$('#contactForm').fadeOut();
-		               	}, 1000);
-				            setTimeout(function(){
-				               $('#form-message-success').fadeIn();   
-		               	}, 1400);
-			               
-			            } else {
-			               $('#form-message-warning').html(msg);
-				            $('#form-message-warning').fadeIn();
-				            $submit.css('display', 'none');
-			            }
-				      },
-				      error: function() {
-				      	$('#form-message-warning').html("Something went wrong. Please try again.");
-				         $('#form-message-warning').fadeIn();
-				         $submit.css('display', 'none');
-				      }
-			      });    		
-		  		}
-				
-			} );
-		}
-	};
-	contactForm();
-
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Mensaje de éxito al crear producto
+    if (urlParams.get('success') === 'true') {
+        Swal.fire({
+            title: '¡Producto Registrado!',
+            text: 'El producto ha sido creado correctamente.',
+            icon: 'success',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#3b82f6'
+        });
+    } else if (urlParams.has('updated')) {
+        Swal.fire({
+            title: '¡Éxito!',
+            text: 'El producto ha sido actualizado correctamente.',
+            icon: 'success',
+            confirmButtonText: 'Aceptar'
+        });
+    } else if (urlParams.has('deleted')) {
+        Swal.fire({
+            title: '¡Éxito!',
+            text: 'El producto ha sido eliminado correctamente.',
+            icon: 'success',
+            confirmButtonText: 'Aceptar'
+        });
+    } else if (urlParams.has('error')) {
+        Swal.fire({
+            title: 'Error',
+            text: 'Ha ocurrido un error al procesar la solicitud.',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+        });
+    }
 });

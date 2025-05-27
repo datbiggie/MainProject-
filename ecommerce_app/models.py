@@ -119,3 +119,22 @@ class producto(models.Model):
         return self.nombre_producto
     
 
+    
+
+class servicio(models.Model):
+    ESTATUS_CHOICES = [
+        ('Activo', 'Activo'),
+        ('Inactivo', 'Inactivo'),
+    ]
+
+    id_servicio = models.AutoField(primary_key=True)
+    nombre_servicio = models.CharField(max_length=150)
+    descripcion_servicio = models.TextField(blank=True, null=True)
+    imagen_servicio = models.ImageField(upload_to='imagenes_servicios/', blank=True, null=True)
+    estatus_servicio = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
+    fecha_creacion_servicio = models.DateTimeField(auto_now_add=True)
+    id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='servicios')
+    id_categoria_servicios_fk = models.ForeignKey('categoria_servicio', on_delete=models.SET_NULL, null=True, related_name='servicios')
+
+    def __str__(self):
+        return self.nombre_servicio

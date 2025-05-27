@@ -14,6 +14,7 @@
     
     <!-- Style -->
     <link rel="stylesheet" href="{% static 'servicio/css/style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <title>Servicios</title>
   </head>
@@ -26,35 +27,36 @@
           <div class="form h-100">
             <h1 class="text-center mb-4" style="color: #333; font-weight: 700; letter-spacing: 1px;">SERVICIOS</h1>
             <form class="mb-5" method="post" id="servicioForm" name="servicioForm" enctype="multipart/form-data">
+              {% csrf_token %}
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
                   <label for="nombre" class="col-form-label">Nombre del Servicio *</label>
-                  <input type="text" class="form-control" name="nombre" id="nombre" placeholder="Ingrese el nombre del servicio" style="max-width: 300px;">
+                  <input type="text" class="form-control" name="nombre_servicio" id="nombre_servicio" placeholder="Ingrese el nombre del servicio" style="max-width: 300px;">
                 </div>
               </div>
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
                   <label for="descripcion" class="col-form-label">Descripción del Servicio</label>
-                  <textarea class="form-control" name="descripcion" id="descripcion" cols="30" rows="3" placeholder="Ingrese la descripción del servicio" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
+                  <textarea class="form-control" name="descripcion_servicio" id="descripcion_servicio" cols="30" rows="3" placeholder="Ingrese la descripción del servicio" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
                 </div>
               </div>
 
               <div class="row">
                 <div class="col-md-6 form-group mb-5">
                   <label for="categoria" class="col-form-label">Categoría del Servicio *</label>
-                  <select class="form-control" name="categoria" id="categoria">
+                  <select class="form-control" name="categoria_servicio" id="categoria_servicio">
                     <option value="">Seleccione una categoría</option>
-                    <option value="mantenimiento">Mantenimiento</option>
-                    <option value="reparacion">Reparación</option>
-                    <option value="instalacion">Instalación</option>
-                    <option value="consultoria">Consultoría</option>
-                    <option value="otro">Otro</option>
+                    {% for categoria in categoria_servicio_all %}
+                      <option value="{{ categoria.id_categoria_serv }}">{{ categoria.nombre_categoria_serv }}</option>
+                    {% endfor %}
+                   
+
                   </select>
                 </div>
                 <div class="col-md-6 form-group mb-5">
                   <label for="estatus" class="col-form-label">Estatus *</label>
-                  <select class="form-control" name="estatus" id="estatus">
+                  <select class="form-control" name="estatus_servicio" id="estatus_servicio">
                     <option value="">Seleccione un estatus</option>
                     <option value="activo">Activo</option>
                     <option value="inactivo">Inactivo</option>
@@ -67,7 +69,7 @@
                   <label for="imagen" class="col-form-label">Imagen del Servicio</label>
                   <div class="file-upload-wrapper" style="max-width: 200px;">
                     <div class="file-upload-container">
-                      <input type="file" name="imagen" id="imagen" class="form-control file-input" accept="image/*" onchange="previewImage(this)">
+                      <input type="file" name="imagen_servicio" id="imagen_servicio" class="form-control file-input" accept="image/*" onchange="previewImage(this)">
                       <div class="file-upload-placeholder">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

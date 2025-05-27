@@ -13,7 +13,6 @@
     
     <!-- Style -->
     <link rel="stylesheet" href="{% static 'producto/css/style.css' %}">
-
     <title>Producto</title>
   </head>
   <body>
@@ -122,11 +121,39 @@
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="{% static 'producto/js/jquery-3.3.1.min.js' %}"></script>
   <script src="{% static 'producto/js/popper.min.js' %}"></script>
   <script src="{% static 'producto/js/bootstrap.min.js' %}"></script>
   <script src="{% static 'producto/js/jquery.validate.min.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    // Verificar que SweetAlert2 está cargado
+    if (typeof Swal === 'undefined') {
+      console.error('SweetAlert2 no está cargado');
+    } else {
+      console.log('SweetAlert2 está cargado correctamente');
+    }
+  </script>
   <script src="{% static 'producto/js/main.js' %}"></script>
+  <script>
+    function previewImage(input) {
+      const preview = document.getElementById('imagePreview');
+      const file = input.files[0];
+      
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+          preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+      } else {
+        preview.innerHTML = '';
+        preview.style.display = 'none';
+      }
+    }
+  </script>
 
   <style>
     .file-upload-wrapper {
@@ -199,24 +226,6 @@
       background: white;
     }
   </style>
-  <script>
-    function previewImage(input) {
-      const preview = document.getElementById('imagePreview');
-      const file = input.files[0];
-      
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-          preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-      } else {
-        preview.innerHTML = '';
-        preview.style.display = 'none';
-      }
-    }
-  </script>
 
   </body>
 </html>

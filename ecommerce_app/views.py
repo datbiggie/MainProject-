@@ -240,8 +240,9 @@ def eliminar_sucursal(request):
 
 def producto_funcion(request):
     empresa_obj = empresa.objects.get(id_empresa=8)
-    categoria_producto_obj = categoria_producto.objects.get(id_categoria_prod=8)
     categoria_producto_all = categoria_producto.objects.all()
+
+    
     if request.method == 'POST':
         logger.info(f"Datos recibidos: {request.POST}")
         nombre_producto = request.POST.get('nombre_producto')
@@ -251,7 +252,9 @@ def producto_funcion(request):
         imagen_producto = request.FILES.get('imagen_producto')
         caracteristicas_generales = request.POST.get('caracteristicas_generales')
         estatus_producto = request.POST.get('estatus_producto')
-        
+        categoria_id = request.POST.get('categoria_producto')
+        categoria_producto_consul=categoria_producto.objects.get(id_categoria_prod=categoria_id)
+
         nuevo_producto = producto(
             nombre_producto=nombre_producto,
             descripcion_producto=descripcion_producto,
@@ -261,7 +264,7 @@ def producto_funcion(request):
             caracteristicas_generales=caracteristicas_generales,
             estatus_producto=estatus_producto,
             id_empresa_fk=empresa_obj,
-            id_categoria_prod_fk=categoria_producto_obj
+            id_categoria_prod_fk=categoria_producto_consul
         )
         nuevo_producto.save()
         logger.info(f"Producto guardado exitosamente: {nuevo_producto.nombre_producto}")
@@ -270,7 +273,34 @@ def producto_funcion(request):
     return render(request, 'ecommerce_app/producto.html', {'categoria_producto_all': categoria_producto_all})
 
 def servicio_funcion(request):
-    return render(request, 'ecommerce_app/servicio.html')
+    categoria_servicio_all = categoria_servicio.objects.all()
+    empresa_obj = empresa.objects.get(id_empresa=8)
+    if request.method == 'POST':
+        logger.info(f"Datos recibidos: {request.POST}")
+        nombre_servicio = request.POST.get('nombre_servicio')
+        descripcion_servicio = request.POST.get('descripcion_servicio')
+        estatus_servicio = request.POST.get('estatus_servicio')
+        categoria_id = request.POST.get('categoria_servicio')
+        categoria_servicio_consul=categoria_servicio.objects.get(id_categoria_serv=categoria_id)
+        imagen_servicio = request.FILES.get('imagen_servicio')
+        
+
+        nuevo_servicio = servicio(
+            nombre_servicio=nombre_servicio,
+            descripcion_servicio=descripcion_servicio,
+            estatus_servicio=estatus_servicio,
+            imagen_servicio=imagen_servicio,
+            id_empresa_fk=empresa_obj,
+            id_categoria_servicios_fk=categoria_servicio_consul
+
+        )
+        nuevo_servicio.save()   
+        logger.info(f"Servicio guardado exitosamente: {nuevo_servicio.nombre_servicio}")
+        return redirect('/ecommerce/servicio/?success=true')
+    
+        
+        
+    return render(request, 'ecommerce_app/servicio.html', {'categoria_servicio_all': categoria_servicio_all})
 
 
 
@@ -339,3 +369,86 @@ def categoria_servicio_funcion(request):
     return render(request, 'ecommerce_app/categoria_servicio.html')
 
 
+
+
+def categ_producto_config_funcion(request):
+    categ_producto_all= categoria_producto.objects.all().order_by('-fecha_creacion_prod')
+
+
+    return render(request, 'ecommerce_app/categ_producto_config.html', {'categoria_producto':categ_producto_all})
+
+
+
+def eliminar_categoria_funcion(request):
+    if request.method == 'POST':
+        try:
+            id_categoria = request.POST.get('id_categoria')
+            logger.info(f"Intentando eliminar categoría con ID: {id_categoria}")
+            
+            if not id_categoria:
+                logger.error("No se proporcionó ID de categoría")
+                return redirect('/ecommerce/categ_producto_config/?error=true')
+                
+            categoria_obj = categoria_producto.objects.get(id_categoria_prod=id_categoria)
+            nombre_categoria = categoria_obj.nombre_categoria_prod
+            
+            # Verificar si hay productos asociados
+            productos_asociados = producto.objects.filter(id_categoria_prod_fk=categoria_obj).exists()
+            if productos_asociados:
+                logger.error(f"No se puede eliminar la categoría {nombre_categoria} porque tiene productos asociados")
+                return redirect('/ecommerce/categ_producto_config/?error=true')
+            
+            categoria_obj.delete()
+            logger.info(f"Categoría eliminada exitosamente: {nombre_categoria}")
+            return redirect('/ecommerce/categ_producto_config/?deleted=true')
+            
+        except categoria_producto.DoesNotExist:
+            logger.error(f"Error al eliminar la categoría: Categoría no encontrada con ID {id_categoria}")
+            return redirect('/ecommerce/categ_producto_config/?error=true')
+        except Exception as e:
+            logger.error(f"Error al eliminar la categoría: {str(e)}")
+            return redirect('/ecommerce/categ_producto_config/?error=true')
+    
+    return redirect('/ecommerce/categ_producto_config/')
+
+
+
+def categ_servicio_config_funcion(request):
+    categ_servicio_all= categoria_servicio.objects.all()
+
+
+    return render(request, 'ecommerce_app/categ_servicio_config.html', {'categoria_servicio':categ_servicio_all})
+
+
+
+def eliminar_categoria_servicio_funcion(request):
+    if request.method == 'POST':
+        try:
+            id_categoria_servicio = request.POST.get('id_categoriaservicio')
+            logger.info(f"Intentando eliminar categoría con ID: {id_categoria_servicio}")
+            
+            if not id_categoria_servicio:
+                logger.error("No se proporcionó ID de categoría")
+                return redirect('/ecommerce/categ_servicio_config/?error=true')
+                
+            categoria_obj = categoria_servicio.objects.get(id_categoria_serv=id_categoria_servicio)
+            nombre_categoria_servicio = categoria_obj.nombre_categoria_serv
+            
+            # Verificar si hay productos asociados
+            servicios_asociados = servicio.objects.filter(id_categoria_servicios_fk_id=categoria_obj).exists()
+            if servicios_asociados:
+                logger.error(f"No se puede eliminar la categoría {nombre_categoria_servicio} porque tiene productos asociados")
+                return redirect('/ecommerce/categ_servicio_config/?error=true')
+            
+            categoria_obj.delete()
+            logger.info(f"Categoría eliminada exitosamente: {nombre_categoria_servicio}")
+            return redirect('/ecommerce/categ_servicio_config/?deleted=true')
+            
+        except categoria_servicio.DoesNotExist:
+            logger.error(f"Error al eliminar la categoría: Categoría no encontrada con ID {id_categoria_servicio}")
+            return redirect('/ecommerce/categ_servicio_config/?error=true')
+        except Exception as e:
+            logger.error(f"Error al eliminar la categoría: {str(e)}")
+            return redirect('/ecommerce/categ_servicio_config/?error=true')
+    
+    return redirect('/ecommerce/categ_servicio_config/')
