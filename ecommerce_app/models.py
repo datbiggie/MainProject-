@@ -138,3 +138,14 @@ class servicio(models.Model):
 
     def __str__(self):
         return self.nombre_servicio
+    
+    
+class producto_sucursal(models.Model):
+    id_producto_sucursal = models.AutoField(primary_key=True)
+    stock_producto_sucursal = models.PositiveIntegerField(default=0)
+    precio_producto_sucursal = models.DecimalField(max_digits=10, decimal_places=2)
+    id_sucursal_fk = models.ForeignKey('sucursal', on_delete=models.CASCADE, related_name='productos_sucursal')
+    id_producto_fk = models.ForeignKey('producto', on_delete=models.CASCADE, related_name='sucursales_producto')
+
+    def __str__(self):
+        return f"{self.id_producto_fk.nombre_producto} en {self.id_sucursal_fk.nombre_sucursal}"

@@ -44,18 +44,17 @@
                         
                         <span class="serial">{{ forloop.counter|stringformat:"02d" }}</span>
                         
-                        <div class="service-icon d-flex align-items-center">
-                            <i class="lni lni-microphone"></i>
-                            <h3 class="mb-0 ms-6" style="margin-left: 50px;">{{ categoria.nombre_categoria_prod }}</h3>
+                        <div class="d-flex align-items-center mb-3">
+                            <h3 class="mb-0 me-4" style="margin-top: 12px;">{{ categoria.nombre_categoria_prod }}</h3>
+                            <div class="feature-buttons">
+                                <button class="btn btn-edit me-2"><i class="lni lni-pencil"></i> Editar</button>
+                                <button class="btn btn-delete" onclick="confirmarEliminacion('{{ categoria.id_categoria_prod }}')">
+                                    <i class="lni lni-trash"></i> Eliminar
+                                </button>
+                            </div>
                         </div>
 
                         <p>{{ categoria.descripcion_categoria_prod }}</p>
-                        <div class="feature-buttons text-start">
-                            <button class="btn btn-edit"><i class="lni lni-pencil"></i> Editar</button>
-                            <button class="btn btn-delete" onclick="confirmarEliminacion('{{ categoria.id_categoria_prod }}')">
-                                <i class="lni lni-trash"></i> Eliminar
-                            </button>
-                        </div>
                     </div>
                     <!-- End Single Feature -->
                 </div>

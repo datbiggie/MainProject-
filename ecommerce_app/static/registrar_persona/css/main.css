@@ -72,6 +72,7 @@ body {
   margin-top: 80px;
   min-height: calc(100vh - 80px);
   box-sizing: border-box;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
 }
 
 .formbold-form-wrapper {
@@ -82,8 +83,6 @@ body {
   padding: 40px;
   border-radius: 15px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  transform: translateY(-20px);
-  transition: all 0.3s ease;
   position: relative;
   z-index: 1;
 }
@@ -101,7 +100,6 @@ body {
 }
 
 .formbold-form-wrapper:hover {
-  transform: translateY(-5px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
@@ -377,4 +375,68 @@ body {
 input[name="nombre_usuario"],
 input[name="apellido"] {
   text-transform: capitalize;
+}
+
+/* Estilos adicionales para el formulario */
+.formbold-form-wrapper {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+}
+
+.formbold-form-wrapper:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.formbold-form-title h2 {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 30px;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.formbold-form-title h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #2196F3, #1976D2);
+  border-radius: 2px;
+}
+
+.formbold-main-wrapper {
+  padding: 60px 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  min-height: 100vh;
+}
+
+.formbold-form-input {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+.formbold-form-label {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+  color: #000000 !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+  color: #000000 !important;
 }

@@ -2446,7 +2446,7 @@ ol {
 }
 
 .single-featuer {
-  padding: 35px;
+  padding: 20px;
   border-radius: 8px;
   -webkit-box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.048);
           box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.048);
@@ -3239,7 +3239,9 @@ ol {
 .feature-buttons {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
+    position: absolute;
+    right: 100px;
+    top: 40px;
 }
 
 .feature-buttons .btn {

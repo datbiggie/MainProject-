@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="no-js" lang="zxx">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>Vista servicios</title>
+    <meta name="description" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'servicio_config/images/favicon.svg' %}" />
+
+    <!-- ========================= CSS here ========================= -->
+    <link rel="stylesheet" href="{% static 'servicio_config/css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'servicio_config/css/LineIcons.3.0.css' %}" />
+    <link rel="stylesheet" href="{% static 'servicio_config/css/animate.css' %}" />
+    <link rel="stylesheet" href="{% static 'servicio_config/css/tiny-slider.css' %}" />
+    <link rel="stylesheet" href="{% static 'servicio_config/css/glightbox.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'servicio_config/css/main.css' %}" />
+   
+</head>
+
+<body>
+    <!-- Start Features Area -->
+    <section class="features section">
+        <div class="container">
+            <div class="row">
+                {% for servicio_todo in servicio_all %}
+                <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
+                    <!-- Start Single Feature -->
+                    <div class="single-featuer">
+                        <img class="shape" src="{% static 'servicio_config/images/features/shape.svg' %}" alt="#">
+                        <img class="shape2" src="{% static 'servicio_config/images/features/shape2.svg' %}" alt="#">
+                        <span class="serial">{{ forloop.counter }}</span>
+                        <div class="service-icon">
+                            <i class="lni lni-microphone"></i>
+                        </div>
+                        <h3>{{ servicio_todo.nombre_servicio }}</h3>
+                        <p>{{servicio_todo.descripcion_servicio}}</p>
+                        <div class="feature-buttons">
+                            <button class="btn btn-edit"><i class="lni lni-pencil"></i> Editar</button>
+                            <button class="btn btn-delete"><i class="lni lni-trash"></i> Eliminar</button>
+                        </div>
+                    </div>
+                    <!-- End Single Feature -->
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    <!-- /End Features Area -->
+
+    <!-- ========================= JS here ========================= -->
+    <script src="{% static 'servicio_config/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'servicio_config/js/wow.min.js' %}"></script>
+    <script src="{% static 'servicio_config/js/tiny-slider.js' %}"></script>
+    <script src="{% static 'servicio_config/js/glightbox.min.js' %}"></script>
+    <script src="{% static 'servicio_config/js/count-up.min.js' %}"></script>
+    <script src="{% static 'servicio_config/js/main.js' %}"></script>
+</body>
+
+</html>

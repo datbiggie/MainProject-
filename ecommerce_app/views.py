@@ -82,42 +82,50 @@ def registrar_persona(request):
         pais=request.POST.get('pais')
         estado=request.POST.get('estado')
 
-        nuevo_usuario = usuario(
-            nombre_usuario=nombre_usuario + ' ' + apellido,
-            correo_usuario=email,
-            telefono_usuario=telefono,
-            password_usuario=password,
-            autenticacion_usuario='local',  
-            tipo_usuario='persona',          
-            fecha_nacimiento=fecha_nacimiento,
-            pais=pais,
-            estado=estado
-        )
-        nuevo_usuario.save()
-        return redirect('/ecommerce/registrar_persona/?success=true')
+        try:
+            nuevo_usuario = usuario(
+                nombre_usuario=nombre_usuario + ' ' + apellido,
+                correo_usuario=email,
+                telefono_usuario=telefono,
+                password_usuario=password,
+                autenticacion_usuario='local',  
+                tipo_usuario='persona',          
+                fecha_nacimiento=fecha_nacimiento,
+                pais=pais,
+                estado=estado
+            )
+            nuevo_usuario.save()
+            return JsonResponse({
+                'success': True,
+                'message': '¡Registro exitoso! Tu cuenta ha sido creada correctamente.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': 'Ha ocurrido un error al registrar el usuario.'
+            })
 
     return render(request, 'ecommerce_app/registrar_persona.html')
 
 def registrar_empresa(request):
     usuario_obj = usuario.objects.get(id_usuario=6)
-    if request.method=='POST':
-        logger.info(f"Datos recibidos: {request.POST}")
-        nombre_empresa=request.POST.get('nombre_empresa')
-        descripcion_empresa=request.POST.get('descripcion_empresa')
-        logo_empresa=request.FILES.get('logo_empresa')
-        pais_empresa=request.POST.get('pais_empresa')
-        estado_empresa=request.POST.get('estado_empresa')
-        tipo_empresa=request.POST.get('tipo_empresa')
-        direccion_empresa=request.POST.getlist('direccion_empresa')[0]  # Tomar el primer valor de la lista
-        latitud=request.POST.get('latitud')
-        longitud=request.POST.get('longitud')
-        id_usuario_fk=request.POST.get('id_usuario_fk')
-
-        # Logging para verificar los datos
-        logger.info(f"Dirección recibida: {direccion_empresa}")
-        logger.info(f"Tipo de dirección: {type(direccion_empresa)}")
-
+    if request.method == 'POST':
         try:
+            logger.info(f"Datos recibidos: {request.POST}")
+            nombre_empresa = request.POST.get('nombre_empresa')
+            descripcion_empresa = request.POST.get('descripcion_empresa')
+            logo_empresa = request.FILES.get('logo_empresa')
+            pais_empresa = request.POST.get('pais_empresa')
+            estado_empresa = request.POST.get('estado_empresa')
+            tipo_empresa = request.POST.get('tipo_empresa')
+            direccion_empresa = request.POST.get('direccion_empresa')
+            latitud = request.POST.get('latitud')
+            longitud = request.POST.get('longitud')
+            
+            # Logging para verificar los datos
+            logger.info(f"Dirección recibida: {direccion_empresa}")
+            logger.info(f"Tipo de dirección: {type(direccion_empresa)}")
+
             nueva_empresa = empresa(
                 nombre_empresa=nombre_empresa,
                 descripcion_empresa=descripcion_empresa,
@@ -133,10 +141,19 @@ def registrar_empresa(request):
             nueva_empresa.save()
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
             logger.info(f"Dirección guardada: {nueva_empresa.direccion_empresa}")
-            return redirect('/ecommerce/registrar_empresa/?success=true')
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Empresa registrada exitosamente'
+            })
         except Exception as e:
             logger.error(f"Error al guardar la empresa: {str(e)}")
-            return render(request, 'ecommerce_app/registrar_empresa.html', {'error': str(e)})
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
+    
+    # Si es GET, mostrar el formulario
     return render(request, 'ecommerce_app/registrar_empresa.html')
 
 
@@ -452,3 +469,17 @@ def eliminar_categoria_servicio_funcion(request):
             return redirect('/ecommerce/categ_servicio_config/?error=true')
     
     return redirect('/ecommerce/categ_servicio_config/')
+
+def producto_config_funcion(request):
+    producto_sucursal_all= producto.objects.all()
+
+    
+    return render(request, 'ecommerce_app/producto_config.html', {'producto_sucursal_all':producto_sucursal_all})
+
+
+
+def servicio_config_funcion(request):
+    servicio_all= servicio.objects.all()
+
+    
+    return render(request, 'ecommerce_app/servicio_config.html', {'servicio_all':servicio_all})

@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="no-js" lang="zxx">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>Vista Productos</title>
+    <meta name="description" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'producto_sucursal/images/favicon.svg' %}" />
+
+    <!-- ========================= CSS here ========================= -->
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/LineIcons.3.0.css' %}" />
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/animate.css' %}" />
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/tiny-slider.css' %}" />
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/glightbox.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/main.css' %}" />
+   
+</head>
+
+<body>
+    <!-- Start Features Area -->
+    <section class="features section">
+        <div class="container">
+            <div class="row">
+                {% for producto_all in producto_sucursal_all %}
+                <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
+                    <!-- Start Single Feature -->
+                    <div class="single-featuer">
+                        <img class="shape" src="{% static 'producto_sucursal/images/features/shape.svg' %}" alt="#">
+                        <img class="shape2" src="{% static 'producto_sucursal/images/features/shape2.svg' %}" alt="#">
+                        <span class="serial">{{ forloop.counter }}</span>
+                        <div class="service-icon">
+                            <i class="lni lni-microphone"></i>
+                        </div>
+                        <h3>{{ producto_all.nombre_producto }}</h3>
+                        <p>{{producto_all.descripcion_producto}}</p>
+                        <div class="feature-buttons">
+                            <button class="btn btn-edit"><i class="lni lni-pencil"></i> Editar</button>
+                            <button class="btn btn-delete"><i class="lni lni-trash"></i> Eliminar</button>
+                        </div>
+                    </div>
+                    <!-- End Single Feature -->
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    <!-- /End Features Area -->
+
+    <!-- ========================= JS here ========================= -->
+    <script src="{% static 'producto_sucursal/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/wow.min.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/tiny-slider.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/glightbox.min.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/count-up.min.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/main.js' %}"></script>
+</body>
+
+</html>

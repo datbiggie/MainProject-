@@ -20,6 +20,8 @@ urlpatterns = [
     path('eliminar_categoria/', eliminar_categoria_funcion, name='eliminar_categoria_funcion'),
     path('categ_servicio_config/', categ_servicio_config_funcion, name='categ_servicio_config_funcion'),
     path('eliminar_categoria_servicio/', eliminar_categoria_servicio_funcion, name='eliminar_categoria_servicio_funcion'),
+    path('producto_config/', producto_config_funcion, name='producto_config_funcion'),
+    path('servicio_config/', servicio_config_funcion, name='servicio_config_funcion'),
 
 
 

@@ -8,73 +8,6 @@
     <link rel="stylesheet" href="{% static 'registrar_persona/css/main.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-    <style>
-        .formbold-form-wrapper {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            transform: translateY(-20px);
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .formbold-form-wrapper:hover {
-            transform: translateY(-25px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .formbold-form-title h2 {
-            font-size: 32px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 30px;
-            position: relative;
-            padding-bottom: 15px;
-        }
-
-        .formbold-form-title h2::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 4px;
-            background: linear-gradient(90deg, #2196F3, #1976D2);
-            border-radius: 2px;
-        }
-
-        .formbold-main-wrapper {
-            padding: 60px 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
-            min-height: 100vh;
-        }
-
-        .formbold-form-input {
-            color: #000000 !important;
-            font-weight: 500;
-        }
-
-        .formbold-form-label {
-            color: #000000 !important;
-            font-weight: 500;
-        }
-
-        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
-            color: #000000 !important;
-            font-weight: 500;
-        }
-
-        .select2-container--bootstrap-5 .select2-dropdown {
-            color: #000000 !important;
-        }
-
-        .select2-container--bootstrap-5 .select2-results__option {
-            color: #000000 !important;
-        }
-    </style>
 </head>
 <body>
 <div class="top-bar-ecommerce">
@@ -213,43 +146,6 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-  $(document).ready(function() {
-    // Inicializar Select2
-    $('#state').select2({
-      theme: 'bootstrap-5',
-      width: '100%',
-      placeholder: 'Selecciona un estado',
-      allowClear: true,
-      language: {
-        noResults: function() {
-          return "No se encontraron resultados";
-        },
-        searching: function() {
-          return "Buscando...";
-        }
-      }
-    });
-
-    // Evento para enfocar el campo de búsqueda cuando se abre el select
-    $('#state').on('select2:open', function() {
-      setTimeout(function() {
-        document.querySelector('.select2-search__field').focus();
-      }, 0);
-    });
-
-    // Verificar si hay un parámetro de éxito en la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      Swal.fire({
-        title: '¡Registro exitoso!',
-        text: 'Tu cuenta ha sido creada correctamente.',
-        icon: 'success',
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#3b82f6'
-      });
-    }
-  });
-</script>
+<script src="{% static 'registrar_persona/js/main.js' %}"></script>
 </body>
 </html>

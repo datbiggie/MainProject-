@@ -1,70 +1,70 @@
-
 $(document).ready(function() {
-  // Inicializar Select2 para países
-  $('#country').select2({
-    theme: 'bootstrap-5',
-    width: '100%',
-    placeholder: 'Selecciona un país',
-    allowClear: true,
-    language: {
-      noResults: function() {
-        return "No se encontraron resultados";
-      },
-      searching: function() {
-        return "Buscando...";
-      }
-    }
-  });
+    // Inicializar Select2
+    $('#state').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Selecciona un estado',
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "No se encontraron resultados";
+            },
+            searching: function() {
+                return "Buscando...";
+            }
+        }
+    });
 
-  // Inicializar Select2 para estados
-  $('#state').select2({
-    theme: 'bootstrap-5',
-    width: '100%',
-    placeholder: 'Selecciona un estado',
-    allowClear: true,
-    disabled: true,
-    language: {
-      noResults: function() {
-        return "No se encontraron resultados";
-      },
-      searching: function() {
-        return "Buscando...";
-      }
-    }
-  });
+    // Evento para enfocar el campo de búsqueda cuando se abre el select
+    $('#state').on('select2:open', function() {
+        setTimeout(function() {
+            document.querySelector('.select2-search__field').focus();
+        }, 0);
+    });
 
-  // Inicializar Select2 para tipo de empresa
-  $('#tipo_empresa').select2({
-    theme: 'bootstrap-5',
-    width: '100%',
-    placeholder: 'Selecciona el tipo de empresa',
-    allowClear: true,
-    language: {
-      noResults: function() {
-        return "No se encontraron resultados";
-      },
-      searching: function() {
-        return "Buscando...";
-      }
-    }
-  });
-
-  // Agregar solo Venezuela al select de países
-  $('#country').append(new Option('Venezuela', 'VE'));
-
-  // Manejar cambio de país
-  $('#country').on('change', function() {
-    const countryCode = $(this).val();
-    const stateSelect = $('#state');
-    
-    if (countryCode === 'VE') {
-      stateSelect.prop('disabled', false);
-      stateSelect.select2('enable');
-    } else {
-      stateSelect.prop('disabled', true);
-      stateSelect.select2('disable');
-      stateSelect.val('').trigger('change');
-    }
-  });
+    // Manejar el envío del formulario
+    $('form').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: '¡Registro exitoso!',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Limpiar el formulario
+                            $('form')[0].reset();
+                            // O redirigir a otra página si lo deseas
+                            // window.location.href = '/ecommerce/iniciar_sesion/';
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: response.message,
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                }
+            },
+            error: function() {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ha ocurrido un error al procesar la solicitud',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar',
+                    confirmButtonColor: '#3b82f6'
+                });
+            }
+        });
+    });
 });
-
