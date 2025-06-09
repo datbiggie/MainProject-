@@ -1,0 +1,83 @@
+/* Estilos para el upload de imágenes */
+.file-upload-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.file-upload-container {
+    position: relative;
+    width: 100%;
+    min-height: 150px;
+    border: 2px dashed #dde3ec;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.file-upload-container:hover {
+    border-color: #6a64f1;
+    background: #f5f7ff;
+}
+
+.file-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.file-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #536387;
+    text-align: center;
+    padding: 20px;
+    z-index: 1;
+}
+
+.file-upload-placeholder svg {
+    width: 48px;
+    height: 48px;
+}
+
+.file-upload-placeholder span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.image-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: white;
+    z-index: 1;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: white;
+}
+
+/* Estilos adicionales para cuando hay una imagen */
+.file-upload-container.has-image .file-upload-placeholder {
+    display: none;
+}
+
+.file-upload-container.has-image .image-preview {
+    display: block;
+} 

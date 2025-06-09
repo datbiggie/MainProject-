@@ -7,13 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{% static 'servicio/	fonts/icomoon/style.cs' %}s">
-
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{% static 'servicio/css/bootstrap.min.cs' %}s">
+    <link rel="stylesheet" href="{% static 'servicio/css/bootstrap.min.css' %}">
     
     <!-- Style -->
     <link rel="stylesheet" href="{% static 'servicio/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'servicio/css/main.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <title>Servicios</title>
@@ -25,8 +24,8 @@
       <div class="row align-items-stretch no-gutters contact-wrap">
         <div class="col-md-8">
           <div class="form h-100">
-            <h1 class="text-center mb-4" style="color: #333; font-weight: 700; letter-spacing: 1px;">SERVICIOS</h1>
-            <form class="mb-5" method="post" id="servicioForm" name="servicioForm" enctype="multipart/form-data">
+            <h3>SERVICIOS</h3>
+            <form class="mb-5" method="post" id="servicioForm" name="servicioForm" action="{% url 'servicio_funcion' %}" enctype="multipart/form-data">
               {% csrf_token %}
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
@@ -50,8 +49,6 @@
                     {% for categoria in categoria_servicio_all %}
                       <option value="{{ categoria.id_categoria_serv }}">{{ categoria.nombre_categoria_serv }}</option>
                     {% endfor %}
-                   
-
                   </select>
                 </div>
                 <div class="col-md-6 form-group mb-5">
@@ -66,10 +63,10 @@
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
-                  <label for="imagen" class="col-form-label">Imagen del Servicio</label>
+                  <label for="imagen_servicio" class="col-form-label">Imagen del Servicio</label>
                   <div class="file-upload-wrapper" style="max-width: 200px;">
                     <div class="file-upload-container">
-                      <input type="file" name="imagen_servicio" id="imagen_servicio" class="form-control file-input" accept="image/*" onchange="previewImage(this)">
+                      <input type="file" name="imagen_servicio" id="imagen_servicio" class="form-control file-input" accept="image/*">
                       <div class="file-upload-placeholder">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -100,7 +97,7 @@
           </div>
         </div>
         <div class="col-md-4">
-          <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
+          <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa;">
             <img src="{% static 'servicio/images/servicios.jpg' %}" alt="Servicios" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(1.05) contrast(1.05);">
           </div>
         </div>
@@ -113,96 +110,6 @@
   <script src="{% static 'servicio/js/bootstrap.min.js' %}"></script>
   <script src="{% static 'servicio/js/jquery.validate.min.js' %}"></script>
   <script src="{% static 'servicio/js/main.js' %}"></script>
-
-  <style>
-    .file-upload-wrapper {
-      position: relative;
-      width: 100%;
-    }
-
-    .file-upload-container {
-      position: relative;
-      width: 100%;
-      min-height: 150px;
-      border: 2px dashed #dde3ec;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f9fafb;
-      transition: all 0.3s ease;
-    }
-
-    .file-upload-container:hover {
-      border-color: #6a64f1;
-      background: #f5f7ff;
-    }
-
-    .file-input {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-      z-index: 2;
-    }
-
-    .file-upload-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      color: #536387;
-      text-align: center;
-      padding: 20px;
-    }
-
-    .file-upload-placeholder svg {
-      width: 48px;
-      height: 48px;
-    }
-
-    .file-upload-placeholder span {
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .image-preview {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .image-preview img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: white;
-    }
-  </style>
-  <script>
-    function previewImage(input) {
-      const preview = document.getElementById('imagePreview');
-      const file = input.files[0];
-      
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-          preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-      } else {
-        preview.innerHTML = '';
-        preview.style.display = 'none';
-      }
-    }
-  </script>
 
   </body>
 </html>

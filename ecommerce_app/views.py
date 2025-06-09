@@ -163,12 +163,9 @@ def sucursalfuncion(request):
     sqlsucursal = sucursal.objects.all()
     
     # Obtener la empresa actual (por ahora hardcodeada)
-    empresa_obj = empresa.objects.get(id_empresa=8)
+    empresa_obj = empresa.objects.get(id_empresa=9)
    
     if request.method == 'POST':
-        logger.info(f"Datos POST recibidos: {request.POST}")
-        logger.info(f"Archivos recibidos: {request.FILES}")
-        
         try:
             nombre_sucursal = request.POST.get('nombre_sucursal')
             telefono_sucursal = request.POST.get('telefono_sucursal')
@@ -176,8 +173,6 @@ def sucursalfuncion(request):
             direccion_sucursal = request.POST.get('direccion_sucursal')
             latitud_sucursal = request.POST.get('latitud_sucursal')
             longitud_sucursal = request.POST.get('longitud_sucursal')
-
-
 
             nueva_sucursal = sucursal(
                 nombre_sucursal=nombre_sucursal,
@@ -189,25 +184,19 @@ def sucursalfuncion(request):
                 id_empresa_fk=empresa_obj
             )
             nueva_sucursal.save()
-            logger.info(f"Sucursal guardada exitosamente: {nueva_sucursal.nombre_sucursal}")
             
-           
-            
-
-            
-            return redirect('/ecommerce/sucursal/?success=true')
+            return JsonResponse({
+                'success': True,
+                'message': 'Sucursal registrada exitosamente'
+            })
         except Exception as e:
-            logger.error(f"Error al guardar la sucursal: {str(e)}")
-            logger.error(f"Traceback completo: {e.__traceback__}")
-            return render(request, 'ecommerce_app/sucursal.html', {
-                'error': str(e),
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
             })
 
-    # Pasar las sucursales al template
     return render(request, 'ecommerce_app/sucursal.html', {
-        'sqlsucursal': sqlsucursal,
-        
-        'success': request.GET.get('success')
+        'sqlsucursal': sqlsucursal
     })
 
 
@@ -226,13 +215,21 @@ def editar_sucursal(request):
             sucursal_obj.longitud_sucursal = float(request.POST.get('longitud_sucursal'))
             
             sucursal_obj.save()
-            logger.info(f"Sucursal actualizada exitosamente: {sucursal_obj.nombre_sucursal}")
-            return redirect('/ecommerce/sucursal/?updated=true')
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Sucursal actualizada exitosamente'
+            }, content_type='application/json')
         except Exception as e:
-            logger.error(f"Error al actualizar la sucursal: {str(e)}")
-            return redirect('/ecommerce/sucursal/?error=true')
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, content_type='application/json')
     
-    return redirect('/ecommerce/sucursal/')
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, content_type='application/json')
 
 
 
@@ -243,80 +240,106 @@ def eliminar_sucursal(request):
             sucursal_obj = sucursal.objects.get(id_sucursal=id_sucursal)
             nombre_sucursal = sucursal_obj.nombre_sucursal
             sucursal_obj.delete()
-            logger.info(f"Sucursal eliminada exitosamente: {nombre_sucursal}")
-            return redirect('/ecommerce/sucursal/?deleted=true')
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Sucursal {nombre_sucursal} eliminada exitosamente'
+            })
         except Exception as e:
-            logger.error(f"Error al eliminar la sucursal: {str(e)}")
-            return redirect('/ecommerce/sucursal/?error=true')
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
     
-    return redirect('/ecommerce/sucursal/')
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
 
 
 
 
 
 def producto_funcion(request):
-    empresa_obj = empresa.objects.get(id_empresa=8)
+    empresa_obj = empresa.objects.get(id_empresa=9)
     categoria_producto_all = categoria_producto.objects.all()
 
-    
     if request.method == 'POST':
-        logger.info(f"Datos recibidos: {request.POST}")
-        nombre_producto = request.POST.get('nombre_producto')
-        descripcion_producto = request.POST.get('descripcion_producto')
-        marca_producto = request.POST.get('marca_producto')
-        modelo_producto = request.POST.get('modelo_producto')
-        imagen_producto = request.FILES.get('imagen_producto')
-        caracteristicas_generales = request.POST.get('caracteristicas_generales')
-        estatus_producto = request.POST.get('estatus_producto')
-        categoria_id = request.POST.get('categoria_producto')
-        categoria_producto_consul=categoria_producto.objects.get(id_categoria_prod=categoria_id)
+        try:
+            logger.info(f"Datos recibidos: {request.POST}")
+            nombre_producto = request.POST.get('nombre_producto')
+            descripcion_producto = request.POST.get('descripcion_producto')
+            marca_producto = request.POST.get('marca_producto')
+            modelo_producto = request.POST.get('modelo_producto')
+            imagen_producto = request.FILES.get('imagen_producto')
+            caracteristicas_generales = request.POST.get('caracteristicas_generales')
+            estatus_producto = request.POST.get('estatus_producto')
+            categoria_id = request.POST.get('categoria_producto')
+            categoria_producto_consul = categoria_producto.objects.get(id_categoria_prod=categoria_id)
 
-        nuevo_producto = producto(
-            nombre_producto=nombre_producto,
-            descripcion_producto=descripcion_producto,
-            marca_producto=marca_producto,
-            modelo_producto=modelo_producto,
-            imagen_producto=imagen_producto,    
-            caracteristicas_generales=caracteristicas_generales,
-            estatus_producto=estatus_producto,
-            id_empresa_fk=empresa_obj,
-            id_categoria_prod_fk=categoria_producto_consul
-        )
-        nuevo_producto.save()
-        logger.info(f"Producto guardado exitosamente: {nuevo_producto.nombre_producto}")
-        return redirect('/ecommerce/producto/?success=true')
+            nuevo_producto = producto(
+                nombre_producto=nombre_producto,
+                descripcion_producto=descripcion_producto,
+                marca_producto=marca_producto,
+                modelo_producto=modelo_producto,
+                imagen_producto=imagen_producto,    
+                caracteristicas_generales=caracteristicas_generales,
+                estatus_producto=estatus_producto,
+                id_empresa_fk=empresa_obj,
+                id_categoria_prod_fk=categoria_producto_consul
+            )
+            nuevo_producto.save()
+            logger.info(f"Producto guardado exitosamente: {nuevo_producto.nombre_producto}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Producto registrado exitosamente'
+            })
+        except Exception as e:
+            logger.error(f"Error al guardar el producto: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
     
     return render(request, 'ecommerce_app/producto.html', {'categoria_producto_all': categoria_producto_all})
 
 def servicio_funcion(request):
     categoria_servicio_all = categoria_servicio.objects.all()
-    empresa_obj = empresa.objects.get(id_empresa=8)
+    empresa_obj = empresa.objects.get(id_empresa=9)
     if request.method == 'POST':
-        logger.info(f"Datos recibidos: {request.POST}")
-        nombre_servicio = request.POST.get('nombre_servicio')
-        descripcion_servicio = request.POST.get('descripcion_servicio')
-        estatus_servicio = request.POST.get('estatus_servicio')
-        categoria_id = request.POST.get('categoria_servicio')
-        categoria_servicio_consul=categoria_servicio.objects.get(id_categoria_serv=categoria_id)
-        imagen_servicio = request.FILES.get('imagen_servicio')
-        
+        try:
+            logger.info(f"Datos recibidos: {request.POST}")
+            nombre_servicio = request.POST.get('nombre_servicio')
+            descripcion_servicio = request.POST.get('descripcion_servicio')
+            estatus_servicio = request.POST.get('estatus_servicio')
+            categoria_id = request.POST.get('categoria_servicio')
+            categoria_servicio_consul = categoria_servicio.objects.get(id_categoria_serv=categoria_id)
+            imagen_servicio = request.FILES.get('imagen_servicio')
 
-        nuevo_servicio = servicio(
-            nombre_servicio=nombre_servicio,
-            descripcion_servicio=descripcion_servicio,
-            estatus_servicio=estatus_servicio,
-            imagen_servicio=imagen_servicio,
-            id_empresa_fk=empresa_obj,
-            id_categoria_servicios_fk=categoria_servicio_consul
+            nuevo_servicio = servicio(
+                nombre_servicio=nombre_servicio,
+                descripcion_servicio=descripcion_servicio,
+                estatus_servicio=estatus_servicio,
+                imagen_servicio=imagen_servicio,
+                id_empresa_fk=empresa_obj,
+                id_categoria_servicios_fk=categoria_servicio_consul
+            )
+            nuevo_servicio.save()   
+            logger.info(f"Servicio guardado exitosamente: {nuevo_servicio.nombre_servicio}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Servicio registrado exitosamente'
+            })
 
-        )
-        nuevo_servicio.save()   
-        logger.info(f"Servicio guardado exitosamente: {nuevo_servicio.nombre_servicio}")
-        return redirect('/ecommerce/servicio/?success=true')
-    
-        
-        
+        except Exception as e:
+            logger.error(f"Error al registrar servicio: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Error al registrar el servicio'
+            })
+
     return render(request, 'ecommerce_app/servicio.html', {'categoria_servicio_all': categoria_servicio_all})
 
 
@@ -324,21 +347,27 @@ def servicio_funcion(request):
 def eliminar_todas_sucursales(request):
     if request.method == 'POST':
         try:
-            # Obtener el número de sucursales antes de eliminarlas
-            total_sucursales = sucursal.objects.count()
-            
+            # Obtener todas las sucursales
+            sucursales = sucursal.objects.all()
+            # Contar cuántas sucursales se eliminarán
+            cantidad = sucursales.count()
             # Eliminar todas las sucursales
-            sucursal.objects.all().delete()
+            sucursales.delete()
             
-            logger.info(f"Se eliminaron {total_sucursales} sucursales")
-            
-            # Mostrar mensaje de éxito
-            return redirect('/ecommerce/sucursal/?deleted=true')
+            return JsonResponse({
+                'success': True,
+                'message': f'Se han eliminado {cantidad} sucursales exitosamente'
+            }, content_type='application/json')
         except Exception as e:
-            logger.error(f"Error al eliminar las sucursales: {str(e)}")
-            return redirect('/ecommerce/sucursal/?error=true')
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, content_type='application/json')
     
-    return redirect('/ecommerce/sucursal/')
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, content_type='application/json')
 
 
 
@@ -347,41 +376,60 @@ def eliminar_todas_sucursales(request):
 
 def categoria_producto_funcion(request):
     if request.method == 'POST':
-        logger.info(f"Datos recibidos: {request.POST}")
-        nombre_categoria = request.POST.get('nombre_categoria')
-        descripcion_categoria = request.POST.get('descripcion_categoria')
-        estatus_categoria = request.POST.get('estatus_categoria')
-        fecha_creacion = request.POST.get('fecha_creacion')
-        
-        nueva_categoria = categoria_producto(
-            nombre_categoria_prod=nombre_categoria,
-            descripcion_categoria_prod=descripcion_categoria,
-            estatus_categoria_prod=estatus_categoria,
-            fecha_creacion_prod=fecha_creacion
-        )
-        nueva_categoria.save()
-        logger.info(f"Categoria guardada exitosamente: {nueva_categoria.nombre_categoria_prod}")
-        return redirect('/ecommerce/categoria_producto/?success=true')
+        try:
+            nombre_categoria = request.POST.get('nombre_categoria')
+            descripcion_categoria = request.POST.get('descripcion_categoria')
+            estatus_categoria = request.POST.get('estatus_categoria')
+            fecha_creacion = request.POST.get('fecha_creacion')
+
+            nueva_categoria = categoria_producto(
+                nombre_categoria_prod=nombre_categoria,
+                descripcion_categoria_prod=descripcion_categoria,
+                estatus_categoria_prod=estatus_categoria,
+                fecha_creacion_prod=fecha_creacion
+            )
+            nueva_categoria.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Categoría registrada exitosamente'
+            }, content_type='application/json')
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, content_type='application/json')
 
     return render(request, 'ecommerce_app/categoria_producto.html')
 
 def categoria_servicio_funcion(request):
     if request.method == 'POST':
-        logger.info(f"Datos recibidos: {request.POST}")
-        nombre_categoria = request.POST.get('nombre_categoria')
-        descripcion_categoria = request.POST.get('descripcion_categoria')
-        estatus_categoria = request.POST.get('estatus_categoria')
-        fecha_creacion = request.POST.get('fecha_creacion')     
-        
-        nueva_categoria = categoria_servicio(
-            nombre_categoria_serv=nombre_categoria,
-            descripcion_categoria_serv=descripcion_categoria,
-            estatus_categoria_serv=estatus_categoria,
-            fecha_creacion_categ_serv=fecha_creacion
-        )
-        nueva_categoria.save()
-        logger.info(f"Categoria guardada exitosamente: {nueva_categoria.nombre_categoria_serv}")
-        return redirect('/ecommerce/categoria_servicio/?success=true')
+        try:
+            logger.info(f"Datos recibidos: {request.POST}")
+            nombre_categoria = request.POST.get('nombre_categoria')
+            descripcion_categoria = request.POST.get('descripcion_categoria')
+            estatus_categoria = request.POST.get('estatus_categoria')
+            fecha_creacion = request.POST.get('fecha_creacion')     
+            
+            nueva_categoria = categoria_servicio(
+                nombre_categoria_serv=nombre_categoria,
+                descripcion_categoria_serv=descripcion_categoria,
+                estatus_categoria_serv=estatus_categoria,
+                fecha_creacion_categ_serv=fecha_creacion
+            )
+            nueva_categoria.save()
+            logger.info(f"Categoria guardada exitosamente: {nueva_categoria.nombre_categoria_serv}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Categoría registrada exitosamente'
+            })
+        except Exception as e:
+            logger.error(f"Error al guardar la categoría: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al registrar la categoría: {str(e)}'
+            })
 
     return render(request, 'ecommerce_app/categoria_servicio.html')
 
@@ -396,7 +444,7 @@ def categ_producto_config_funcion(request):
 
 
 
-def eliminar_categoria_funcion(request):
+def eliminar_categoria_producto_funcion(request):
     if request.method == 'POST':
         try:
             id_categoria = request.POST.get('id_categoria')

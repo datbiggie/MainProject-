@@ -98,7 +98,7 @@
 <div id="addEmployeeModal" class="modal fade">
 	<div class="modal-dialog modal-lg">
 		<div class="modal-content">
-			<form method="POST" action="" id="sucursalForm">
+			<form method="POST" action="{% url 'sucursal' %}" id="sucursalForm">
 				{% csrf_token %}
 				<div class="modal-header">						
 					<h4 class="modal-title">Agregar Sucursal</h4>
@@ -214,7 +214,7 @@
 <div id="editEmployeeModal" class="modal fade">
 	<div class="modal-dialog modal-lg">
 		<div class="modal-content">
-			<form method="POST" action="{% url 'editar_sucursal' %}">
+			<form method="POST" action="{% url 'editar_sucursal' %}" id="editSucursalForm">
 				{% csrf_token %}
 				<input type="hidden" name="id_sucursal" id="edit_id_sucursal">
 				<div class="modal-header">						
@@ -328,7 +328,7 @@
 <div id="deleteEmployeeModal" class="modal fade">
 	<div class="modal-dialog">
 		<div class="modal-content">
-			<form method="POST" action="{% url 'eliminar_sucursal' %}">
+			<form method="POST" action="{% url 'eliminar_sucursal' %}" id="deleteSucursalForm">
 				{% csrf_token %}
 				<input type="hidden" name="id_sucursal" id="delete_id_sucursal">
 				<div class="modal-header">						
@@ -378,7 +378,7 @@
 <div id="deleteAllModal" class="modal fade" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="formEliminarTodas" method="POST" action="{% url 'eliminar_todas_sucursales' %}">
+            <form id="deleteAllSucursalesForm" method="POST" action="{% url 'eliminar_todas_sucursales' %}">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title" id="deleteAllModalLabel">Eliminar todas las Sucursales</h5>
@@ -403,41 +403,7 @@
 
 
 <script src="{% static 'sucursal/js/main.js' %}"></script>
-
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap" async defer></script>
 
-<script>
-// Función para cargar los datos en el modal de edición
-function cargarDatosEdicion(sucursal) {
-    // Cargar datos básicos
-    document.getElementById('edit_id_sucursal').value = sucursal.id_sucursal;
-    document.getElementById('edit_nombre_sucursal').value = sucursal.nombre_sucursal;
-    document.getElementById('edit_telefono_sucursal').value = sucursal.telefono_sucursal;
-    document.getElementById('edit_estado_sucursal').value = sucursal.estado_sucursal;
-    document.getElementById('edit_direccion_sucursal').value = sucursal.direccion_sucursal;
-    
-    // Cargar coordenadas
-    const latitud = parseFloat(sucursal.latitud_sucursal);
-    const longitud = parseFloat(sucursal.longitud_sucursal);
-    
-    document.getElementById('edit_latitud').value = latitud;
-    document.getElementById('edit_longitud').value = longitud;
-    document.getElementById('edit_direccion_sucursal_mapa').value = sucursal.direccion_sucursal;
-    
-    // Actualizar el mapa
-    const position = { lat: latitud, lng: longitud };
-    editMap.setCenter(position);
-    editMap.setZoom(15); // Aumentar el zoom para mejor visualización
-    editMarker.setPosition(position);
-    
-    // Obtener la dirección actualizada
-    geocoder.geocode({ 'location': position }, function(results, status) {
-        if (status === 'OK' && results[0]) {
-            document.getElementById('edit_direccion_sucursal_mapa').value = results[0].formatted_address;
-            document.getElementById('edit_direccion_sucursal').value = results[0].formatted_address;
-        }
-    });
-}
-</script>
 </body>
 </html>

@@ -42,6 +42,7 @@ $(document).ready(function() {
                         if (result.isConfirmed) {
                             // Limpiar el formulario
                             $('form')[0].reset();
+                            window.location.href = window.location.pathname; // recarga limpia sin scroll
                             // O redirigir a otra página si lo deseas
                             // window.location.href = '/ecommerce/iniciar_sesion/';
                         }

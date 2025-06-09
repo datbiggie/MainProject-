@@ -1,4 +1,3 @@
-
 let map;
 let editMap;
 let marker;
@@ -136,19 +135,34 @@ function initMap() {
 
 // Función para cargar los datos en el modal de edición
 function cargarDatosEdicion(sucursal) {
+    // Cargar datos básicos
     document.getElementById('edit_id_sucursal').value = sucursal.id_sucursal;
     document.getElementById('edit_nombre_sucursal').value = sucursal.nombre_sucursal;
     document.getElementById('edit_telefono_sucursal').value = sucursal.telefono_sucursal;
     document.getElementById('edit_estado_sucursal').value = sucursal.estado_sucursal;
     document.getElementById('edit_direccion_sucursal').value = sucursal.direccion_sucursal;
-    document.getElementById('edit_latitud').value = sucursal.latitud_sucursal;
-    document.getElementById('edit_longitud').value = sucursal.longitud_sucursal;
+    
+    // Cargar coordenadas
+    const latitud = parseFloat(sucursal.latitud_sucursal);
+    const longitud = parseFloat(sucursal.longitud_sucursal);
+    
+    document.getElementById('edit_latitud').value = latitud;
+    document.getElementById('edit_longitud').value = longitud;
     document.getElementById('edit_direccion_sucursal_mapa').value = sucursal.direccion_sucursal;
     
-    // Centrar el mapa en la ubicación de la sucursal
-    const position = { lat: parseFloat(sucursal.latitud_sucursal), lng: parseFloat(sucursal.longitud_sucursal) };
+    // Actualizar el mapa
+    const position = { lat: latitud, lng: longitud };
     editMap.setCenter(position);
+    editMap.setZoom(15); // Aumentar el zoom para mejor visualización
     editMarker.setPosition(position);
+    
+    // Obtener la dirección actualizada
+    geocoder.geocode({ 'location': position }, function(results, status) {
+        if (status === 'OK' && results[0]) {
+            document.getElementById('edit_direccion_sucursal_mapa').value = results[0].formatted_address;
+            document.getElementById('edit_direccion_sucursal').value = results[0].formatted_address;
+        }
+    });
 }
 
 // Agregar eventos a los botones de editar y eliminar
@@ -187,39 +201,136 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Manejar mensajes de éxito y error
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
+// Función para mostrar mensajes de éxito
+function mostrarMensajeExito(mensaje) {
+    Swal.fire({
+        title: '¡Éxito!',
+        text: mensaje,
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#3b82f6'
+    });
+}
+
+// Función para mostrar mensajes de error
+function mostrarMensajeError(mensaje) {
+    Swal.fire({
+        title: 'Error',
+        text: mensaje,
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#3b82f6'
+    });
+}
+
+// Manejar el envío del formulario de agregar sucursal
+$('#sucursalForm').on('submit', function(e) {
+    e.preventDefault();
     
-    // Mensaje de éxito al crear sucursal
-    if (urlParams.get('success') === 'true') {
-        Swal.fire({
-            title: '¡Sucursal Registrada!',
-            text: 'La sucursal ha sido creada correctamente.',
-            icon: 'success',
-            confirmButtonText: 'Aceptar',
-            confirmButtonColor: '#3b82f6'
-        });
-    } else if (urlParams.has('updated')) {
-        Swal.fire({
-            title: '¡Éxito!',
-            text: 'La sucursal ha sido actualizada correctamente',
-            icon: 'success',
-            confirmButtonText: 'Aceptar'
-        });
-    } else if (urlParams.has('deleted')) {
-        Swal.fire({
-            title: '¡Éxito!',
-            text: 'La sucursal ha sido eliminada correctamente',
-            icon: 'success',
-            confirmButtonText: 'Aceptar'
-        });
-    } else if (urlParams.has('error')) {
-        Swal.fire({
-            title: 'Error',
-            text: 'Ha ocurrido un error al procesar la solicitud',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-        });
-    }
+    $.ajax({
+        url: $(this).attr('action'),
+        method: 'POST',
+        data: $(this).serialize(),
+        success: function(response) {
+            if (response.success) {
+                mostrarMensajeExito(response.message);
+                // Limpiar el formulario
+                $('#sucursalForm')[0].reset();
+                // Recargar la página para mostrar la nueva sucursal
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarMensajeError(response.message);
+            }
+        },
+        error: function() {
+            mostrarMensajeError('Ha ocurrido un error al procesar la solicitud');
+        }
+    });
+});
+
+// Manejar el envío del formulario de editar sucursal
+$('#editSucursalForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    $.ajax({
+        url: $(this).attr('action'),
+        method: 'POST',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                mostrarMensajeExito(response.message);
+                // Cerrar el modal
+                $('#editEmployeeModal').modal('hide');
+                // Recargar la página para mostrar los cambios
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarMensajeError(response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+            mostrarMensajeError('Ha ocurrido un error al procesar la solicitud');
+        }
+    });
+});
+
+// Manejar el envío del formulario de eliminar sucursal
+$('#deleteSucursalForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    $.ajax({
+        url: $(this).attr('action'),
+        method: 'POST',
+        data: $(this).serialize(),
+        success: function(response) {
+            if (response.success) {
+                mostrarMensajeExito(response.message);
+                // Cerrar el modal
+                $('#deleteEmployeeModal').modal('hide');
+                // Recargar la página para mostrar los cambios
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarMensajeError(response.message);
+            }
+        },
+        error: function() {
+            mostrarMensajeError('Ha ocurrido un error al procesar la solicitud');
+        }
+    });
+});
+
+// Manejar el envío del formulario de eliminar todas las sucursales
+$('#deleteAllSucursalesForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    $.ajax({
+        url: $(this).attr('action'),
+        method: 'POST',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                mostrarMensajeExito(response.message);
+                // Cerrar el modal
+                $('#deleteAllModal').modal('hide');
+                // Recargar la página para mostrar los cambios
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarMensajeError(response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+            mostrarMensajeError('Ha ocurrido un error al procesar la solicitud');
+        }
+    });
 });
