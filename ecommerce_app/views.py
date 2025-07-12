@@ -436,46 +436,133 @@ def categoria_servicio_funcion(request):
 
 
 
+
+
 def categ_producto_config_funcion(request):
     categ_producto_all= categoria_producto.objects.all().order_by('-fecha_creacion_prod')
-
+    
+    # Logging básico
+    logger.info(f"Total de categorías encontradas: {categ_producto_all.count()}")
 
     return render(request, 'ecommerce_app/categ_producto_config.html', {'categoria_producto':categ_producto_all})
 
 
 
-def eliminar_categoria_producto_funcion(request):
+
+
+def eliminar_categoria_producto(request):
     if request.method == 'POST':
         try:
+            # Logging de todos los datos recibidos
+            logger.info(f"Datos POST recibidos: {request.POST}")
+            logger.info(f"Headers recibidos: {request.headers}")
+            
             id_categoria = request.POST.get('id_categoria')
-            logger.info(f"Intentando eliminar categoría con ID: {id_categoria}")
+            logger.info(f"ID de categoría extraído: '{id_categoria}' (tipo: {type(id_categoria)})")
             
             if not id_categoria:
                 logger.error("No se proporcionó ID de categoría")
-                return redirect('/ecommerce/categ_producto_config/?error=true')
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID de categoría no proporcionado'
+                })
+            
+            # Validar que el ID sea un número válido
+            try:
+                id_categoria_int = int(id_categoria)
+                logger.info(f"ID de categoría convertido a entero: {id_categoria_int}")
+            except ValueError:
+                logger.error(f"ID de categoría no es un número válido: '{id_categoria}'")
+                return JsonResponse({
+                    'success': False,
+                    'message': f'ID de categoría inválido: {id_categoria}'
+                })
                 
-            categoria_obj = categoria_producto.objects.get(id_categoria_prod=id_categoria)
+            categoria_obj = categoria_producto.objects.get(id_categoria_prod=id_categoria_int)
             nombre_categoria = categoria_obj.nombre_categoria_prod
+            logger.info(f"Categoría encontrada: {nombre_categoria}")
             
             # Verificar si hay productos asociados
             productos_asociados = producto.objects.filter(id_categoria_prod_fk=categoria_obj).exists()
             if productos_asociados:
                 logger.error(f"No se puede eliminar la categoría {nombre_categoria} porque tiene productos asociados")
-                return redirect('/ecommerce/categ_producto_config/?error=true')
+                return JsonResponse({
+                    'success': False,
+                    'message': f'No se puede eliminar la categoría "{nombre_categoria}" porque tiene productos asociados'
+                })
             
             categoria_obj.delete()
             logger.info(f"Categoría eliminada exitosamente: {nombre_categoria}")
-            return redirect('/ecommerce/categ_producto_config/?deleted=true')
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Categoría "{nombre_categoria}" eliminada exitosamente'
+            })
             
         except categoria_producto.DoesNotExist:
             logger.error(f"Error al eliminar la categoría: Categoría no encontrada con ID {id_categoria}")
-            return redirect('/ecommerce/categ_producto_config/?error=true')
+            return JsonResponse({
+                'success': False,
+                'message': 'Categoría no encontrada'
+            })
         except Exception as e:
             logger.error(f"Error al eliminar la categoría: {str(e)}")
-            return redirect('/ecommerce/categ_producto_config/?error=true')
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar la categoría: {str(e)}'
+            })
     
-    return redirect('/ecommerce/categ_producto_config/')
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
 
+
+def editar_categoria_producto(request):
+    if request.method == 'POST':
+        try:
+            id_categoria = request.POST.get('id_categoria')
+            logger.info(f"Intentando editar categoría con ID: {id_categoria}")
+            
+            if not id_categoria:
+                logger.error("No se proporcionó ID de categoría")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID de categoría no proporcionado'
+                })
+            
+            categoria_obj = categoria_producto.objects.get(id_categoria_prod=id_categoria)
+            
+            # Actualizar los datos
+            categoria_obj.nombre_categoria_prod = request.POST.get('nombre_categoria')
+            categoria_obj.descripcion_categoria_prod = request.POST.get('descripcion_categoria')
+            categoria_obj.estatus_categoria_prod = request.POST.get('estatus_categoria')
+            
+            categoria_obj.save()
+            logger.info(f"Categoría actualizada exitosamente: {categoria_obj.nombre_categoria_prod}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Categoría "{categoria_obj.nombre_categoria_prod}" actualizada exitosamente'
+            })
+            
+        except categoria_producto.DoesNotExist:
+            logger.error(f"Error al editar la categoría: Categoría no encontrada con ID {id_categoria}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Categoría no encontrada'
+            })
+        except Exception as e:
+            logger.error(f"Error al editar la categoría: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al editar la categoría: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
 
 
 def categ_servicio_config_funcion(request):
@@ -520,9 +607,13 @@ def eliminar_categoria_servicio_funcion(request):
 
 def producto_config_funcion(request):
     producto_sucursal_all= producto.objects.all()
+    categoria_producto_all= categoria_producto.objects.all()
 
     
-    return render(request, 'ecommerce_app/producto_config.html', {'producto_sucursal_all':producto_sucursal_all})
+    return render(request, 'ecommerce_app/producto_config.html', {
+        'producto_sucursal_all': producto_sucursal_all,
+        'categoria_producto_all': categoria_producto_all
+    })
 
 
 
@@ -531,3 +622,121 @@ def servicio_config_funcion(request):
 
     
     return render(request, 'ecommerce_app/servicio_config.html', {'servicio_all':servicio_all})
+
+
+
+def editar_producto(request):
+    if request.method == 'POST':
+        try:
+            logger.info(f"Datos recibidos para editar producto: {request.POST}")
+            
+            id_producto = request.POST.get('id_producto')
+            if not id_producto:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID de producto no proporcionado'
+                })
+            
+            producto_obj = producto.objects.get(id_producto=id_producto)
+            
+            # Actualizar los datos básicos
+            producto_obj.nombre_producto = request.POST.get('nombre_producto')
+            producto_obj.descripcion_producto = request.POST.get('descripcion_producto')
+            producto_obj.marca_producto = request.POST.get('marca_producto')
+            producto_obj.modelo_producto = request.POST.get('modelo_producto')
+            producto_obj.caracteristicas_generales = request.POST.get('caracteristicas_generales')
+            producto_obj.estatus_producto = request.POST.get('estatus_producto')
+            
+            # Actualizar categoría si se proporciona
+            categoria_id = request.POST.get('categoria_producto')
+            if categoria_id:
+                try:
+                    categoria_obj = categoria_producto.objects.get(id_categoria_prod=categoria_id)
+                    producto_obj.id_categoria_prod_fk = categoria_obj
+                except categoria_producto.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Categoría no encontrada'
+                    })
+            
+            # Actualizar imagen si se proporciona
+            imagen_producto = request.FILES.get('imagen_producto')
+            if imagen_producto:
+                producto_obj.imagen_producto = imagen_producto
+            
+            producto_obj.save()
+            logger.info(f"Producto actualizado exitosamente: {producto_obj.nombre_producto}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Producto actualizado exitosamente'
+            })
+            
+        except producto.DoesNotExist:
+            logger.error(f"Producto no encontrado con ID: {id_producto}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Producto no encontrado'
+            })
+        except Exception as e:
+            logger.error(f"Error al actualizar producto: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al actualizar el producto: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+def eliminar_producto(request):
+    if request.method == 'POST':
+        try:
+            id_producto = request.POST.get('id_producto')
+            logger.info(f"Intentando eliminar producto con ID: {id_producto}")
+            
+            if not id_producto:
+                logger.error("No se proporcionó ID de producto")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID de producto no proporcionado'
+                })
+                
+            producto_obj = producto.objects.get(id_producto=id_producto)
+            nombre_producto = producto_obj.nombre_producto
+            
+            # Verificar si hay productos_sucursal asociados
+            productos_sucursal_asociados = producto_sucursal.objects.filter(id_producto_fk=producto_obj).exists()
+            if productos_sucursal_asociados:
+                logger.error(f"No se puede eliminar el producto {nombre_producto} porque tiene registros en sucursales")
+                return JsonResponse({
+                    'success': False,
+                    'message': f'No se puede eliminar el producto "{nombre_producto}" porque tiene registros en sucursales'
+                })
+            
+            producto_obj.delete()
+            logger.info(f"Producto eliminado exitosamente: {nombre_producto}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Producto "{nombre_producto}" eliminado exitosamente'
+            })
+            
+        except producto.DoesNotExist:
+            logger.error(f"Error al eliminar el producto: Producto no encontrado con ID {id_producto}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Producto no encontrado'
+            })
+        except Exception as e:
+            logger.error(f"Error al eliminar el producto: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar el producto: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })

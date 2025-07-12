@@ -22,6 +22,8 @@ urlpatterns = [
 
     path('producto/', producto_funcion, name='producto_funcion'),
     path('producto_config/', producto_config_funcion, name='producto_config_funcion'),
+    path('editar_producto/', editar_producto, name='editar_producto'),
+    path('eliminar_producto/', eliminar_producto, name='eliminar_producto'),
 
 
 
@@ -36,8 +38,9 @@ urlpatterns = [
 
 
 
-    path('eliminar_categoria/', eliminar_categoria_producto_funcion, name='eliminar_categoria_producto_funcion'),
     path('eliminar_categoria_servicio/', eliminar_categoria_servicio_funcion, name='eliminar_categoria_servicio_funcion'),
+    path('eliminar_categoria_producto/', eliminar_categoria_producto, name='eliminar_categoria_producto'),
+    path('editar_categoria_producto/', editar_categoria_producto, name='editar_categoria_producto'),
 
 
 

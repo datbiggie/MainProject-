@@ -1,43 +1,122 @@
+// Archivo JavaScript limpio para categ_producto_config
+// Solo contiene funciones auxiliares que no interfieren con el template
+
+// Variables globales
+window.CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+window.DELETE_URL = '/ecommerce/eliminar_categoria_producto/';
+
+// Función de eliminación de categorías
 function confirmarEliminacion(idCategoria) {
+    console.log('Función confirmarEliminacion llamada con ID:', idCategoria);
+    console.log('Tipo de ID:', typeof idCategoria);
+    
+    // Validar que el ID no sea nulo o vacío
+    if (!idCategoria || idCategoria === 'null' || idCategoria === 'undefined' || idCategoria === '') {
+        console.error('ID de categoría inválido:', idCategoria);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'ID de categoría inválido. No se puede eliminar esta categoría.',
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Aceptar'
+        });
+        return;
+    }
+    
     Swal.fire({
         title: '¿Estás seguro?',
-        text: "Esta acción no se puede deshacer",
+        text: "¿Realmente quieres eliminar esta categoría? Esta acción no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Crear un formulario dinámicamente
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/ecommerce/eliminar_categoria/';
+            console.log('Usuario confirmó eliminación');
             
-            // Agregar el token CSRF
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrfmiddlewaretoken';
-            csrfInput.value = window.CSRF_TOKEN;
-            form.appendChild(csrfInput);
+            // Crear FormData para enviar los datos
+            const formData = new FormData();
+            formData.append('id_categoria', idCategoria);
+            formData.append('csrfmiddlewaretoken', window.CSRF_TOKEN);
             
-            // Agregar el ID de la categoría
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = 'id_categoria';
-            idInput.value = idCategoria;
-            form.appendChild(idInput);
+            console.log('FormData creado, enviando a:', window.DELETE_URL);
+            console.log('ID a enviar:', idCategoria);
             
-            // Agregar el formulario al documento y enviarlo
-            document.body.appendChild(form);
-            form.submit();
+            // Mostrar indicador de carga
+            Swal.fire({
+                title: 'Eliminando...',
+                text: 'Por favor espera mientras se elimina la categoría',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Enviar solicitud de eliminación
+            fetch(window.DELETE_URL, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': window.CSRF_TOKEN
+                }
+            })
+            .then(response => {
+                console.log('Respuesta recibida:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos:', data);
+                if (data.success) {
+                    // Éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Categoría Eliminada!',
+                        text: data.message,
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'Aceptar'
+                    }).then((result) => {
+                        // Recargar página para mostrar cambios
+                        window.location.reload();
+                    });
+                } else {
+                    // Error
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: 'Aceptar'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al eliminar categoría:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al eliminar la categoría. Por favor, inténtalo de nuevo.',
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Aceptar'
+                });
+            });
         }
     });
 }
 
-// Manejar mensajes de éxito/error
+// Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
+    // Obtener el token CSRF del template
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    if (csrfToken) {
+        window.CSRF_TOKEN = csrfToken;
+    }
+    
+    console.log('Template cargado - DELETE_URL:', window.DELETE_URL);
+    console.log('CSRF_TOKEN:', window.CSRF_TOKEN);
+    
+    // Manejar mensajes de éxito/error de URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('deleted')) {
         Swal.fire({

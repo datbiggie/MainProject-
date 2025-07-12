@@ -34,6 +34,36 @@ function initMap() {
         draggable: true
     });
 
+    // --- INICIO AUTOCOMPLETE GOOGLE PLACES ---
+    if (window.google && google.maps.places) {
+        const input = document.getElementById('direccion_sucursal_mapa');
+        if (input) {
+            const autocomplete = new google.maps.places.Autocomplete(input);
+            autocomplete.bindTo('bounds', map);
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                if (!place.geometry) {
+                    alert('No se encontró información del lugar seleccionado.');
+                    return;
+                }
+                // Centrar el mapa y mover el marcador
+                if (place.geometry.viewport) {
+                    map.fitBounds(place.geometry.viewport);
+                } else {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(17);
+                }
+                marker.setPosition(place.geometry.location);
+                // Actualizar los campos ocultos
+                document.getElementById('latitud').value = place.geometry.location.lat();
+                document.getElementById('longitud').value = place.geometry.location.lng();
+                // También actualiza el campo de dirección principal
+                document.getElementById('direccion_sucursal').value = input.value;
+            });
+        }
+    }
+    // --- FIN AUTOCOMPLETE GOOGLE PLACES ---
+
     // Configurar el botón de ubicación actual para el mapa principal
     document.getElementById('currentLocationButton').addEventListener('click', function() {
         if (navigator.geolocation) {

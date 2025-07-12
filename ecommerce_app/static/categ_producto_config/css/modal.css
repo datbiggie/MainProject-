@@ -1,0 +1,137 @@
+/* Estilos para el modal de edición de categorías - Similar al modal de sucursal */
+
+.modal .modal-dialog {
+    max-width: 800px;
+}
+
+.modal .modal-header, .modal .modal-body, .modal .modal-footer {
+    padding: 20px;
+}
+
+.modal .modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.modal .modal-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: 20px 30px;
+}
+
+.modal .modal-body {
+    padding: 30px;
+}
+
+.modal .modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: 20px 30px;
+}
+
+.modal .modal-title {
+    color: #000;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.modal .form-control {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px 15px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: none;
+    color: #333;
+}
+
+.modal .form-control:focus {
+    border-color: #2196F3;
+    box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.1);
+}
+
+.modal .form-control::placeholder {
+    color: #999;
+}
+
+.modal textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.modal select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23333' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    padding-right: 35px;
+}
+
+.modal label {
+    color: #000;
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.modal .btn {
+    padding: 10px 20px;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.modal .btn-primary {
+    background-color: #2196F3;
+    border-color: #2196F3;
+}
+
+.modal .btn-primary:hover {
+    background-color: #1976D2;
+    border-color: #1976D2;
+}
+
+.modal .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.modal .btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+.modal .btn-success {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+}
+
+.modal .btn-success:hover {
+    background-color: #43A047;
+    border-color: #43A047;
+}
+
+/* Estilos específicos para el campo de estatus */
+#edit_estatus_categoria {
+    max-width: 200px;
+}
+
+/* Loading state para el botón */
+.btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Animaciones del modal */
+.modal.fade .modal-dialog {
+    transform: scale(0.8);
+    transition: transform 0.3s ease;
+}
+
+.modal.show .modal-dialog {
+    transform: scale(1);
+} 
