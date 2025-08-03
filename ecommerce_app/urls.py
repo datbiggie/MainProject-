@@ -4,6 +4,7 @@ from .views import *
 urlpatterns = [
    
     path('iniciar_sesion/', iniciar_sesion, name='iniciar_sesion'),
+    path('login-ajax/', login_ajax, name='login_ajax'),
     path('validate-email/', validate_email, name='validate_email'),
     path('prueba/', prueba, name='prueba'),
     path('registrar_persona/',  registrar_persona, name='registrar_persona'),
@@ -25,5 +26,8 @@ urlpatterns = [
     path('eliminar_categoria_servicio/', eliminar_categoria_servicio_funcion, name='eliminar_categoria_servicio_funcion'),
     path('eliminar_categoria_producto/', eliminar_categoria_producto, name='eliminar_categoria_producto'),
     path('editar_categoria_producto/', editar_categoria_producto, name='editar_categoria_producto'),
+    path('cerrar_sesion/', cerrar_sesion, name='cerrar_sesion'),
+    path('logout-ajax/', logout_ajax, name='logout_ajax'),
+    path('get-user-info/', get_user_info, name='get_user_info'),
     path('index/', index, name='index'),
 ] 

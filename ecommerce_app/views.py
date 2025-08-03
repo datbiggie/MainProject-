@@ -8,6 +8,45 @@ import logging
 # Configurar el logger
 logger = logging.getLogger(__name__)
 
+# Funciones auxiliares para manejo de sesiones
+def get_current_user(request):
+    """
+    Obtiene el usuario actual desde la sesión
+    """
+    if request.session.get('is_authenticated', False):
+        try:
+            user_id = request.session.get('user_id')
+            return usuario.objects.get(id_usuario=user_id)
+        except usuario.DoesNotExist:
+            # Si el usuario no existe, limpiar la sesión
+            logout_user(request)
+            return None
+    return None
+
+def is_user_authenticated(request):
+    """
+    Verifica si el usuario está autenticado
+    """
+    return request.session.get('is_authenticated', False)
+
+def logout_user(request):
+    """
+    Cierra la sesión del usuario
+    """
+    # Limpiar todas las variables de sesión
+    request.session.flush()
+    logger.info("Sesión cerrada exitosamente")
+
+def require_login(view_func):
+    """
+    Decorador para proteger vistas que requieren autenticación
+    """
+    def wrapper(request, *args, **kwargs):
+        if not is_user_authenticated(request):
+            return redirect('/ecommerce/iniciar_sesion')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
 # Create your views here.
 def iniciar_sesion(request):
     if request.method == 'POST':
@@ -28,6 +67,15 @@ def iniciar_sesion(request):
                     logger.warning("La contraseña no está hasheada correctamente")
                     # Si no está hasheada, comparar directamente
                     if user.password_usuario == password:
+                        # Crear sesión personalizada
+                        request.session['user_id'] = user.id_usuario
+                        request.session['user_email'] = user.correo_usuario
+                        request.session['user_name'] = user.nombre_usuario
+                        request.session['user_type'] = user.tipo_usuario
+                        request.session['is_authenticated'] = True
+                        
+                        logger.info(f"Sesión creada para usuario: {user.correo_usuario}")
+                        
                         return JsonResponse({
                             'success': True, 
                             'message': 'Inicio de sesión exitoso',
@@ -38,6 +86,15 @@ def iniciar_sesion(request):
                 else:
                     # Si está hasheada, usar check_password
                     if check_password(password, user.password_usuario):
+                        # Crear sesión personalizada
+                        request.session['user_id'] = user.id_usuario
+                        request.session['user_email'] = user.correo_usuario
+                        request.session['user_name'] = user.nombre_usuario
+                        request.session['user_type'] = user.tipo_usuario
+                        request.session['is_authenticated'] = True
+                        
+                        logger.info(f"Sesión creada para usuario: {user.correo_usuario}")
+                        
                         return JsonResponse({
                             'success': True, 
                             'message': 'Inicio de sesión exitoso',
@@ -73,6 +130,109 @@ def validate_email(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+@csrf_exempt
+def login_ajax(request):
+    """
+    Vista para manejar el login AJAX desde el formulario de pasos
+    """
+    if request.method == 'POST':
+        email = request.POST.get('login_email')
+        password = request.POST.get('login_password')
+        
+        logger.info(f"Intento de login AJAX para el email: {email}")
+        
+        if email and password:
+            try:
+                user = usuario.objects.get(correo_usuario=email)
+                logger.info(f"Usuario encontrado: {user.correo_usuario}")
+                
+                # Verificar si la contraseña está hasheada
+                if not user.password_usuario.startswith('pbkdf2_sha256$'):
+                    logger.warning("La contraseña no está hasheada correctamente")
+                    # Si no está hasheada, comparar directamente
+                    if user.password_usuario == password:
+                        # Crear sesión personalizada
+                        request.session['user_id'] = user.id_usuario
+                        request.session['user_email'] = user.correo_usuario
+                        request.session['user_name'] = user.nombre_usuario
+                        request.session['user_type'] = user.tipo_usuario
+                        request.session['is_authenticated'] = True
+                        
+                        logger.info(f"Sesión creada para usuario: {user.correo_usuario}")
+                        
+                        # Verificar si el usuario ya tiene una empresa asociada
+                        try:
+                            empresa_existente = empresa.objects.filter(id_usuario_fk=user).first()
+                            if empresa_existente:
+                                return JsonResponse({
+                                    'success': False, 
+                                    'message': f'Ya tienes una empresa registrada: {empresa_existente.nombre_empresa}. No puedes registrar otra empresa.'
+                                })
+                        except Exception as e:
+                            logger.error(f"Error al verificar empresa existente: {str(e)}")
+                        
+                        return JsonResponse({
+                            'success': True, 
+                            'message': 'Inicio de sesión exitoso',
+                            'user_name': user.nombre_usuario,
+                            'user_type': user.tipo_usuario
+                        })
+                    else:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'Contraseña incorrecta'
+                        })
+                else:
+                    # Si está hasheada, usar check_password
+                    if check_password(password, user.password_usuario):
+                        # Crear sesión personalizada
+                        request.session['user_id'] = user.id_usuario
+                        request.session['user_email'] = user.correo_usuario
+                        request.session['user_name'] = user.nombre_usuario
+                        request.session['user_type'] = user.tipo_usuario
+                        request.session['is_authenticated'] = True
+                        
+                        logger.info(f"Sesión creada para usuario: {user.correo_usuario}")
+                        
+                        # Verificar si el usuario ya tiene una empresa asociada
+                        try:
+                            empresa_existente = empresa.objects.filter(id_usuario_fk=user).first()
+                            if empresa_existente:
+                                return JsonResponse({
+                                    'success': False, 
+                                    'message': f'Ya tienes una empresa registrada: {empresa_existente.nombre_empresa}. No puedes registrar otra empresa.'
+                                })
+                        except Exception as e:
+                            logger.error(f"Error al verificar empresa existente: {str(e)}")
+                        
+                        return JsonResponse({
+                            'success': True, 
+                            'message': 'Inicio de sesión exitoso',
+                            'user_name': user.nombre_usuario,
+                            'user_type': user.tipo_usuario
+                        })
+                    else:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'Contraseña incorrecta'
+                        })
+            except usuario.DoesNotExist:
+                logger.warning(f"Usuario no encontrado: {email}")
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Usuario no encontrado'
+                })
+        else:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Por favor completa todos los campos'
+            })
+    
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    })
 
 def prueba(request):
     return render(request, 'ecommerce_app/prueba.html')
@@ -159,9 +319,20 @@ def registrar_persona(request):
             )
             nuevo_usuario.save()
             logger.info(f"Usuario registrado exitosamente: {email}")
+            
+            # Crear sesión automáticamente después del registro exitoso
+            request.session['user_id'] = nuevo_usuario.id_usuario
+            request.session['user_email'] = nuevo_usuario.correo_usuario
+            request.session['user_name'] = nuevo_usuario.nombre_usuario
+            request.session['user_type'] = nuevo_usuario.tipo_usuario
+            request.session['is_authenticated'] = True
+            
+            logger.info(f"Sesión creada automáticamente para usuario registrado: {email}")
+            
             return JsonResponse({
                 'success': True,
-                'message': '¡Registro exitoso! Tu cuenta ha sido creada correctamente.'
+                'message': '¡Registro exitoso! Tu cuenta ha sido creada correctamente.',
+                'redirect_url': '/ecommerce/index'
             })
         except Exception as e:
             logger.error(f"Error al registrar usuario: {str(e)}")
@@ -173,8 +344,18 @@ def registrar_persona(request):
     return render(request, 'ecommerce_app/registrar_persona.html')
 
 def registrar_empresa(request):
-    usuario_obj = usuario.objects.get(id_usuario=6)
+    # Esta función debe ser accesible sin autenticación para el registro inicial
+    # Solo se requiere autenticación para el POST (cuando se envía el formulario)
+    current_user = get_current_user(request)
+    
     if request.method == 'POST':
+        # Verificar autenticación solo para el POST
+        if not current_user:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe iniciar sesión para registrar una empresa'
+            })
+            
         try:
             logger.info(f"Datos recibidos: {request.POST}")
             nombre_empresa = request.POST.get('nombre_empresa')
@@ -228,7 +409,7 @@ def registrar_empresa(request):
                 direccion_empresa=direccion_empresa,
                 latitud_empresa=latitud,
                 longitud_empresa=longitud,
-                id_usuario_fk=usuario_obj
+                id_usuario_fk=current_user
             )
             nueva_empresa.save()
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
@@ -236,7 +417,8 @@ def registrar_empresa(request):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Empresa registrada exitosamente'
+                'message': 'Empresa registrada exitosamente',
+                'redirect_url': '/ecommerce/sucursal'
             })
         except Exception as e:
             logger.error(f"Error al guardar la empresa: {str(e)}")
@@ -246,16 +428,37 @@ def registrar_empresa(request):
             })
     
     # Si es GET, mostrar el formulario
-    return render(request, 'ecommerce_app/registrar_empresa.html')
-
-
-
-def sucursalfuncion(request):
-    # Obtener todas las sucursales
-    sqlsucursal = sucursal.objects.all()
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.tipo_usuario,
+                'is_authenticated': True
+            }
     
-    # Obtener la empresa actual (por ahora hardcodeada)
-    empresa_obj = empresa.objects.get(id_empresa=9)
+    return render(request, 'ecommerce_app/registrar_empresa.html', {'user_info': user_info})
+
+
+
+@require_login
+def sucursalfuncion(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    # Obtener la empresa del usuario actual
+    try:
+        empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
+        # Obtener todas las sucursales de la empresa del usuario
+        sqlsucursal = sucursal.objects.filter(id_empresa_fk=empresa_obj)
+    except empresa.DoesNotExist:
+        # Si el usuario no tiene empresa, redirigir a registrar empresa
+        return redirect('/ecommerce/registrar_empresa')
    
     if request.method == 'POST':
         try:
@@ -352,9 +555,19 @@ def eliminar_sucursal(request):
 
 
 
+@require_login
 def producto_funcion(request):
-    empresa_obj = empresa.objects.get(id_empresa=9)
-    categoria_producto_all = categoria_producto.objects.all()
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    # Obtener la empresa del usuario actual
+    try:
+        empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
+        categoria_producto_all = categoria_producto.objects.all()
+    except empresa.DoesNotExist:
+        # Si el usuario no tiene empresa, redirigir a registrar empresa
+        return redirect('/ecommerce/registrar_empresa')
 
     if request.method == 'POST':
         try:
@@ -396,9 +609,19 @@ def producto_funcion(request):
     
     return render(request, 'ecommerce_app/producto.html', {'categoria_producto_all': categoria_producto_all})
 
+@require_login
 def servicio_funcion(request):
-    categoria_servicio_all = categoria_servicio.objects.all()
-    empresa_obj = empresa.objects.get(id_empresa=9)
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    # Obtener la empresa del usuario actual
+    try:
+        empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
+        categoria_servicio_all = categoria_servicio.objects.all()
+    except empresa.DoesNotExist:
+        # Si el usuario no tiene empresa, redirigir a registrar empresa
+        return redirect('/ecommerce/registrar_empresa')
     if request.method == 'POST':
         try:
             logger.info(f"Datos recibidos: {request.POST}")
@@ -834,4 +1057,62 @@ def eliminar_producto(request):
     })
 
 def index(request):
-    return render(request, 'ecommerce_app/index.html')
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.tipo_usuario,
+                'is_authenticated': True
+            }
+    
+    return render(request, 'ecommerce_app/index.html', {'user_info': user_info})
+
+# Vista para cerrar sesión
+def cerrar_sesion(request):
+    logout_user(request)
+    return redirect('/ecommerce/iniciar_sesion')
+
+@csrf_exempt
+def logout_ajax(request):
+    """
+    Vista para manejar el logout AJAX
+    """
+    if request.method == 'POST':
+        logout_user(request)
+        return JsonResponse({
+            'success': True,
+            'message': 'Sesión cerrada exitosamente'
+        })
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+@csrf_exempt
+def get_user_info(request):
+    """
+    Vista para obtener información del usuario en sesión
+    """
+    if request.method == 'GET':
+        current_user = get_current_user(request)
+        if current_user:
+            return JsonResponse({
+                'success': True,
+                'user_name': current_user.nombre_usuario,
+                'user_email': current_user.correo_usuario,
+                'user_type': current_user.tipo_usuario
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Usuario no autenticado'
+            })
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })

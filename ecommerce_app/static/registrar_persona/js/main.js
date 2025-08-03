@@ -194,11 +194,14 @@ $(document).ready(function() {
                         confirmButtonColor: '#3b82f6'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Limpiar el formulario
-                            $('form')[0].reset();
-                            window.location.href = window.location.pathname; // recarga limpia sin scroll
-                            // O redirigir a otra página si lo deseas
-                            // window.location.href = '/ecommerce/iniciar_sesion/';
+                            // Si hay una URL de redirección en la respuesta, usarla
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else {
+                                // Limpiar el formulario y recargar la página
+                                $('form')[0].reset();
+                                window.location.href = window.location.pathname;
+                            }
                         }
                     });
                 } else {

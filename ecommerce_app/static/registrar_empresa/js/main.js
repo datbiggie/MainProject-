@@ -2,10 +2,138 @@
 let map;
 let marker;
 let geocoder;
+let locationObtained = false;
+
+// Función de fallback si Google Maps no se carga
+function initMapFallback() {
+    console.log('Intentando inicializar mapa con fallback...');
+    setTimeout(function() {
+        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+            initMap();
+        } else {
+            console.error('Google Maps no se pudo cargar');
+            const locationStatus = document.getElementById('locationStatus');
+            if (locationStatus) {
+                locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error al cargar Google Maps. Recarga la página.';
+                locationStatus.style.color = '#dc3545';
+            }
+        }
+    }, 2000);
+}
+
+// Función para obtener ubicación automáticamente
+function getCurrentLocation() {
+    const locationStatus = document.getElementById('locationStatus');
+    const locationIcon = document.getElementById('locationIcon');
+    
+    if (navigator.geolocation) {
+        // Configurar opciones de alta precisión
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000 // 5 minutos de cache
+        };
+        
+        locationStatus.innerHTML = '<span id="locationIcon">⏳</span> Obteniendo ubicación con alta precisión...';
+        document.getElementById('retryButton').style.display = 'none';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                
+                // Actualizar el mapa
+                map.setCenter(userLocation);
+                map.setZoom(16); // Zoom más cercano para mejor precisión
+                marker.setPosition(userLocation);
+                
+                // Actualizar campos de coordenadas
+                document.getElementById('latitud').value = userLocation.lat.toFixed(6);
+                document.getElementById('longitud').value = userLocation.lng.toFixed(6);
+                
+                // Obtener la dirección con alta precisión
+                geocoder.geocode({ 
+                    'location': userLocation,
+                    'language': 'es' // Forzar idioma español
+                }, function(results, status) {
+                    if (status === 'OK' && results[0]) {
+                        document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
+                        document.getElementById('direccion_empresa').value = results[0].formatted_address;
+                        
+                        // Mostrar éxito
+                        locationStatus.innerHTML = '<span id="locationIcon">✅</span> Ubicación obtenida correctamente';
+                        locationStatus.style.color = '#28a745';
+                        document.getElementById('retryButton').style.display = 'none';
+                        locationObtained = true;
+                    } else {
+                        locationStatus.innerHTML = '<span id="locationIcon">⚠️</span> Ubicación obtenida pero no se pudo obtener la dirección';
+                        locationStatus.style.color = '#ffc107';
+                        document.getElementById('retryButton').style.display = 'inline-block';
+                    }
+                });
+            },
+            function(error) {
+                let errorMessage = 'Error al obtener la ubicación';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Permiso denegado. Por favor, permite el acceso a tu ubicación.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Información de ubicación no disponible.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Tiempo de espera agotado. Verifica tu conexión a internet.';
+                        break;
+                }
+                
+                locationStatus.innerHTML = '<span id="locationIcon">❌</span> ' + errorMessage;
+                locationStatus.style.color = '#dc3545';
+                document.getElementById('retryButton').style.display = 'inline-block';
+                
+                Swal.fire({
+                    title: 'Error de ubicación',
+                    text: errorMessage + '\n\nPuedes hacer clic en "Reintentar" o arrastrar el marcador en el mapa para seleccionar tu ubicación manualmente.',
+                    icon: 'warning',
+                    confirmButtonText: 'Reintentar',
+                    cancelButtonText: 'Cancelar',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3b82f6',
+                    cancelButtonColor: '#6c757d'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        retryLocation();
+                    }
+                });
+            },
+            options
+        );
+    } else {
+        locationStatus.innerHTML = '<span id="locationIcon">❌</span> Tu navegador no soporta geolocalización';
+        locationStatus.style.color = '#dc3545';
+        document.getElementById('retryButton').style.display = 'inline-block';
+        
+        Swal.fire({
+            title: 'Error',
+            text: 'Tu navegador no soporta geolocalización',
+            icon: 'error',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#3b82f6'
+        });
+    }
+}
 
 // Función para inicializar el mapa
 function initMap() {
+    console.log('Inicializando mapa...');
     try {
+        // Verificar que Google Maps esté cargado
+        if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+            console.error('Google Maps no está cargado');
+            return;
+        }
+        
         // Crear el mapa inicialmente centrado en Venezuela
         const venezuela = { lat: 6.42375, lng: -66.58973 };
         const mapElement = document.getElementById('map');
@@ -20,7 +148,11 @@ function initMap() {
             zoom: 6,
             mapTypeControl: true,
             streetViewControl: true,
-            fullscreenControl: true
+            fullscreenControl: true,
+            // Mejorar la precisión del mapa
+            gestureHandling: 'cooperative',
+            zoomControl: true,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
         });
 
         // Inicializar el geocoder
@@ -31,67 +163,60 @@ function initMap() {
             position: venezuela,
             map: map,
             draggable: true,
-            title: 'Ubicación de la empresa'
+            title: 'Ubicación de la empresa',
+            // Mejorar la apariencia del marcador
+            icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                scaledSize: new google.maps.Size(32, 32)
+            }
         });
 
-        // Configurar el botón de ubicación actual
-        const currentLocationButton = document.getElementById('currentLocationButton');
-        if (currentLocationButton) {
-            currentLocationButton.addEventListener('click', function() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        function(position) {
-                            const userLocation = {
-                                lat: position.coords.latitude,
-                                lng: position.coords.longitude
-                            };
-                            map.setCenter(userLocation);
-                            map.setZoom(15);
-                            marker.setPosition(userLocation);
-                            document.getElementById('latitud').value = userLocation.lat;
-                            document.getElementById('longitud').value = userLocation.lng;
-
-                            // Obtener la dirección actual
-                            geocoder.geocode({ 'location': userLocation }, function(results, status) {
-                                if (status === 'OK' && results[0]) {
-                                    document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
-                                    document.getElementById('direccion_empresa').value = results[0].formatted_address;
-                                }
-                            });
-                        },
-                        function(error) {
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'Error al obtener la ubicación: ' + error.message,
-                                icon: 'error',
-                                confirmButtonText: 'Aceptar',
-                                confirmButtonColor: '#3b82f6'
-                            });
-                        }
-                    );
-                } else {
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'Tu navegador no soporta geolocalización',
-                        icon: 'error',
-                        confirmButtonText: 'Aceptar',
-                        confirmButtonColor: '#3b82f6'
-                    });
-                }
-            });
+        // Obtener ubicación automáticamente después de un breve delay
+        setTimeout(function() {
+            getCurrentLocation();
+        }, 1000);
+        
+        console.log('Mapa inicializado correctamente');
+        
+        // Actualizar estado inicial
+        const locationStatus = document.getElementById('locationStatus');
+        if (locationStatus) {
+            locationStatus.innerHTML = '<span id="locationIcon">📍</span> Obteniendo ubicación automáticamente...';
+            locationStatus.style.color = '#2196F3';
         }
+        
+        // Agregar función para reintentar ubicación
+        window.retryLocation = function() {
+            const locationStatus = document.getElementById('locationStatus');
+            locationStatus.innerHTML = '<span id="locationIcon">⏳</span> Reintentando obtener ubicación...';
+            locationStatus.style.color = '#2196F3';
+            document.getElementById('retryButton').style.display = 'none';
+            getCurrentLocation();
+        };
 
         // Actualizar coordenadas cuando se arrastra el marcador
         google.maps.event.addListener(marker, 'dragend', function() {
             const position = marker.getPosition();
-            document.getElementById('latitud').value = position.lat();
-            document.getElementById('longitud').value = position.lng();
+            document.getElementById('latitud').value = position.lat().toFixed(6);
+            document.getElementById('longitud').value = position.lng().toFixed(6);
 
-            // Obtener la dirección al soltar el marcador
-            geocoder.geocode({ 'location': position }, function(results, status) {
+            // Obtener la dirección al soltar el marcador con alta precisión
+            geocoder.geocode({ 
+                'location': position,
+                'language': 'es' // Forzar idioma español
+            }, function(results, status) {
                 if (status === 'OK' && results[0]) {
                     document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
                     document.getElementById('direccion_empresa').value = results[0].formatted_address;
+                    
+                    // Mostrar confirmación de actualización
+                    const locationStatus = document.getElementById('locationStatus');
+                    if (locationStatus) {
+                        locationStatus.innerHTML = '<span id="locationIcon">📍</span> Ubicación actualizada manualmente';
+                        locationStatus.style.color = '#2196F3';
+                    }
+                } else {
+                    console.warn('No se pudo obtener la dirección para las coordenadas:', position.lat(), position.lng());
                 }
             });
         });
@@ -99,16 +224,31 @@ function initMap() {
         // Agregar autocompletado para el campo de dirección
         const input = document.getElementById('direccion_empresa_mapa');
         if (input) {
-            const autocomplete = new google.maps.places.Autocomplete(input);
+            const autocomplete = new google.maps.places.Autocomplete(input, {
+                // Restringir a Venezuela para mejor precisión
+                componentRestrictions: { country: 've' },
+                // Tipos de lugares más específicos
+                types: ['establishment', 'geocode'],
+                // Idioma español
+                language: 'es'
+            });
+            
             autocomplete.addListener('place_changed', function() {
                 const place = autocomplete.getPlace();
                 if (place.geometry) {
                     map.setCenter(place.geometry.location);
-                    map.setZoom(15);
+                    map.setZoom(16); // Zoom más cercano para mejor precisión
                     marker.setPosition(place.geometry.location);
-                    document.getElementById('latitud').value = place.geometry.location.lat();
-                    document.getElementById('longitud').value = place.geometry.location.lng();
+                    document.getElementById('latitud').value = place.geometry.location.lat().toFixed(6);
+                    document.getElementById('longitud').value = place.geometry.location.lng().toFixed(6);
                     document.getElementById('direccion_empresa').value = place.formatted_address;
+                    
+                    // Mostrar confirmación de actualización
+                    const locationStatus = document.getElementById('locationStatus');
+                    if (locationStatus) {
+                        locationStatus.innerHTML = '<span id="locationIcon">📍</span> Ubicación seleccionada desde búsqueda';
+                        locationStatus.style.color = '#2196F3';
+                    }
                 }
             });
         }

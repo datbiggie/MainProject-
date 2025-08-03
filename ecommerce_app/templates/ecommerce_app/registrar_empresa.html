@@ -8,14 +8,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Registro Empresa</title>
     <link rel="stylesheet" href="{% static 'registrar_empresa/css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'registrar_empresa/css/steps.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
@@ -42,7 +45,7 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="p-2 mx-1" title="Perfil">
+                <a href="#" class="p-2 mx-1" title="Perfil" data-bs-toggle="modal" data-bs-target="#userModal">
                     <svg width="24" height="24"><use xlink:href="#user"></use></svg>
                 </a>
             </li>
@@ -54,8 +57,68 @@
         </ul>
     </div>
 </div>
-<div class="formbold-main-wrapper">
-  <div class="formbold-form-wrapper">
+
+<!-- Indicador de pasos -->
+<div class="step-indicator">
+    <div class="step active" id="step1-indicator">
+        <div class="step-number">1</div>
+        <div class="step-text">Iniciar Sesión</div>
+    </div>
+    <div class="step-connector" id="connector1"></div>
+    <div class="step" id="step2-indicator">
+        <div class="step-number">2</div>
+        <div class="step-text">Registro Empresa</div>
+    </div>
+</div>
+
+<!-- Paso 1: Formulario de Inicio de Sesión -->
+  <div class="formbold-form-wrapper form-step active login-form-container" id="step1">
+    <form id="loginForm">
+      {% csrf_token %}
+      <div class="formbold-form-title">
+        <h2 class="" style="text-align: center;">Iniciar Sesión</h2>
+        <p style="text-align: center; color: #666; margin-top: 10px;">Ingresa tus credenciales para continuar con el registro de empresa</p>
+      </div>
+
+      <div class="formbold-mb-3">
+        <label for="login_email" class="formbold-form-label">Email</label>
+        <input
+          type="email"
+          name="login_email"
+          id="login_email"
+          class="formbold-form-input"
+          placeholder="Ingresa tu email"
+          required
+        />
+      </div>
+
+      <div class="formbold-mb-3">
+        <label for="login_password" class="formbold-form-label">Contraseña</label>
+        <input
+          type="password"
+          name="login_password"
+          id="login_password"
+          class="formbold-form-input"
+          placeholder="Ingresa tu contraseña"
+          required
+        />
+      </div>
+
+      <div class="container-login100-form-btn" style="justify-content: center;">
+        <button class="login100-form-btn" type="button" onclick="handleLogin()" style="width: auto; min-width: 150px;">
+          Iniciar Sesión
+        </button>
+      </div>
+      
+     
+    </form>
+  </div>
+</div>
+
+
+
+<!-- Paso 2: Formulario de Registro de Empresa -->
+  <div class="formbold-form-wrapper form-step" id="step2">
     
    <!-- <img src="your-image-url-here.jpg">-->
 
@@ -64,6 +127,7 @@
 
       <div class="formbold-form-title">
         <h2 class="" style="text-align: center;">Registrarse Empresa</h2>
+        <p style="text-align: center; color: #666; margin-top: 10px;">Completa la información de tu empresa</p>
       </div>
 
       <div class="formbold-input-flex">
@@ -197,11 +261,14 @@
                   placeholder="Dirección de la empresa..."
                 />
               </div>
-              <div style="margin-left: 10px;">
-                <button type="button" id="currentLocationButton" class="formbold-form-input" style="background-color: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-                  Obtener Mi Ubicación
-                </button>
-              </div>
+                        <div style="margin-left: 10px;">
+            <div id="locationStatus" style="color: #2196F3; font-size: 14px; font-weight: 500;">
+              <span id="locationIcon">⏳</span> Inicializando mapa...
+            </div>
+            <button type="button" onclick="retryLocation()" style="margin-top: 5px; background-color: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: none;" id="retryButton">
+              🔄 Reintentar ubicación
+            </button>
+          </div>
             </div>
           </div>
           <div id="map" style="height: 400px; width: 100%; border-radius: 8px;"></div>
@@ -288,6 +355,9 @@
       </div>
 
       <div class="container-login100-form-btn">
+        <button type="button" class="btn-back" onclick="goBackToStep1()">
+          ← Terminar Sesión
+        </button>
         <button class="login100-form-btn" type="submit">
           Registrarse
         </button>
@@ -297,9 +367,349 @@
 </div>
 
 
+<!-- Modal del Usuario -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="userModalLabel">Información del Usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if user_info %}
+          <div class="user-info">
+            <div class="user-avatar">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="currentColor" stroke-width="1.5">
+                  <circle cx="12" cy="9" r="3"/>
+                  <circle cx="12" cy="12" r="10"/>
+                  <path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/>
+                </g>
+              </svg>
+            </div>
+            <div class="user-details">
+              <h6>{{ user_info.nombre }}</h6>
+              <p>{{ user_info.email }}</p>
+              <p>Tipo: {{ user_info.tipo }}</p>
+            </div>
+          </div>
+        {% else %}
+          <div class="alert alert-warning">
+            <h6 class="alert-heading">No has iniciado sesión</h6>
+            <p class="mb-0">Para acceder a todas las funcionalidades, por favor inicia sesión.</p>
+          </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        {% if user_info %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-danger" onclick="logoutUser()">Terminar Sesión</button>
+        {% else %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary">Iniciar Sesión</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Scripts -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap" async defer></script>
 <script src="{% static 'registrar_empresa/js/main.js' %}"></script>
+<script>
+    let currentStep = 1;
+    
+    // Función para manejar el inicio de sesión con validación real
+    function handleLogin() {
+        const email = document.getElementById('login_email').value;
+        const password = document.getElementById('login_password').value;
+        
+        if (!email || !password) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Por favor completa todos los campos'
+            });
+            return;
+        }
+        
+        // Mostrar loading
+        Swal.fire({
+            title: 'Verificando credenciales...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Crear FormData para enviar los datos
+        const formData = new FormData();
+        formData.append('login_email', email);
+        formData.append('login_password', password);
+        
+        // Hacer la petición AJAX al backend
+        fetch('{% url "login_ajax" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Actualizar el modal con la información del usuario
+                updateUserModal(data.user_name, data.user_type);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Bienvenido!',
+                    text: `Hola ${data.user_name}, inicio de sesión exitoso`,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    goToStep2();
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de autenticación',
+                    text: data.message
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: 'No se pudo conectar con el servidor. Intenta nuevamente.'
+            });
+        });
+    }
+    
+    // Función para ir al paso 2
+    function goToStep2() {
+        document.getElementById('step1').classList.remove('active');
+        document.getElementById('step2').classList.add('active');
+        
+        document.getElementById('step1-indicator').classList.remove('active');
+        document.getElementById('step1-indicator').classList.add('completed');
+        document.getElementById('step2-indicator').classList.add('active');
+        document.getElementById('connector1').classList.add('active');
+        
+        currentStep = 2;
+        
+        // Inicializar el mapa cuando se muestre el paso 2
+        initializeApp();
+    }
+    
+    // Función para terminar sesión
+    function goBackToStep1() {
+        Swal.fire({
+            title: '¿Terminar sesión?',
+            text: '¿Estás seguro de que quieres cerrar la sesión?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, terminar sesión',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Hacer petición AJAX para terminar sesión
+                fetch('{% url "logout_ajax" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Sesión terminada',
+                            text: 'Has cerrado sesión exitosamente',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Redirigir al index
+                            window.location.href = '{% url "index" %}';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo terminar la sesión'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor'
+                    });
+                });
+            }
+        });
+    }
+    
+    // Función para mostrar formulario de registro (opcional)
+    function showRegistrationForm() {
+        Swal.fire({
+            title: 'Registro de Usuario',
+            text: 'Esta funcionalidad te llevará al formulario de registro de usuario',
+            icon: 'info',
+            confirmButtonText: 'Entendido'
+        });
+    }
+    
+    // Función para actualizar el modal del usuario después del login
+    function updateUserModal(userName, userType) {
+        const modalBody = document.querySelector('#userModal .modal-body');
+        const modalFooter = document.querySelector('#userModal .modal-footer');
+        
+        // Actualizar el contenido del modal
+        modalBody.innerHTML = `
+            <div class="user-info">
+                <div class="user-avatar">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="9" r="3"/>
+                            <circle cx="12" cy="12" r="10"/>
+                            <path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/>
+                        </g>
+                    </svg>
+                </div>
+                <div class="user-details">
+                    <h6>${userName}</h6>
+                    <p>Tipo: ${userType}</p>
+                </div>
+            </div>
+        `;
+        
+        // Actualizar el footer del modal
+        modalFooter.innerHTML = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="button" class="btn btn-danger" onclick="logoutUser()">Terminar Sesión</button>
+        `;
+    }
+    
+
+    
+    // Función para terminar sesión desde el modal
+    function logoutUser() {
+        Swal.fire({
+            title: '¿Terminar sesión?',
+            text: '¿Estás seguro de que quieres cerrar la sesión?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, terminar sesión',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Cerrar el modal primero
+                const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                modal.hide();
+                
+                // Hacer petición AJAX para terminar sesión
+                fetch('{% url "logout_ajax" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Sesión terminada',
+                            text: 'Has cerrado sesión exitosamente',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Redirigir al index
+                            window.location.href = '{% url "index" %}';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo terminar la sesión'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor'
+                    });
+                });
+            }
+        });
+    }
+    
+    // Función para cargar Google Maps de forma más robusta
+    function loadGoogleMaps() {
+        console.log('Cargando Google Maps...');
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap';
+        script.async = true;
+        script.defer = true;
+        script.onerror = function() {
+            console.error('Error al cargar Google Maps');
+            initMapFallback();
+        };
+        script.onload = function() {
+            console.log('Google Maps cargado exitosamente');
+        };
+        document.head.appendChild(script);
+    }
+    
+    // Verificar que todos los scripts necesarios estén cargados
+    function checkDependencies() {
+        if (typeof $ === 'undefined') {
+            console.error('jQuery no está cargado');
+            return false;
+        }
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert2 no está cargado');
+            return false;
+        }
+        return true;
+    }
+    
+    // Cargar Google Maps cuando el DOM esté listo y las dependencias estén disponibles
+    function initializeApp() {
+        if (checkDependencies()) {
+            loadGoogleMaps();
+        } else {
+            console.error('Dependencias no disponibles');
+            setTimeout(initializeApp, 1000);
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            // Solo inicializar el mapa si estamos en el paso 2
+            if (currentStep === 2) {
+                initializeApp();
+            }
+        });
+    } else {
+        // Solo inicializar el mapa si estamos en el paso 2
+        if (currentStep === 2) {
+            initializeApp();
+        }
+    }
+</script>
 
 </body>
 </html>

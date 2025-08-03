@@ -1,0 +1,148 @@
+/* Estilos para el sistema de pasos del formulario de registro de empresa */
+
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    padding: 20px 0;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    margin: 0 15px;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+    background-color: #2196F3;
+    color: white;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.step.completed .step-number {
+    background-color: #4CAF50;
+    color: white;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.step-text {
+    font-weight: 500;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.step.active .step-text {
+    color: #2196F3;
+}
+
+.step.completed .step-text {
+    color: #4CAF50;
+}
+
+.step-connector {
+    width: 60px;
+    height: 2px;
+    background-color: #e0e0e0;
+    margin: 0 10px;
+    transition: background-color 0.3s ease;
+}
+
+.step-connector.active {
+    background-color: #2196F3;
+}
+
+.form-step {
+    display: none;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+}
+
+.form-step.active {
+    display: block;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.btn-back {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-back:hover {
+    background-color: #5a6268;
+}
+
+/* Estilos para el formulario de login */
+.login-form-container {
+    margin: 0 auto;
+}
+
+.login-form-container .formbold-form-title {
+    margin-bottom: 30px;
+}
+
+.login-form-container .formbold-form-title p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.login-link {
+    color: #2196F3;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.login-link:hover {
+    color: #1976D2;
+    text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .step-indicator {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .step-connector {
+        width: 2px;
+        height: 30px;
+        margin: 5px 0;
+    }
+    
+    .step {
+        margin: 0;
+    }
+    
+    .btn-back {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .container-login100-form-btn {
+        flex-direction: column;
+    }
+} 
