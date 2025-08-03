@@ -12,14 +12,48 @@
     <link rel="stylesheet" href="{% static 'registrar_empresa/css/main.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <defs>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="home" viewBox="0 0 24 24"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="3"/><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/></g></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="faq" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41c0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></symbol>
+    </defs>
+</svg>
 <body>
 <div class="top-bar-ecommerce">
-	<!-- Aquí puedes agregar un ícono más adelante -->
-  </div>
+    <div class="top-bar-left">
+        <a href="{% url 'index' %}">
+            <img src="{% static 'iniciar_sesion/images/logo.jpg' %}" alt="Logo" class="img-fluid">
+        </a>
+        <p class="top-bar-text">Bienvenido a la tienda virtual de Todo Aquí</p>
+    </div>
+    
+    <div class="top-bar-right">
+        <ul class="d-flex justify-content-end align-items-center list-unstyled m-0 py-0 my-0">
+            <li>
+                <a href="{% url 'index' %}" class="p-2 mx-1" title="Inicio">
+                    <svg width="24" height="24"><use xlink:href="#home"></use></svg>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="p-2 mx-1" title="Perfil">
+                    <svg width="24" height="24"><use xlink:href="#user"></use></svg>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="p-2 mx-1" title="Preguntas Frecuentes">
+                    <svg width="24" height="24"><use xlink:href="#faq"></use></svg>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
 <div class="formbold-main-wrapper">
   <div class="formbold-form-wrapper">
     

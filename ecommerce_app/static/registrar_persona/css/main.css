@@ -69,8 +69,8 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  margin-top: 80px;
-  min-height: calc(100vh - 80px);
+  margin-top: 90px;
+  min-height: calc(100vh - 90px);
   box-sizing: border-box;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
 }
@@ -226,12 +226,114 @@ body {
 }
 
 .top-bar-ecommerce {
-  background-color: #1D4ED8;
-  height: 60px;
-  width: 100%;
-  position: fixed;
-  top: 0;
-  z-index: 1000;
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.top-bar-ecommerce img {
+    max-height: 65px;
+    width: auto;
+    filter: none;
+    transition: all 0.3s ease;
+}
+
+.top-bar-ecommerce img:hover {
+    transform: scale(1.05);
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.top-bar-text {
+    color: #333;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.top-bar-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.top-bar-icon a {
+    padding: 8px;
+    margin: 0 4px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.top-bar-icon a:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+.top-bar-icon svg {
+    width: 100%;
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+/* Colores específicos para cada icono */
+.top-bar-right .list-unstyled li:first-child a svg {
+    color: #1769aa;
+}
+
+.top-bar-right .list-unstyled li:nth-child(2) a svg {
+    color: #ffc107;
+}
+
+.top-bar-right .list-unstyled li:nth-child(3) a svg {
+    color: #dc3545;
+}
+
+.top-bar-right .list-unstyled li:first-child a:hover {
+    background-color: rgba(23, 105, 170, 0.1);
+}
+
+.top-bar-right .list-unstyled li:nth-child(2) a:hover {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.top-bar-right .list-unstyled li:nth-child(3) a:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.top-bar-right .list-unstyled li:first-child a:hover svg {
+    color: #1769aa;
+}
+
+.top-bar-right .list-unstyled li:nth-child(2) a:hover svg {
+    color: #ffc107;
+}
+
+.top-bar-right .list-unstyled li:nth-child(3) a:hover svg {
+    color: #dc3545;
 }
 
 .file-upload-wrapper {
@@ -416,6 +518,7 @@ input[name="apellido"] {
   padding: 60px 0;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
   min-height: 100vh;
+  margin-top: 70px;
 }
 
 .formbold-form-input {
@@ -439,4 +542,100 @@ input[name="apellido"] {
 
 .select2-container--bootstrap-5 .select2-results__option {
   color: #000000 !important;
+}
+
+/* ===== ESTILOS PARA VALIDACIÓN DE CAMPOS ===== */
+
+.error-input {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    background-color: #fff5f5 !important;
+}
+
+.error-input:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.formbold-form-input.error-input::placeholder {
+    color: #dc3545;
+}
+
+/* Animación para campos con error */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.error-input {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Estilos para tooltip de error */
+.formbold-form-input[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #dc3545;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+}
+
+.formbold-form-input[title]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #dc3545;
+    margin-bottom: -5px;
+}
+
+/* ===== ESTILOS PARA CAMPOS OBLIGATORIOS ===== */
+
+.required-error {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    background-color: #fff5f5 !important;
+}
+
+.required-error:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.formbold-form-input.required-error::placeholder {
+    color: #dc3545;
+}
+
+/* Indicador visual de campo obligatorio */
+.formbold-form-label::after {
+    content: ' *';
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Estilos para el checkbox de términos */
+.formbold-input-checkbox:not(:checked) + .formbold-checkbox-inner {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+/* Animación para campos obligatorios vacíos */
+@keyframes pulse-error {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.required-error {
+    animation: pulse-error 1s ease-in-out;
 }

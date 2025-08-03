@@ -25,5 +25,5 @@ urlpatterns = [
     path('eliminar_categoria_servicio/', eliminar_categoria_servicio_funcion, name='eliminar_categoria_servicio_funcion'),
     path('eliminar_categoria_producto/', eliminar_categoria_producto, name='eliminar_categoria_producto'),
     path('editar_categoria_producto/', editar_categoria_producto, name='editar_categoria_producto'),
-
+    path('index/', index, name='index'),
 ] 

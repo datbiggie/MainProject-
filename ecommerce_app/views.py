@@ -28,13 +28,21 @@ def iniciar_sesion(request):
                     logger.warning("La contraseña no está hasheada correctamente")
                     # Si no está hasheada, comparar directamente
                     if user.password_usuario == password:
-                        return JsonResponse({'success': True, 'message': 'Inicio de sesión exitoso'})
+                        return JsonResponse({
+                            'success': True, 
+                            'message': 'Inicio de sesión exitoso',
+                            'redirect_url': '/ecommerce/index'
+                        })
                     else:
                         return JsonResponse({'success': False, 'message': 'Contraseña incorrecta'})
                 else:
                     # Si está hasheada, usar check_password
                     if check_password(password, user.password_usuario):
-                        return JsonResponse({'success': True, 'message': 'Inicio de sesión exitoso'})
+                        return JsonResponse({
+                            'success': True, 
+                            'message': 'Inicio de sesión exitoso',
+                            'redirect_url': '/ecommerce/index'
+                        })
                     else:
                         return JsonResponse({'success': False, 'message': 'Contraseña incorrecta'})
             except usuario.DoesNotExist:
@@ -82,12 +90,67 @@ def registrar_persona(request):
         pais=request.POST.get('pais')
         estado=request.POST.get('estado')
 
+        # Validaciones del backend
+        import re
+        
+        # Validar nombre (solo letras y espacios)
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', nombre_usuario):
+            logger.warning(f"Nombre inválido: {nombre_usuario}")
+            return JsonResponse({
+                'success': False,
+                'message': 'El nombre solo puede contener letras y espacios.'
+            })
+        
+        # Validar apellido (solo letras y espacios)
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', apellido):
+            logger.warning(f"Apellido inválido: {apellido}")
+            return JsonResponse({
+                'success': False,
+                'message': 'El apellido solo puede contener letras y espacios.'
+            })
+        
+        # Validar teléfono (solo números)
+        if not re.match(r'^[0-9]+$', telefono):
+            logger.warning(f"Teléfono inválido: {telefono}")
+            return JsonResponse({
+                'success': False,
+                'message': 'El teléfono solo puede contener números.'
+            })
+
+        # Validar que todos los campos estén completos
+        if not nombre_usuario or not apellido or not email or not password or not telefono or not fecha_nacimiento or not pais or not estado:
+            logger.warning("Campos obligatorios faltantes en registro de persona")
+            return JsonResponse({
+                'success': False,
+                'message': 'Todos los campos son obligatorios. Por favor complete todos los campos.'
+            })
+
+        # Validar formato de email
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            logger.warning(f"Email inválido: {email}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Por favor ingrese un email válido.'
+            })
+
+        # Validar longitud mínima de contraseña
+        if len(password) < 6:
+            logger.warning("Contraseña demasiado corta")
+            return JsonResponse({
+                'success': False,
+                'message': 'La contraseña debe tener al menos 6 caracteres.'
+            })
+
         try:
+            # Encriptar la contraseña antes de guardarla
+            password_encriptada = make_password(password)
+            logger.info(f"Contraseña encriptada correctamente para el usuario: {email}")
+            
             nuevo_usuario = usuario(
                 nombre_usuario=nombre_usuario + ' ' + apellido,
                 correo_usuario=email,
                 telefono_usuario=telefono,
-                password_usuario=password,
+                password_usuario=password_encriptada,  # Usar la contraseña encriptada
                 autenticacion_usuario='local',  
                 tipo_usuario='persona',          
                 fecha_nacimiento=fecha_nacimiento,
@@ -95,11 +158,13 @@ def registrar_persona(request):
                 estado=estado
             )
             nuevo_usuario.save()
+            logger.info(f"Usuario registrado exitosamente: {email}")
             return JsonResponse({
                 'success': True,
                 'message': '¡Registro exitoso! Tu cuenta ha sido creada correctamente.'
             })
         except Exception as e:
+            logger.error(f"Error al registrar usuario: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': 'Ha ocurrido un error al registrar el usuario.'
@@ -121,6 +186,33 @@ def registrar_empresa(request):
             direccion_empresa = request.POST.get('direccion_empresa')
             latitud = request.POST.get('latitud')
             longitud = request.POST.get('longitud')
+            
+            # Validar que todos los campos estén completos
+            if not nombre_empresa or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa or not latitud or not longitud:
+                logger.warning("Campos obligatorios faltantes en registro de empresa")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Todos los campos son obligatorios. Por favor complete todos los campos.'
+                })
+            
+            # Validar que las coordenadas sean números válidos
+            try:
+                lat = float(latitud)
+                lng = float(longitud)
+            except ValueError:
+                logger.warning("Coordenadas inválidas")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Las coordenadas deben ser números válidos.'
+                })
+            
+            # Validar longitud mínima de descripción
+            if len(descripcion_empresa) < 10:
+                logger.warning("Descripción demasiado corta")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'La descripción debe tener al menos 10 caracteres.'
+                })
             
             # Logging para verificar los datos
             logger.info(f"Dirección recibida: {direccion_empresa}")
@@ -740,3 +832,6 @@ def eliminar_producto(request):
         'success': False,
         'message': 'Método no permitido'
     })
+
+def index(request):
+    return render(request, 'ecommerce_app/index.html')

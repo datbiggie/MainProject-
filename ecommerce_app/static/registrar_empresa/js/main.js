@@ -223,11 +223,109 @@ $(document).ready(function() {
             stateSelect.select2('disable');
             stateSelect.val('').trigger('change');
         }
+        
+        // Validar campo obligatorio
+        validateRequiredField(this);
+    });
+
+    // Validación en tiempo real para campos obligatorios
+    function validateRequiredField(field) {
+        const value = $(field).val().trim();
+        if (!value) {
+            $(field).addClass('required-error');
+            $(field).attr('title', 'Este campo es obligatorio');
+        } else {
+            $(field).removeClass('required-error');
+            $(field).removeAttr('title');
+        }
+    }
+
+    // Aplicar validación a todos los campos obligatorios
+    $('#firstname, #email, #phone, #descripcion_empresa, #direccion_empresa, #direccion_empresa_mapa').on('blur input', function() {
+        validateRequiredField(this);
+    });
+
+    // Validación especial para textarea
+    $('#descripcion_empresa').on('blur input', function() {
+        validateRequiredField(this);
+    });
+
+    // Validación especial para selects
+    $('#state, #tipo_empresa').on('change', function() {
+        const value = $(this).val();
+        if (!value) {
+            $(this).addClass('required-error');
+            $(this).attr('title', 'Debe seleccionar una opción');
+        } else {
+            $(this).removeClass('required-error');
+            $(this).removeAttr('title');
+        }
+    });
+
+    // Validación para coordenadas
+    $('#latitud, #longitud').on('blur', function() {
+        const value = $(this).val();
+        if (!value) {
+            $(this).addClass('required-error');
+            $(this).attr('title', 'Debe seleccionar una ubicación en el mapa');
+        } else {
+            $(this).removeClass('required-error');
+            $(this).removeAttr('title');
+        }
+    });
+
+    // Validación para checkbox de términos
+    $('#supportCheckbox').on('change', function() {
+        if (!$(this).is(':checked')) {
+            $(this).addClass('required-error');
+            $(this).attr('title', 'Debe aceptar los términos y condiciones');
+        } else {
+            $(this).removeClass('required-error');
+            $(this).removeAttr('title');
+        }
     });
 
     // Manejar el envío del formulario
     $('form').on('submit', function(e) {
         e.preventDefault();
+        
+        // Validar campos obligatorios antes de enviar
+        const nombre_empresa = $('#firstname').val().trim();
+        const descripcion_empresa = $('#descripcion_empresa').val().trim();
+        const pais_empresa = $('#country').val();
+        const estado_empresa = $('#state').val();
+        const tipo_empresa = $('#tipo_empresa').val();
+        const direccion_empresa = $('#direccion_empresa').val().trim();
+        const latitud = $('#latitud').val();
+        const longitud = $('#longitud').val();
+        
+        // Validar checkbox de términos y condiciones
+        const checkbox = $('#supportCheckbox').is(':checked');
+        
+        // Validar campos vacíos
+        if (!nombre_empresa || !descripcion_empresa || !pais_empresa || !estado_empresa || !tipo_empresa || !direccion_empresa || !latitud || !longitud) {
+            Swal.fire({
+                title: 'Campos obligatorios',
+                text: 'Todos los campos son obligatorios. Por favor complete todos los campos.',
+                icon: 'warning',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Validar checkbox de términos y condiciones
+        if (!checkbox) {
+            Swal.fire({
+                title: 'Términos y condiciones',
+                text: 'Debe aceptar los términos y condiciones para continuar.',
+                icon: 'warning',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            $('#supportCheckbox').focus();
+            return false;
+        }
         
         // Crear un objeto FormData para manejar archivos
         const formData = new FormData(this);
