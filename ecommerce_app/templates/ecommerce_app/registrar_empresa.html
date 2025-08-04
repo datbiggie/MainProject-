@@ -19,6 +19,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places" async defer></script>
 </head>
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
@@ -251,17 +252,7 @@
         <label class="formbold-form-label">Ubicación de la Empresa</label>
         <div class="map-container">
           <div class="search-container" style="margin-bottom: 10px;">
-            <div class="formbold-input-flex">
-              <div style="flex: 1;">
-                <input
-                  type="text"
-                  name="direccion_empresa_mapa"
-                  id="direccion_empresa_mapa"
-                  class="formbold-form-input"
-                  placeholder="Dirección de la empresa..."
-                />
-              </div>
-                        <div style="margin-left: 10px;">
+            <div style="margin-left: 10px;">
             <div id="locationStatus" style="color: #2196F3; font-size: 14px; font-weight: 500;">
               <span id="locationIcon">⏳</span> Inicializando mapa...
             </div>
@@ -269,7 +260,6 @@
               🔄 Reintentar ubicación
             </button>
           </div>
-            </div>
           </div>
           <div id="map" style="height: 400px; width: 100%; border-radius: 8px;"></div>
           <div class="formbold-input-flex" style="margin-top: 15px;">
@@ -656,7 +646,8 @@
         });
     }
     
-    // Función para cargar Google Maps de forma más robusta
+    // Función para cargar Google Maps de forma más robusta - COMENTADA PARA EVITAR CONFLICTO
+    /*
     function loadGoogleMaps() {
         console.log('Cargando Google Maps...');
         const script = document.createElement('script');
@@ -672,6 +663,7 @@
         };
         document.head.appendChild(script);
     }
+    */
     
     // Verificar que todos los scripts necesarios estén cargados
     function checkDependencies() {
@@ -689,7 +681,8 @@
     // Cargar Google Maps cuando el DOM esté listo y las dependencias estén disponibles
     function initializeApp() {
         if (checkDependencies()) {
-            loadGoogleMaps();
+            // loadGoogleMaps(); // COMENTADO PARA EVITAR CONFLICTO
+            console.log('Dependencias verificadas correctamente');
         } else {
             console.error('Dependencias no disponibles');
             setTimeout(initializeApp, 1000);

@@ -1,8 +1,30 @@
 // Variables globales para el mapa
-let map;
-let marker;
-let geocoder;
+let map = null;
+let marker = null;
+let geocoder = null;
 let locationObtained = false;
+let mapInitialized = false;
+
+// Función para limpiar el estado del mapa
+function clearMapState() {
+    if (map) {
+        // Limpiar eventos del mapa
+        google.maps.event.clearInstanceListeners(map);
+    }
+    if (marker) {
+        // Limpiar eventos del marcador
+        google.maps.event.clearInstanceListeners(marker);
+        marker.setMap(null);
+    }
+    
+    map = null;
+    marker = null;
+    geocoder = null;
+    locationObtained = false;
+    mapInitialized = false;
+    
+    console.log('Estado del mapa limpiado');
+}
 
 // Función de fallback si Google Maps no se carga
 function initMapFallback() {
@@ -59,7 +81,6 @@ function getCurrentLocation() {
                     'language': 'es' // Forzar idioma español
                 }, function(results, status) {
                     if (status === 'OK' && results[0]) {
-                        document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
                         document.getElementById('direccion_empresa').value = results[0].formatted_address;
                         
                         // Mostrar éxito
@@ -124,15 +145,26 @@ function getCurrentLocation() {
     }
 }
 
-// Función para inicializar el mapa
+// Función para inicializar el mapa - Versión mejorada para evitar problemas de caché
 function initMap() {
     console.log('Inicializando mapa...');
+    
+    // Evitar inicializaciones múltiples
+    if (mapInitialized) {
+        console.log('El mapa ya está inicializado');
+        return;
+    }
+    
     try {
         // Verificar que Google Maps esté cargado
         if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-            console.error('Google Maps no está cargado');
+            console.error('Google Maps no está cargado, reintentando en 1 segundo...');
+            setTimeout(initMap, 1000);
             return;
         }
+        
+        // Limpiar estado anterior si existe
+        clearMapState();
         
         // Crear el mapa inicialmente centrado en Venezuela
         const venezuela = { lat: 6.42375, lng: -66.58973 };
@@ -206,7 +238,6 @@ function initMap() {
                 'language': 'es' // Forzar idioma español
             }, function(results, status) {
                 if (status === 'OK' && results[0]) {
-                    document.getElementById('direccion_empresa_mapa').value = results[0].formatted_address;
                     document.getElementById('direccion_empresa').value = results[0].formatted_address;
                     
                     // Mostrar confirmación de actualización
@@ -221,41 +252,13 @@ function initMap() {
             });
         });
 
-        // Agregar autocompletado para el campo de dirección
-        const input = document.getElementById('direccion_empresa_mapa');
-        if (input) {
-            const autocomplete = new google.maps.places.Autocomplete(input, {
-                // Restringir a Venezuela para mejor precisión
-                componentRestrictions: { country: 've' },
-                // Tipos de lugares más específicos
-                types: ['establishment', 'geocode'],
-                // Idioma español
-                language: 'es'
-            });
-            
-            autocomplete.addListener('place_changed', function() {
-                const place = autocomplete.getPlace();
-                if (place.geometry) {
-                    map.setCenter(place.geometry.location);
-                    map.setZoom(16); // Zoom más cercano para mejor precisión
-                    marker.setPosition(place.geometry.location);
-                    document.getElementById('latitud').value = place.geometry.location.lat().toFixed(6);
-                    document.getElementById('longitud').value = place.geometry.location.lng().toFixed(6);
-                    document.getElementById('direccion_empresa').value = place.formatted_address;
-                    
-                    // Mostrar confirmación de actualización
-                    const locationStatus = document.getElementById('locationStatus');
-                    if (locationStatus) {
-                        locationStatus.innerHTML = '<span id="locationIcon">📍</span> Ubicación seleccionada desde búsqueda';
-                        locationStatus.style.color = '#2196F3';
-                    }
-                }
-            });
-        }
+
 
         console.log('Mapa inicializado correctamente');
+        mapInitialized = true;
     } catch (error) {
         console.error('Error al inicializar el mapa:', error);
+        mapInitialized = false;
         const mapElement = document.getElementById('map');
         if (mapElement) {
             mapElement.innerHTML = `
@@ -263,6 +266,9 @@ function initMap() {
                     <h3>Error al cargar el mapa</h3>
                     <p>Por favor, verifica tu conexión a internet y recarga la página.</p>
                     <p>Si el problema persiste, contacta al administrador.</p>
+                    <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Recargar Página
+                    </button>
                 </div>
             `;
         }
@@ -381,7 +387,7 @@ $(document).ready(function() {
     }
 
     // Aplicar validación a todos los campos obligatorios
-    $('#firstname, #email, #phone, #descripcion_empresa, #direccion_empresa, #direccion_empresa_mapa').on('blur input', function() {
+    $('#firstname, #email, #phone, #descripcion_empresa, #direccion_empresa').on('blur input', function() {
         validateRequiredField(this);
     });
 
@@ -482,24 +488,16 @@ $(document).ready(function() {
                         title: '¡Empresa Registrada!',
                         text: response.message,
                         icon: 'success',
-                        confirmButtonText: 'Aceptar',
+                        confirmButtonText: 'Continuar a Sucursales',
                         confirmButtonColor: '#3b82f6'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Limpiar el formulario
-                            $('form')[0].reset();
-                            // Limpiar la previsualización de la imagen
-                            $('#imagePreview').html('').hide();
-                            // Resetear el mapa
-                            if (map && marker) {
-                                const venezuela = { lat: 6.42375, lng: -66.58973 };
-                                map.setCenter(venezuela);
-                                map.setZoom(6);
-                                marker.setPosition(venezuela);
-                                $('#latitud').val('');
-                                $('#longitud').val('');
-                                $('#direccion_empresa_mapa').val('');
-                                $('#direccion_empresa').val('');
+                            // Redirigir a la página de sucursales
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else {
+                                // Fallback si no hay redirect_url
+                                window.location.href = '/ecommerce/sucursal/';
                             }
                         }
                     });
@@ -525,6 +523,54 @@ $(document).ready(function() {
         });
     });
 });
+
+// Función para cargar Google Maps de forma robusta
+function loadGoogleMapsRobustly() {
+    // Verificar si ya está cargado
+    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+        console.log('Google Maps ya está cargado, inicializando mapa...');
+        initMap();
+        return;
+    }
+
+    // Si no está cargado, esperar y reintentar
+    console.log('Esperando a que Google Maps se cargue...');
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const checkGoogleMaps = function() {
+        attempts++;
+        console.log(`Intento ${attempts} de ${maxAttempts} para cargar Google Maps...`);
+        
+        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+            console.log('Google Maps cargado exitosamente, inicializando mapa...');
+            initMap();
+        } else if (attempts < maxAttempts) {
+            setTimeout(checkGoogleMaps, 1000);
+        } else {
+            console.error('No se pudo cargar Google Maps después de múltiples intentos');
+            const locationStatus = document.getElementById('locationStatus');
+            if (locationStatus) {
+                locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error al cargar Google Maps. <button onclick="reloadPageWithCacheClear()" style="background: none; border: none; color: #007bff; text-decoration: underline; cursor: pointer;">Recargar página</button>';
+                locationStatus.style.color = '#dc3545';
+            }
+        }
+    };
+    
+    // Iniciar el proceso de verificación
+    setTimeout(checkGoogleMaps, 500);
+}
+
+// Función para recargar la página limpiando el caché
+function reloadPageWithCacheClear() {
+    console.log('Recargando página con limpieza de caché...');
+    
+    // Limpiar el estado del mapa antes de recargar
+    clearMapState();
+    
+    // Forzar recarga sin caché
+    window.location.reload(true);
+}
 
 // Manejar mensajes de URL al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -561,4 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Aceptar'
         });
     }
+    
+    // Iniciar la carga robusta de Google Maps
+    loadGoogleMapsRobustly();
 });

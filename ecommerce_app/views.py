@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.paginator import Paginator
 from .models import *
 import logging
 
@@ -490,12 +491,28 @@ def sucursalfuncion(request):
                 'message': str(e)
             })
 
+    # Implementar paginación
+    page = request.GET.get('page', 1)
+    paginator = Paginator(sqlsucursal, 5)  # 5 registros por página
+    
+    try:
+        sucursales_paginadas = paginator.page(page)
+    except:
+        sucursales_paginadas = paginator.page(1)
+
     return render(request, 'ecommerce_app/sucursal.html', {
-        'sqlsucursal': sqlsucursal
+        'sqlsucursal': sucursales_paginadas,
+        'total_sucursales': sqlsucursal.count(),
+        'paginator': paginator
     })
 
 
+@require_login
 def editar_sucursal(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
     if request.method == 'POST':
         try:
             id_sucursal = request.POST.get('id_sucursal')
@@ -528,7 +545,12 @@ def editar_sucursal(request):
 
 
 
+@require_login
 def eliminar_sucursal(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
     if request.method == 'POST':
         try:
             id_sucursal = request.POST.get('id_sucursal')
@@ -659,7 +681,12 @@ def servicio_funcion(request):
 
 
 
+@require_login
 def eliminar_todas_sucursales(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
     if request.method == 'POST':
         try:
             # Obtener todas las sucursales
