@@ -1,0 +1,310 @@
+/* ===== ESTILOS PARA LA BARRA SUPERIOR BIENVENIDO ===== */
+
+/* Barra superior principal */
+.top-bar-ecommerce {
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Logo y texto izquierdo */
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.top-bar-ecommerce img {
+    max-height: 65px;
+    width: auto;
+    filter: none;
+    transition: all 0.3s ease;
+}
+
+.top-bar-ecommerce img:hover {
+    transform: scale(1.05);
+}
+
+.top-bar-text {
+    color: #333;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Contenedor derecho con iconos */
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Estilos base para los iconos */
+.top-bar-right .list-unstyled li a {
+    padding: 0.5rem !important;
+    border-radius: 50% !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    background: transparent !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.top-bar-right .list-unstyled li a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border-radius: 50%;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.top-bar-right .list-unstyled li a:hover::before {
+    opacity: 1;
+}
+
+.top-bar-right .list-unstyled li a svg {
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+/* Icono de Inicio - Verde elegante */
+.top-bar-right .list-unstyled li:first-child a svg {
+    color: #2ecc71 !important;
+    filter: drop-shadow(0 1px 2px rgba(46, 204, 113, 0.3));
+}
+
+.top-bar-right .list-unstyled li:first-child a:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 8px 20px rgba(46, 204, 113, 0.3);
+}
+
+.top-bar-right .list-unstyled li:first-child a:hover svg {
+    color: #27ae60 !important;
+    filter: drop-shadow(0 2px 4px rgba(46, 204, 113, 0.5));
+}
+
+/* Icono de Perfil - Azul elegante */
+.top-bar-right .list-unstyled li:nth-child(2) a svg {
+    color: #3498db !important;
+    filter: drop-shadow(0 1px 2px rgba(52, 152, 219, 0.3));
+}
+
+.top-bar-right .list-unstyled li:nth-child(2) a:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+}
+
+.top-bar-right .list-unstyled li:nth-child(2) a:hover svg {
+    color: #2980b9 !important;
+    filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.5));
+}
+
+/* Icono de Preguntas Frecuentes - Naranja elegante */
+.top-bar-right .list-unstyled li:nth-child(3) a svg {
+    color: #e67e22 !important;
+    filter: drop-shadow(0 1px 2px rgba(230, 126, 34, 0.3));
+}
+
+.top-bar-right .list-unstyled li:nth-child(3) a:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 8px 20px rgba(230, 126, 34, 0.3);
+}
+
+.top-bar-right .list-unstyled li:nth-child(3) a:hover svg {
+    color: #d35400 !important;
+    filter: drop-shadow(0 2px 4px rgba(230, 126, 34, 0.5));
+}
+
+/* ===== ESTILOS ESPECÍFICOS PARA EL MODAL - RESTAURAR BOOTSTRAP ===== */
+.modal * {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.modal .btn {
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    border: 1px solid transparent !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    border-radius: 0.375rem !important;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.modal .btn-primary {
+    color: #fff !important;
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+
+.modal .btn-primary:hover {
+    color: #fff !important;
+    background-color: #0b5ed7 !important;
+    border-color: #0a58ca !important;
+}
+
+.modal .btn-danger {
+    color: #fff !important;
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.modal .btn-danger:hover {
+    color: #fff !important;
+    background-color: #bb2d3b !important;
+    border-color: #b02a37 !important;
+}
+
+.modal .btn-secondary {
+    color: #fff !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.modal .btn-secondary:hover {
+    color: #fff !important;
+    background-color: #5c636a !important;
+    border-color: #565e64 !important;
+}
+
+.modal .alert {
+    position: relative !important;
+    padding: 1rem 1rem !important;
+    margin-bottom: 1rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 0.375rem !important;
+}
+
+.modal .alert-success {
+    color: #0f5132 !important;
+    background-color: #d1e7dd !important;
+    border-color: #badbcc !important;
+}
+
+.modal .alert-warning {
+    color: #664d03 !important;
+    background-color: #fff3cd !important;
+    border-color: #ffecb5 !important;
+}
+
+.modal .alert-heading {
+    color: inherit !important;
+    font-weight: 600 !important;
+}
+
+.modal .badge {
+    display: inline-block !important;
+    padding: 0.35em 0.65em !important;
+    font-size: 0.75em !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    color: #fff !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    vertical-align: baseline !important;
+    border-radius: 0.375rem !important;
+}
+
+.modal .bg-primary {
+    background-color: #0d6efd !important;
+}
+
+.modal h5, .modal h6 {
+    margin-top: 0 !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+}
+
+.modal h5 {
+    font-size: 1.25rem !important;
+}
+
+.modal h6 {
+    font-size: 1rem !important;
+}
+
+.modal p {
+    margin-top: 0 !important;
+    margin-bottom: 1rem !important;
+}
+
+.modal .mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+.modal .mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.modal .d-grid {
+    display: grid !important;
+}
+
+.modal .gap-2 {
+    gap: 0.5rem !important;
+}
+
+.modal .me-2 {
+    margin-right: 0.5rem !important;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .top-bar-ecommerce {
+        padding: 0 15px;
+        height: 60px;
+    }
+    
+    .top-bar-text {
+        font-size: 14px;
+    }
+    
+    .top-bar-ecommerce img {
+        max-height: 50px;
+    }
+    
+    .top-bar-left {
+        gap: 15px;
+    }
+}
+
+@media (max-width: 576px) {
+    .top-bar-ecommerce {
+        padding: 0 10px;
+    }
+    
+    .top-bar-text {
+        display: none;
+    }
+    
+    .top-bar-ecommerce img {
+        max-height: 45px;
+    }
+    
+    .top-bar-right .list-unstyled li a {
+        padding: 0.4rem !important;
+    }
+    
+    .top-bar-right .list-unstyled li a svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+} 

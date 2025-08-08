@@ -65,7 +65,6 @@ function previewImage(input) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
-    
     // Mensaje de éxito al crear producto
     if (urlParams.get('success') === 'true') {
         Swal.fire({
@@ -90,11 +89,19 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Aceptar'
         });
     } else if (urlParams.has('error')) {
+        // Si hay mensaje de error y parámetro de campo, enfocar el campo correspondiente
+        const errorMsg = urlParams.get('error_msg') || 'Ha ocurrido un error al procesar la solicitud';
+        const errorField = urlParams.get('error_field');
         Swal.fire({
             title: 'Error',
-            text: 'Ha ocurrido un error al procesar la solicitud.',
+            text: errorMsg,
             icon: 'error',
             confirmButtonText: 'Aceptar'
+        }).then(() => {
+            if (errorField) {
+                const $el = document.getElementById(errorField);
+                if ($el) $el.focus();
+            }
         });
     }
 });
@@ -235,6 +242,12 @@ $(document).ready(function() {
                         icon: 'error',
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
+                    }).then(() => {
+                        // Foco automático según el campo de error
+                        if (response.field) {
+                            const $el = document.getElementById(response.field);
+                            if ($el) $el.focus();
+                        }
                     });
                 }
             },

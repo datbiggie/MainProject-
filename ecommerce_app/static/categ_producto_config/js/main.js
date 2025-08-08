@@ -1,9 +1,7 @@
 // Archivo JavaScript limpio para categ_producto_config
 // Solo contiene funciones auxiliares que no interfieren con el template
 
-// Variables globales
-window.CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-window.DELETE_URL = '/ecommerce/eliminar_categoria_producto/';
+
 
 // Función de eliminación de categorías
 function confirmarEliminacion(idCategoria) {
@@ -36,12 +34,13 @@ function confirmarEliminacion(idCategoria) {
         if (result.isConfirmed) {
             console.log('Usuario confirmó eliminación');
             
-            // Crear FormData para enviar los datos
+            // Obtener CSRF token directamente del input oculto
+            const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
             const formData = new FormData();
             formData.append('id_categoria', idCategoria);
-            formData.append('csrfmiddlewaretoken', window.CSRF_TOKEN);
+            formData.append('csrfmiddlewaretoken', csrfToken);
             
-            console.log('FormData creado, enviando a:', window.DELETE_URL);
+            console.log('FormData creado, enviando a: /ecommerce/eliminar_categoria_producto/');
             console.log('ID a enviar:', idCategoria);
             
             // Mostrar indicador de carga
@@ -55,7 +54,7 @@ function confirmarEliminacion(idCategoria) {
             });
             
             // Enviar solicitud de eliminación
-            fetch(window.DELETE_URL, {
+            fetch('/ecommerce/eliminar_categoria_producto/', {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -133,4 +132,5 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Aceptar'
         });
     }
+
 });

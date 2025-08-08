@@ -1,4 +1,5 @@
 {% load static %}
+{% include 'ecommerce_app/barra_superior_operaciones.html' %}
 <!doctype html>
 <html lang="es">
   <head>
@@ -24,7 +25,7 @@
       <div class="row align-items-stretch no-gutters contact-wrap">
         <div class="col-md-8">
           <div class="form h-100">
-            <h3>SERVICIOS</h3>
+            <h3 class="text-center mb-4" style="color: #35477d; font-weight: 700; letter-spacing: 1px;">SERVICIOS</h3>
             <form class="mb-5" method="post" id="servicioForm" name="servicioForm" action="{% url 'servicio_funcion' %}" enctype="multipart/form-data">
               {% csrf_token %}
               <div class="row">

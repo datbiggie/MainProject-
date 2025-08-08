@@ -1,3 +1,58 @@
+/* === Personalización de colores para vista de productos === */
+.productos-bg-main {
+    background: #f7f9fb !important;
+    border: 1.5px solid #e0e4ea !important;
+}
+.productos-bg-search {
+    background: #f1f3f6 !important;
+    border: none !important;
+}
+.productos-input {
+    background: #fff !important;
+    border: 1.5px solid #d1d9e6 !important;
+    border-radius: 2rem !important;
+    font-size: 1.08rem;
+    padding: 0.7rem 1.2rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    transition: border-color 0.2s;
+}
+.productos-input:focus {
+    border-color: #b3c6e7 !important;
+    box-shadow: 0 2px 10px 0 rgba(74,144,226,0.08);
+}
+.btn-edit {
+    background: #4a90e2 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 1.2rem !important;
+    padding: 0.35rem 1.1rem !important;
+    font-size: 0.98rem;
+    transition: background 0.18s;
+}
+.btn-edit:hover {
+    background: #357ab8 !important;
+}
+.btn-delete {
+    background: #e57373 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 1.2rem !important;
+    padding: 0.35rem 1.1rem !important;
+    font-size: 0.98rem;
+    transition: background 0.18s;
+}
+.btn-delete:hover {
+    background: #c62828 !important;
+}
+/* Efecto hover para imagen de producto en cards */
+.img-producto-hover {
+    transition: transform 0.22s cubic-bezier(.4,1.4,.6,1), box-shadow 0.22s cubic-bezier(.4,1.4,.6,1);
+}
+.img-producto-hover:hover {
+    transform: scale(1.30);
+    z-index: 3;
+    box-shadow: 0 10px 32px 0 rgba(44,62,80,0.28), 0 2px 8px 0 rgba(44,62,80,0.10);
+}
 /*======================================
     Variables
 ========================================*/
@@ -1489,7 +1544,7 @@ ol {
 }
 
 /*======================================
-	01. Start Header CSS
+  01. Start Header CSS
 ========================================*/
 .header {
   width: 100%;
@@ -2238,7 +2293,7 @@ ol {
 }
 
 /*======================================
-	Start Countdown CSS
+  Start Countdown CSS
 ========================================*/
 .count-down {
   background-color: #F4F7FA;
@@ -2578,7 +2633,7 @@ ol {
 }
 
 /*=============================
-	Pricing Table CSS
+  Pricing Table CSS
 ===============================*/
 .pricing-table {
   background-image: url("../images/pricing/pricing-bg.jpg");
@@ -2989,7 +3044,7 @@ ol {
 }
 
 /*======================================
-	Footer CSS
+  Footer CSS
 ========================================*/
 .footer {
   background-color: #fff;
@@ -3257,16 +3312,18 @@ ol {
         }
         .btn-edit {
             background: linear-gradient(45deg, #2ecc71, #27ae60);
-            color: white;
+            color: #fff !important;
             border: none;
+            opacity: 1 !important;
         }
         .btn-edit:hover {
             background: linear-gradient(45deg, #27ae60, #2ecc71);
         }
         .btn-delete {
             background: linear-gradient(45deg, #e74c3c, #c0392b);
-            color: white;
+            color: #fff !important;
             border: none;
+            opacity: 1 !important;
         }
         .btn-delete:hover {
             background: linear-gradient(45deg, #c0392b, #e74c3c);

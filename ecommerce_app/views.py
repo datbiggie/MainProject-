@@ -1,3 +1,52 @@
+
+from django.views.decorators.http import require_GET
+
+# API para filtrar productos por nombre (AJAX)
+@require_GET
+def api_filtrar_productos(request):
+    try:
+        nombre = request.GET.get('nombre', '').strip().lower()
+        estatus = request.GET.get('estatus', '').strip().lower()
+        productos_query = producto.objects.all()
+        if nombre:
+            productos_query = productos_query.filter(nombre_producto__icontains=nombre)
+        if estatus and estatus in ['activo', 'inactivo']:
+            productos_query = productos_query.filter(estatus_producto=estatus)
+        productos_list = []
+        for idx, prod in enumerate(productos_query, start=1):
+            productos_list.append({
+                'id_producto': prod.id_producto,
+                'nombre_producto': prod.nombre_producto,
+                'descripcion_producto': prod.descripcion_producto or '',
+                'marca_producto': prod.marca_producto or '',
+                'modelo_producto': prod.modelo_producto or '',
+                'imagen_producto': prod.imagen_producto.url if prod.imagen_producto else '',
+                'caracteristicas_generales': prod.caracteristicas_generales or '',
+                'estatus_producto': prod.estatus_producto,
+                'categoria_producto': prod.id_categoria_prod_fk.nombre_categoria_prod if prod.id_categoria_prod_fk else '',
+                'serial': idx
+            })
+        return JsonResponse({'success': True, 'productos': productos_list})
+    except Exception as e:
+        logger.error(f"Error al filtrar productos: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error al filtrar productos: {str(e)}'})
+from django.views.decorators.http import require_GET
+
+
+
+# API para obtener nombres de categorías de producto
+@require_GET
+def api_categorias_producto(request):
+    from .models import categoria_producto
+    categorias = list(categoria_producto.objects.values_list('nombre_categoria_prod', flat=True))
+    return JsonResponse({'categorias': categorias})
+
+# API para obtener nombres de categorías de servicio
+@require_GET
+def api_categorias_servicio(request):
+    from .models import categoria_servicio
+    categorias = list(categoria_servicio.objects.values_list('nombre_categoria_serv', flat=True))
+    return JsonResponse({'categorias': categorias})
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -50,6 +99,17 @@ def require_login(view_func):
 
 # Create your views here.
 def iniciar_sesion(request):
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.tipo_usuario,
+                'is_authenticated': True
+            }
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
@@ -109,8 +169,7 @@ def iniciar_sesion(request):
             except Exception as e:
                 logger.error(f"Error durante el inicio de sesión: {str(e)}")
                 return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
-    
-    return render(request, 'ecommerce_app/iniciar_sesion.html')
+    return render(request, 'ecommerce_app/iniciar_sesion.html', {'user_info': user_info})
 
 @csrf_exempt
 def validate_email(request):
@@ -137,11 +196,17 @@ def login_ajax(request):
     """
     Vista para manejar el login AJAX desde el formulario de pasos
     """
+    logger.info(f"login_ajax called with method: {request.method}")
+    logger.info(f"Request headers: {request.headers}")
+    logger.info(f"Request META: {request.META}")
+    
     if request.method == 'POST':
         email = request.POST.get('login_email')
         password = request.POST.get('login_password')
         
         logger.info(f"Intento de login AJAX para el email: {email}")
+        logger.info(f"POST data: {request.POST}")
+        logger.info(f"Content-Type: {request.content_type}")
         
         if email and password:
             try:
@@ -166,24 +231,32 @@ def login_ajax(request):
                         try:
                             empresa_existente = empresa.objects.filter(id_usuario_fk=user).first()
                             if empresa_existente:
+                                logger.info(f"Usuario {user.correo_usuario} tiene empresa registrada")
                                 return JsonResponse({
-                                    'success': False, 
-                                    'message': f'Ya tienes una empresa registrada: {empresa_existente.nombre_empresa}. No puedes registrar otra empresa.'
-                                })
+                                    'success': True, 
+                                    'message': 'Inicio de sesión exitoso',
+                                    'user_name': user.nombre_usuario,
+                                    'user_type': user.tipo_usuario,
+                                    'has_company': True,
+                                    'redirect_url': '/ecommerce/sucursal/'
+                                }, content_type='application/json')
                         except Exception as e:
                             logger.error(f"Error al verificar empresa existente: {str(e)}")
                         
+                        logger.info(f"Usuario {user.correo_usuario} no tiene empresa registrada")
                         return JsonResponse({
                             'success': True, 
                             'message': 'Inicio de sesión exitoso',
                             'user_name': user.nombre_usuario,
-                            'user_type': user.tipo_usuario
-                        })
+                            'user_type': user.tipo_usuario,
+                            'has_company': False
+                        }, content_type='application/json')
                     else:
+                        logger.warning(f"Contraseña incorrecta para usuario: {email}")
                         return JsonResponse({
                             'success': False, 
                             'message': 'Contraseña incorrecta'
-                        })
+                        }, content_type='application/json')
                 else:
                     # Si está hasheada, usar check_password
                     if check_password(password, user.password_usuario):
@@ -200,40 +273,57 @@ def login_ajax(request):
                         try:
                             empresa_existente = empresa.objects.filter(id_usuario_fk=user).first()
                             if empresa_existente:
+                                logger.info(f"Usuario {user.correo_usuario} tiene empresa registrada")
                                 return JsonResponse({
-                                    'success': False, 
-                                    'message': f'Ya tienes una empresa registrada: {empresa_existente.nombre_empresa}. No puedes registrar otra empresa.'
-                                })
+                                    'success': True, 
+                                    'message': 'Inicio de sesión exitoso',
+                                    'user_name': user.nombre_usuario,
+                                    'user_type': user.tipo_usuario,
+                                    'has_company': True,
+                                    'redirect_url': '/ecommerce/sucursal/'
+                                }, content_type='application/json')
                         except Exception as e:
                             logger.error(f"Error al verificar empresa existente: {str(e)}")
                         
+                        logger.info(f"Usuario {user.correo_usuario} no tiene empresa registrada")
                         return JsonResponse({
                             'success': True, 
                             'message': 'Inicio de sesión exitoso',
                             'user_name': user.nombre_usuario,
-                            'user_type': user.tipo_usuario
-                        })
+                            'user_type': user.tipo_usuario,
+                            'has_company': False
+                        }, content_type='application/json')
                     else:
+                        logger.warning(f"Contraseña incorrecta para usuario: {email}")
                         return JsonResponse({
                             'success': False, 
                             'message': 'Contraseña incorrecta'
-                        })
+                        }, content_type='application/json')
             except usuario.DoesNotExist:
                 logger.warning(f"Usuario no encontrado: {email}")
                 return JsonResponse({
                     'success': False, 
                     'message': 'Usuario no encontrado'
-                })
+                }, content_type='application/json')
+            except Exception as e:
+                logger.error(f"Error in login_ajax: {str(e)}")
+                return JsonResponse({
+                    'success': False, 
+                    'message': f'Error interno del servidor: {str(e)}'
+                }, content_type='application/json')
         else:
+            logger.warning("Campos faltantes en login AJAX")
             return JsonResponse({
                 'success': False, 
                 'message': 'Por favor completa todos los campos'
-            })
+            }, content_type='application/json')
     
+    logger.warning("Método no permitido en login_ajax")
     return JsonResponse({
         'success': False, 
         'message': 'Método no permitido'
-    })
+    }, content_type='application/json')
+
 
 def prueba(request):
     return render(request, 'ecommerce_app/prueba.html')
@@ -342,7 +432,20 @@ def registrar_persona(request):
                 'message': 'Ha ocurrido un error al registrar el usuario.'
             })
 
-    return render(request, 'ecommerce_app/registrar_persona.html')
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.tipo_usuario,
+                'is_authenticated': True
+            }
+    
+    return render(request, 'ecommerce_app/registrar_persona.html', {'user_info': user_info})
 
 def registrar_empresa(request):
     # Esta función debe ser accesible sin autenticación para el registro inicial
@@ -419,7 +522,7 @@ def registrar_empresa(request):
             return JsonResponse({
                 'success': True,
                 'message': 'Empresa registrada exitosamente',
-                'redirect_url': '/ecommerce/sucursal'
+                'redirect_url': '/ecommerce/sucursal/'
             })
         except Exception as e:
             logger.error(f"Error al guardar la empresa: {str(e)}")
@@ -431,6 +534,9 @@ def registrar_empresa(request):
     # Si es GET, mostrar el formulario
     # Obtener información del usuario si está autenticado
     user_info = None
+    is_authenticated = False
+    has_company = False
+    
     if is_user_authenticated(request):
         current_user = get_current_user(request)
         if current_user:
@@ -441,17 +547,47 @@ def registrar_empresa(request):
                 'tipo': current_user.tipo_usuario,
                 'is_authenticated': True
             }
+            is_authenticated = True
+            
+            # Verificar si el usuario ya tiene una empresa registrada
+            try:
+                existing_company = empresa.objects.get(id_usuario_fk=current_user)
+                has_company = True
+                logger.info(f"Usuario {current_user.correo_usuario} ya tiene empresa registrada: {existing_company.nombre_empresa}")
+            except empresa.DoesNotExist:
+                has_company = False
+                logger.info(f"Usuario {current_user.correo_usuario} no tiene empresa registrada")
     
-    return render(request, 'ecommerce_app/registrar_empresa.html', {'user_info': user_info})
+    return render(request, 'ecommerce_app/registrar_empresa.html', {
+        'user_info': user_info,
+        'is_authenticated': is_authenticated,
+        'has_company': has_company
+    })
 
 
 
 @require_login
 def sucursalfuncion(request):
+
+
+
+    user_info = None
+    
+            
     current_user = get_current_user(request)
     if not current_user:
         return redirect('/ecommerce/iniciar_sesion')
     
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.tipo_usuario,
+                'is_authenticated': True
+            }
     # Obtener la empresa del usuario actual
     try:
         empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
@@ -459,16 +595,37 @@ def sucursalfuncion(request):
         sqlsucursal = sucursal.objects.filter(id_empresa_fk=empresa_obj)
     except empresa.DoesNotExist:
         # Si el usuario no tiene empresa, redirigir a registrar empresa
-        return redirect('/ecommerce/registrar_empresa')
+        return redirect('/ecommerce/registrar_empresa/')
    
     if request.method == 'POST':
         try:
-            nombre_sucursal = request.POST.get('nombre_sucursal')
-            telefono_sucursal = request.POST.get('telefono_sucursal')
-            estado_sucursal = request.POST.get('estado_sucursal')
-            direccion_sucursal = request.POST.get('direccion_sucursal')
-            latitud_sucursal = request.POST.get('latitud_sucursal')
-            longitud_sucursal = request.POST.get('longitud_sucursal')
+            nombre_sucursal = request.POST.get('nombre_sucursal', '').strip()
+            telefono_sucursal = request.POST.get('telefono_sucursal', '').strip()
+            estado_sucursal = request.POST.get('estado_sucursal', '').strip()
+            direccion_sucursal = request.POST.get('direccion_sucursal', '').strip()
+            latitud_sucursal = request.POST.get('latitud_sucursal', '').strip()
+            longitud_sucursal = request.POST.get('longitud_sucursal', '').strip()
+
+            # Validaciones de campos vacíos
+            if not nombre_sucursal or not telefono_sucursal or not estado_sucursal or not direccion_sucursal:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Todos los campos son obligatorios.'
+                })
+
+            # Validar que el teléfono sea numérico
+            if not telefono_sucursal.isdigit():
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El número de teléfono solo debe contener dígitos.'
+                })
+
+            # Validar que el nombre de sucursal no se repita para la empresa
+            if sucursal.objects.filter(id_empresa_fk=empresa_obj, nombre_sucursal__iexact=nombre_sucursal).exists():
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Ya existe una sucursal con ese nombre para esta empresa.'
+                })
 
             nueva_sucursal = sucursal(
                 nombre_sucursal=nombre_sucursal,
@@ -480,7 +637,6 @@ def sucursalfuncion(request):
                 id_empresa_fk=empresa_obj
             )
             nueva_sucursal.save()
-            
             return JsonResponse({
                 'success': True,
                 'message': 'Sucursal registrada exitosamente'
@@ -503,7 +659,9 @@ def sucursalfuncion(request):
     return render(request, 'ecommerce_app/sucursal.html', {
         'sqlsucursal': sucursales_paginadas,
         'total_sucursales': sqlsucursal.count(),
-        'paginator': paginator
+        'paginator': paginator,
+        'user_info': user_info,
+        'empresa_obj': empresa_obj
     })
 
 
@@ -517,17 +675,44 @@ def editar_sucursal(request):
         try:
             id_sucursal = request.POST.get('id_sucursal')
             sucursal_obj = sucursal.objects.get(id_sucursal=id_sucursal)
-            
+            nombre_sucursal = request.POST.get('nombre_sucursal', '').strip()
+            telefono_sucursal = request.POST.get('telefono_sucursal', '').strip()
+            estado_sucursal = request.POST.get('estado_sucursal', '').strip()
+            direccion_sucursal = request.POST.get('direccion_sucursal', '').strip()
+            latitud_sucursal = request.POST.get('latitud_sucursal', '').strip()
+            longitud_sucursal = request.POST.get('longitud_sucursal', '').strip()
+
+            # Validaciones de campos vacíos
+            if not nombre_sucursal or not telefono_sucursal or not estado_sucursal or not direccion_sucursal:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Todos los campos son obligatorios.'
+                }, content_type='application/json')
+
+            # Validar que el teléfono sea numérico
+            if not telefono_sucursal.isdigit():
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El número de teléfono solo debe contener dígitos.'
+                }, content_type='application/json')
+
+            # Validar que el nombre de sucursal no se repita para la empresa (excepto la actual)
+            empresa_obj = sucursal_obj.id_empresa_fk
+            if sucursal.objects.filter(id_empresa_fk=empresa_obj, nombre_sucursal__iexact=nombre_sucursal).exclude(id_sucursal=id_sucursal).exists():
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Ya existe una sucursal con ese nombre para esta empresa.'
+                }, content_type='application/json')
+
             # Actualizar los datos
-            sucursal_obj.nombre_sucursal = request.POST.get('nombre_sucursal')
-            sucursal_obj.telefono_sucursal = request.POST.get('telefono_sucursal')
-            sucursal_obj.estado_sucursal = request.POST.get('estado_sucursal')
-            sucursal_obj.direccion_sucursal = request.POST.get('direccion_sucursal')
-            sucursal_obj.latitud_sucursal = float(request.POST.get('latitud_sucursal'))
-            sucursal_obj.longitud_sucursal = float(request.POST.get('longitud_sucursal'))
-            
+            sucursal_obj.nombre_sucursal = nombre_sucursal
+            sucursal_obj.telefono_sucursal = telefono_sucursal
+            sucursal_obj.estado_sucursal = estado_sucursal
+            sucursal_obj.direccion_sucursal = direccion_sucursal
+            sucursal_obj.latitud_sucursal = float(latitud_sucursal) if latitud_sucursal else None
+            sucursal_obj.longitud_sucursal = float(longitud_sucursal) if longitud_sucursal else None
+
             sucursal_obj.save()
-            
             return JsonResponse({
                 'success': True,
                 'message': 'Sucursal actualizada exitosamente'
@@ -582,26 +767,48 @@ def producto_funcion(request):
     current_user = get_current_user(request)
     if not current_user:
         return redirect('/ecommerce/iniciar_sesion')
-    
+
     # Obtener la empresa del usuario actual
     try:
         empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
         categoria_producto_all = categoria_producto.objects.all()
     except empresa.DoesNotExist:
         # Si el usuario no tiene empresa, redirigir a registrar empresa
-        return redirect('/ecommerce/registrar_empresa')
+        return redirect('/ecommerce/registrar_empresa/')
+
+    # user_info para la sesión
+    user_info = {
+        'id': current_user.id_usuario,
+        'nombre': current_user.nombre_usuario,
+        'email': current_user.correo_usuario,
+        'tipo': current_user.tipo_usuario,
+        'is_authenticated': True
+    }
 
     if request.method == 'POST':
         try:
             logger.info(f"Datos recibidos: {request.POST}")
-            nombre_producto = request.POST.get('nombre_producto')
-            descripcion_producto = request.POST.get('descripcion_producto')
-            marca_producto = request.POST.get('marca_producto')
-            modelo_producto = request.POST.get('modelo_producto')
+            nombre_producto = request.POST.get('nombre_producto', '').strip()
+            descripcion_producto = request.POST.get('descripcion_producto', '').strip()
+            marca_producto = request.POST.get('marca_producto', '').strip()
+            modelo_producto = request.POST.get('modelo_producto', '').strip()
             imagen_producto = request.FILES.get('imagen_producto')
-            caracteristicas_generales = request.POST.get('caracteristicas_generales')
-            estatus_producto = request.POST.get('estatus_producto')
-            categoria_id = request.POST.get('categoria_producto')
+            caracteristicas_generales = request.POST.get('caracteristicas_generales', '').strip()
+            estatus_producto = request.POST.get('estatus_producto', '').strip()
+            categoria_id = request.POST.get('categoria_producto', '').strip()
+
+            # Validaciones backend
+            if not nombre_producto:
+                return JsonResponse({'success': False, 'message': 'El nombre del producto es obligatorio.', 'field': 'nombre'})
+            if not descripcion_producto:
+                return JsonResponse({'success': False, 'message': 'La descripción es obligatoria.', 'field': 'descripcion'})
+            if not caracteristicas_generales:
+                return JsonResponse({'success': False, 'message': 'Las características generales son obligatorias.', 'field': 'caracteristicas'})
+            if not categoria_id:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar una categoría.', 'field': 'categoria'})
+            if not estatus_producto:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.', 'field': 'estatus'})
+
             categoria_producto_consul = categoria_producto.objects.get(id_categoria_prod=categoria_id)
 
             nuevo_producto = producto(
@@ -628,31 +835,51 @@ def producto_funcion(request):
                 'success': False,
                 'message': str(e)
             })
-    
-    return render(request, 'ecommerce_app/producto.html', {'categoria_producto_all': categoria_producto_all})
+
+    return render(request, 'ecommerce_app/producto.html', {'categoria_producto_all': categoria_producto_all, 'user_info': user_info})
 
 @require_login
 def servicio_funcion(request):
     current_user = get_current_user(request)
     if not current_user:
         return redirect('/ecommerce/iniciar_sesion')
-    
+
+    # user_info para la sesión
+    user_info = {
+        'id': current_user.id_usuario,
+        'nombre': current_user.nombre_usuario,
+        'email': current_user.correo_usuario,
+        'tipo': current_user.tipo_usuario,
+        'is_authenticated': True
+    }
+
     # Obtener la empresa del usuario actual
     try:
         empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
         categoria_servicio_all = categoria_servicio.objects.all()
     except empresa.DoesNotExist:
         # Si el usuario no tiene empresa, redirigir a registrar empresa
-        return redirect('/ecommerce/registrar_empresa')
+        return redirect('/ecommerce/registrar_empresa/')
     if request.method == 'POST':
         try:
             logger.info(f"Datos recibidos: {request.POST}")
-            nombre_servicio = request.POST.get('nombre_servicio')
-            descripcion_servicio = request.POST.get('descripcion_servicio')
-            estatus_servicio = request.POST.get('estatus_servicio')
-            categoria_id = request.POST.get('categoria_servicio')
-            categoria_servicio_consul = categoria_servicio.objects.get(id_categoria_serv=categoria_id)
+            nombre_servicio = request.POST.get('nombre_servicio', '').strip()
+            descripcion_servicio = request.POST.get('descripcion_servicio', '').strip()
+            estatus_servicio = request.POST.get('estatus_servicio', '').strip()
+            categoria_id = request.POST.get('categoria_servicio', '').strip()
             imagen_servicio = request.FILES.get('imagen_servicio')
+
+            # Validaciones backend
+            if not nombre_servicio:
+                return JsonResponse({'success': False, 'message': 'El nombre del servicio es obligatorio.', 'field': 'nombre_servicio'})
+            if not descripcion_servicio:
+                return JsonResponse({'success': False, 'message': 'La descripción del servicio es obligatoria.', 'field': 'descripcion_servicio'})
+            if not categoria_id:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar una categoría.', 'field': 'categoria_servicio'})
+            if not estatus_servicio:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.', 'field': 'estatus_servicio'})
+
+            categoria_servicio_consul = categoria_servicio.objects.get(id_categoria_serv=categoria_id)
 
             nuevo_servicio = servicio(
                 nombre_servicio=nombre_servicio,
@@ -677,7 +904,7 @@ def servicio_funcion(request):
                 'message': 'Error al registrar el servicio'
             })
 
-    return render(request, 'ecommerce_app/servicio.html', {'categoria_servicio_all': categoria_servicio_all})
+    return render(request, 'ecommerce_app/servicio.html', {'categoria_servicio_all': categoria_servicio_all, 'user_info': user_info})
 
 
 
@@ -715,14 +942,34 @@ def eliminar_todas_sucursales(request):
 
 
 
-
+@require_login
 def categoria_producto_funcion(request):
+    # Obtener información de usuario en sesión
+    user_info = None
+    current_user = get_current_user(request)
+    if current_user:
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.tipo_usuario,
+            'is_authenticated': True
+        }
+
     if request.method == 'POST':
         try:
-            nombre_categoria = request.POST.get('nombre_categoria')
-            descripcion_categoria = request.POST.get('descripcion_categoria')
-            estatus_categoria = request.POST.get('estatus_categoria')
+            nombre_categoria = request.POST.get('nombre_categoria', '').strip()
+            descripcion_categoria = request.POST.get('descripcion_categoria', '').strip()
+            estatus_categoria = request.POST.get('estatus_categoria', '').strip()
             fecha_creacion = request.POST.get('fecha_creacion')
+
+            # Validaciones
+            if not nombre_categoria:
+                return JsonResponse({'success': False, 'message': 'El nombre de la categoría es obligatorio.'}, content_type='application/json')
+            if categoria_producto.objects.filter(nombre_categoria_prod__iexact=nombre_categoria).exists():
+                return JsonResponse({'success': False, 'message': 'Ya existe una categoría con ese nombre.'}, content_type='application/json')
+            if not estatus_categoria:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.'}, content_type='application/json')
 
             nueva_categoria = categoria_producto(
                 nombre_categoria_prod=nombre_categoria,
@@ -731,7 +978,6 @@ def categoria_producto_funcion(request):
                 fecha_creacion_prod=fecha_creacion
             )
             nueva_categoria.save()
-            
             return JsonResponse({
                 'success': True,
                 'message': 'Categoría registrada exitosamente'
@@ -742,17 +988,41 @@ def categoria_producto_funcion(request):
                 'message': str(e)
             }, content_type='application/json')
 
-    return render(request, 'ecommerce_app/categoria_producto.html')
+    return render(request, 'ecommerce_app/categoria_producto.html', {'user_info': user_info})
 
 def categoria_servicio_funcion(request):
+    # Obtener información de usuario en sesión
+    user_info = None
+    current_user = get_current_user(request)
+    if current_user:
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.tipo_usuario,
+            'is_authenticated': True
+        }
+
     if request.method == 'POST':
         try:
             logger.info(f"Datos recibidos: {request.POST}")
-            nombre_categoria = request.POST.get('nombre_categoria')
-            descripcion_categoria = request.POST.get('descripcion_categoria')
-            estatus_categoria = request.POST.get('estatus_categoria')
-            fecha_creacion = request.POST.get('fecha_creacion')     
-            
+            nombre_categoria = request.POST.get('nombre_categoria', '').strip()
+            descripcion_categoria = request.POST.get('descripcion_categoria', '').strip()
+            estatus_categoria = request.POST.get('estatus_categoria', '').strip()
+            fecha_creacion = request.POST.get('fecha_creacion')
+
+            # Validaciones
+            if not nombre_categoria:
+                return JsonResponse({'success': False, 'message': 'El nombre de la categoría es obligatorio.'})
+            if not descripcion_categoria:
+                return JsonResponse({'success': False, 'message': 'La descripción de la categoría es obligatoria.'})
+            if not estatus_categoria:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.'})
+            if not fecha_creacion:
+                return JsonResponse({'success': False, 'message': 'Debe ingresar la fecha de creación.'})
+            if categoria_servicio.objects.filter(nombre_categoria_serv__iexact=nombre_categoria).exists():
+                return JsonResponse({'success': False, 'message': 'Ya existe una categoría con ese nombre.'})
+
             nueva_categoria = categoria_servicio(
                 nombre_categoria_serv=nombre_categoria,
                 descripcion_categoria_serv=descripcion_categoria,
@@ -761,7 +1031,6 @@ def categoria_servicio_funcion(request):
             )
             nueva_categoria.save()
             logger.info(f"Categoria guardada exitosamente: {nueva_categoria.nombre_categoria_serv}")
-            
             return JsonResponse({
                 'success': True,
                 'message': 'Categoría registrada exitosamente'
@@ -773,20 +1042,71 @@ def categoria_servicio_funcion(request):
                 'message': f'Error al registrar la categoría: {str(e)}'
             })
 
-    return render(request, 'ecommerce_app/categoria_servicio.html')
+    return render(request, 'ecommerce_app/categoria_servicio.html', {'user_info': user_info})
 
 
 
 
 
-
+@require_login
 def categ_producto_config_funcion(request):
-    categ_producto_all= categoria_producto.objects.all().order_by('-fecha_creacion_prod')
-    
+    categ_producto_all = categoria_producto.objects.all().order_by('-fecha_creacion_prod')
     # Logging básico
     logger.info(f"Total de categorías encontradas: {categ_producto_all.count()}")
 
-    return render(request, 'ecommerce_app/categ_producto_config.html', {'categoria_producto':categ_producto_all})
+    # Obtener información de usuario autenticado
+    user_info = None
+    current_user = get_current_user(request)
+    if current_user:
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.tipo_usuario,
+            'is_authenticated': True
+        }
+
+    return render(request, 'ecommerce_app/categ_producto_config.html', {
+        'categoria_producto': categ_producto_all,
+        'user_info': user_info
+    })
+
+@require_GET
+def api_filtrar_categorias_producto(request):
+    try:
+        # Obtener parámetros de la solicitud
+        nombre = request.GET.get('nombre', '').strip().lower()
+        estatus = request.GET.get('estatus', '').strip()
+        
+        # Iniciar con todas las categorías
+        categorias_query = categoria_producto.objects.all()
+        
+        # Filtrar por nombre si se proporciona
+        if nombre:
+            categorias_query = categorias_query.filter(nombre_categoria_prod__icontains=nombre)
+        
+        # Filtrar por estatus si se proporciona y no es 'todos'
+        if estatus and estatus.lower() != 'todos':
+            categorias_query = categorias_query.filter(estatus_categoria_prod=estatus)
+        
+        # Convertir a lista de diccionarios para la respuesta JSON
+        categorias_list = list(categorias_query.values(
+            'id_categoria_prod', 
+            'nombre_categoria_prod', 
+            'descripcion_categoria_prod', 
+            'estatus_categoria_prod'
+        ))
+        
+        return JsonResponse({
+            'success': True,
+            'categorias': categorias_list
+        })
+    except Exception as e:
+        logger.error(f"Error al filtrar categorías: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al filtrar categorías: {str(e)}'
+        })
 
 
 
@@ -907,6 +1227,59 @@ def editar_categoria_producto(request):
     })
 
 
+
+def editar_categoria_servicio(request):
+    if request.method == 'POST':
+        try:
+            id_categoria = request.POST.get('id_categoria')
+            logger.info(f"Intentando editar categoría de servicio con ID: {id_categoria}")
+            if not id_categoria:
+                logger.error("No se proporcionó ID de categoría de servicio")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID de categoría de servicio no proporcionado'
+                })
+            categoria_obj = categoria_servicio.objects.get(id_categoria_serv=id_categoria)
+            # Actualizar los datos
+            categoria_obj.nombre_categoria_serv = request.POST.get('nombre_categoria')
+            categoria_obj.descripcion_categoria_serv = request.POST.get('descripcion_categoria')
+            categoria_obj.estatus_categoria_serv = request.POST.get('estatus_categoria')
+            categoria_obj.save()
+            logger.info(f"Categoría de servicio actualizada exitosamente: {categoria_obj.nombre_categoria_serv}")
+            return JsonResponse({
+                'success': True,
+                'message': f'Categoría de servicio "{categoria_obj.nombre_categoria_serv}" actualizada exitosamente'
+            })
+        except categoria_servicio.DoesNotExist:
+            logger.error(f"Error al editar la categoría de servicio: Categoría no encontrada con ID {id_categoria}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Categoría de servicio no encontrada'
+            })
+        except Exception as e:
+            logger.error(f"Error al editar la categoría de servicio: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al editar la categoría de servicio: {str(e)}'
+            })
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def categ_servicio_config_funcion(request):
     categ_servicio_all= categoria_servicio.objects.all()
 
@@ -920,32 +1293,26 @@ def eliminar_categoria_servicio_funcion(request):
         try:
             id_categoria_servicio = request.POST.get('id_categoriaservicio')
             logger.info(f"Intentando eliminar categoría con ID: {id_categoria_servicio}")
-            
             if not id_categoria_servicio:
                 logger.error("No se proporcionó ID de categoría")
-                return redirect('/ecommerce/categ_servicio_config/?error=true')
-                
+                return JsonResponse({'success': False, 'message': 'ID de categoría no proporcionado'})
             categoria_obj = categoria_servicio.objects.get(id_categoria_serv=id_categoria_servicio)
             nombre_categoria_servicio = categoria_obj.nombre_categoria_serv
-            
-            # Verificar si hay productos asociados
-            servicios_asociados = servicio.objects.filter(id_categoria_servicios_fk_id=categoria_obj).exists()
+            # Verificar si hay servicios asociados
+            servicios_asociados = servicio.objects.filter(id_categoria_servicios_fk=categoria_obj).exists()
             if servicios_asociados:
-                logger.error(f"No se puede eliminar la categoría {nombre_categoria_servicio} porque tiene productos asociados")
-                return redirect('/ecommerce/categ_servicio_config/?error=true')
-            
+                logger.error(f"No se puede eliminar la categoría {nombre_categoria_servicio} porque tiene servicios asociados")
+                return JsonResponse({'success': False, 'message': f'No se puede eliminar la categoría "{nombre_categoria_servicio}" porque tiene servicios asociados'})
             categoria_obj.delete()
             logger.info(f"Categoría eliminada exitosamente: {nombre_categoria_servicio}")
-            return redirect('/ecommerce/categ_servicio_config/?deleted=true')
-            
+            return JsonResponse({'success': True, 'message': f'Categoría "{nombre_categoria_servicio}" eliminada exitosamente'})
         except categoria_servicio.DoesNotExist:
             logger.error(f"Error al eliminar la categoría: Categoría no encontrada con ID {id_categoria_servicio}")
-            return redirect('/ecommerce/categ_servicio_config/?error=true')
+            return JsonResponse({'success': False, 'message': 'Categoría no encontrada'})
         except Exception as e:
             logger.error(f"Error al eliminar la categoría: {str(e)}")
-            return redirect('/ecommerce/categ_servicio_config/?error=true')
-    
-    return redirect('/ecommerce/categ_servicio_config/')
+            return JsonResponse({'success': False, 'message': f'Error al eliminar la categoría: {str(e)}'})
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
 
 def producto_config_funcion(request):
     producto_sucursal_all= producto.objects.all()
@@ -1089,12 +1456,21 @@ def index(request):
     if is_user_authenticated(request):
         current_user = get_current_user(request)
         if current_user:
+            # Buscar empresa asociada
+            empresa_nombre = None
+            try:
+                empresa_obj = empresa.objects.filter(id_usuario_fk=current_user).first()
+                if empresa_obj:
+                    empresa_nombre = empresa_obj.nombre_empresa
+            except Exception as e:
+                empresa_nombre = None
             user_info = {
                 'id': current_user.id_usuario,
                 'nombre': current_user.nombre_usuario,
                 'email': current_user.correo_usuario,
                 'tipo': current_user.tipo_usuario,
-                'is_authenticated': True
+                'is_authenticated': True,
+                'empresa_nombre': empresa_nombre
             }
     
     return render(request, 'ecommerce_app/index.html', {'user_info': user_info})

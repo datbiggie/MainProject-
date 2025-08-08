@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     // Mensaje de éxito al crear categoría
     if (urlParams.get('success') === 'true') {
         Swal.fire({
@@ -25,35 +25,33 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Aceptar'
         });
     } else if (urlParams.has('error')) {
+        // Si hay mensaje de error y parámetro de campo, enfocar el campo correspondiente
+        const errorMsg = urlParams.get('error_msg') || 'Ha ocurrido un error al procesar la solicitud';
+        const errorField = urlParams.get('error_field');
         Swal.fire({
             title: 'Error',
-            text: 'Ha ocurrido un error al procesar la solicitud',
+            text: errorMsg,
             icon: 'error',
             confirmButtonText: 'Aceptar'
+        }).then(() => {
+            if (errorField) {
+                const $el = document.getElementById(errorField);
+                if ($el) $el.focus();
+            }
         });
     }
 });
 
 // Inicializar flatpickr con configuración mejorada
-flatpickr("#fecha_creacion", {
-  dateFormat: "d/m/Y",
-  locale: "es",
-  allowInput: true,
-  altInput: true,
-  altFormat: "d/m/Y",
-  disableMobile: "true",
-  minDate: "today",
-  maxDate: new Date().fp_incr(365), // Un año desde hoy
-  enableTime: false,
-  time_24hr: true,
-  showMonths: 1,
-  static: true,
-  position: "auto",
-  monthSelectorType: "static",
-  prevArrow: "<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M15 18L9 12L15 6' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-  nextArrow: "<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M9 18L15 12L9 6' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-  onOpen: function(selectedDates, dateStr, instance) {
-    instance.set("position", "auto");
+// Fecha de hoy por defecto y deshabilitado
+document.addEventListener('DOMContentLoaded', function() {
+  var fechaInput = document.getElementById('fecha_creacion');
+  if (fechaInput) {
+    var today = new Date();
+    var day = String(today.getDate()).padStart(2, '0');
+    var month = String(today.getMonth() + 1).padStart(2, '0');
+    var year = today.getFullYear();
+    fechaInput.value = day + '/' + month + '/' + year;
   }
 });
 
@@ -119,6 +117,15 @@ $(document).ready(function() {
                         icon: 'error',
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
+                    }).then(() => {
+                        // Foco automático según el mensaje de error
+                        if (response.message && response.message.toLowerCase().includes('nombre')) {
+                            $('#nombre_categoria').focus();
+                        } else if (response.message && response.message.toLowerCase().includes('estatus')) {
+                            $('#estatus_categoria').focus();
+                        } else if (response.message && response.message.toLowerCase().includes('descrip')) {
+                            $('#descripcion_categoria').focus();
+                        }
                     });
                 }
             },

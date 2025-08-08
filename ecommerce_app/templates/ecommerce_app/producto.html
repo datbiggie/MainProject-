@@ -1,4 +1,5 @@
-{% load static %}
+{% load static %}       
+{% include 'ecommerce_app/barra_superior_operaciones.html' %}
 <!doctype html>
 <html lang="es">
   <head>
@@ -14,7 +15,8 @@
     <!-- Style -->
     <link rel="stylesheet" href="{% static 'producto/css/style.css' %}">
     <link rel="stylesheet" href="{% static 'producto/css/main.css' %}">
-    <title>Producto</title>
+    <title>Productos</title>
+
   </head>
   <body>
   <div class="content">
@@ -22,7 +24,7 @@
       <div class="row align-items-stretch no-gutters contact-wrap">
         <div class="col-md-8">
           <div class="form h-100">
-            <h3>PRODUCTO</h3>
+            <h3 class="text-center mb-4" style=" font-weight: 700; letter-spacing: 1px;">PRODUCTOS</h3>
             <form class="mb-5" method="post" id="productoForm" name="productoForm" enctype="multipart/form-data" action="{% url 'producto_funcion' %}">
               {% csrf_token %}
               <div class="row">

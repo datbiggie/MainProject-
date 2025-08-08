@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Gestión de Sucursales</title>
 <link rel="stylesheet" href="{% static 'sucursal/css/main.css' %}">
+<link rel="stylesheet" href="{% static 'barra_superior/css/main.css' %}">
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -24,165 +25,150 @@
 <!-- SVG Icons -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
   <defs>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="menu" viewBox="0 0 24 24"><path fill="currentColor" d="M2 6a1 1 0 0 1 1-1h18a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1m0 6.032a1 1 0 0 1 1-1h18a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1m1 5.033a1 1 0 1 0 0 2h18a1 1 0 0 0 0-2z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="3"/><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/></g></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.448 7.969C6.448 4.596 9.044 2 12.417 2C15.79 2 18.386 4.596 18.386 7.969C18.386 11.342 18.386 12.053 18.386 13.474C18.386 14.895 18.386 15.605 18.386 18.979C18.386 19.403 18.386 19.615 18.386 19.721C18.386 19.827 18.386 19.88 18.386 19.88C18.386 19.88 18.333 19.88 18.227 19.88C18.121 19.88 17.909 19.88 17.485 19.88H7.349C6.925 19.88 6.713 19.88 6.607 19.88C6.501 19.88 6.448 19.88 6.448 19.88C6.448 19.88 6.448 19.827 6.448 19.721C6.448 19.615 6.448 19.403 6.448 18.979C6.448 15.605 6.448 14.895 6.448 13.474C6.448 12.053 6.448 11.342 6.448 7.969Z"/><path d="M10.766 19.88C10.766 20.914 11.732 21.88 12.766 21.88C13.8 21.88 14.766 20.914 14.766 19.88"/></g></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="heart" viewBox="0 0 24 24"><path fill="currentColor" d="M20.16 4.61A6.27 6.27 0 0 0 12 4a6.27 6.27 0 0 0-8.16 9.48l7.45 7.45a1 1 0 0 0 1.42 0l7.45-7.45a6.27 6.27 0 0 0 0-8.87Zm-1.41 7.46L12 18.81l-6.75-6.74a4.28 4.28 0 0 1 3-7.3a4.25 4.25 0 0 1 3 1.25a1 1 0 0 0 1.42 0a4.27 4.27 0 0 1 6 6.05Z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="cart" viewBox="0 0 24 24"><path fill="currentColor" d="M8.5 19a1.5 1.5 0 1 0 1.5 1.5A1.5 1.5 0 0 0 8.5 19ZM19 16H7a1 1 0 0 1 0-2h8.491a3.013 3.013 0 0 0 2.885-2.176l1.585-5.55A1 1 0 0 0 19 5H6.74a3.007 3.007 0 0 0-2.82-2H3a1 1 0 0 0 0 2h.921a1.005 1.005 0 0 1 .962.725l.155.545v.005l1.641 5.742A3 3 0 0 0 7 18h12a1 1 0 0 0 0-2Zm-1.326-9l-1.22 4.274a1.005 1.005 0 0 1-.963.726H8.754l-.255-.892L7.326 7ZM16.5 19a1.5 1.5 0 1 0 1.5 1.5a1.5 1.5 0 0 0-1.5-1.5Z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="home" viewBox="0 0 24 24"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="category" viewBox="0 0 24 24"><path fill="currentColor" d="M19 5.5h-6.28l-.32-1a3 3 0 0 0-2.84-2H5a3 3 0 0 0-3 3v13a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-10a3 3 0 0 0-3-3Zm1 13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1h4.56a1 1 0 0 1 .95.68l.54 1.64a1 1 0 0 0 .95.68h7a1 1 0 0 1 1 1Z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="box" viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="service" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="business" viewBox="0 0 24 24"><path fill="currentColor" d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10z"/></symbol>
-    <symbol xmlns="http://www.w3.org/2000/svg" id="location" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="menu" viewBox="0 0 24 24"><path fill="currentColor" d="M2 6a1 1 0 0 1 1-1h18a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1m0 6.032a1 1 0 0 1 1-1h18a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1m1 5.033a1 1 0 1 0 0 2h18a1 1 0 0 0 0-2z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="3"/><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/></g></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.448 7.969C6.448 4.596 9.044 2 12.417 2C15.79 2 18.386 4.596 18.386 7.969C18.386 11.342 18.386 12.053 18.386 13.474C18.386 14.895 18.386 15.605 18.386 18.979C18.386 19.403 18.386 19.615 18.386 19.721C18.386 19.827 18.386 19.88 18.386 19.88C18.386 19.88 18.333 19.88 18.227 19.88C18.121 19.88 17.909 19.88 17.485 19.88H7.349C6.925 19.88 6.713 19.88 6.607 19.88C6.501 19.88 6.448 19.88 6.448 19.88C6.448 19.88 6.448 19.827 6.448 19.721C6.448 19.615 6.448 19.403 6.448 18.979C6.448 15.605 6.448 14.895 6.448 13.474C6.448 12.053 6.448 11.342 6.448 7.969Z"/><path d="M10.766 19.88C10.766 20.914 11.732 21.88 12.766 21.88C13.8 21.88 14.766 20.914 14.766 19.88"/></g></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="heart" viewBox="0 0 24 24"><path fill="currentColor" d="M20.16 4.61A6.27 6.27 0 0 0 12 4a6.27 6.27 0 0 0-8.16 9.48l7.45 7.45a1 1 0 0 0 1.42 0l7.45-7.45a6.27 6.27 0 0 0 0-8.87Zm-1.41 7.46L12 18.81l-6.75-6.74a4.28 4.28 0 0 1 3-7.3a4.25 4.25 0 0 1 3 1.25a1 1 0 0 0 1.42 0a4.27 4.27 0 0 1 6 6.05Z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="cart" viewBox="0 0 24 24"><path fill="currentColor" d="M8.5 19a1.5 1.5 0 1 0 1.5 1.5A1.5 1.5 0 0 0 8.5 19ZM19 16H7a1 1 0 0 1 0-2h8.491a3.013 3.013 0 0 0 2.885-2.176l1.585-5.55A1 1 0 0 0 19 5H6.74a3.007 3.007 0 0 0-2.82-2H3a1 1 0 0 0 0 2h.921a1.005 1.005 0 0 1 .962.725l.155.545v.005l1.641 5.742A3 3 0 0 0 7 18h12a1 1 0 0 0 0-2Zm-1.326-9l-1.22 4.274a1.005 1.005 0 0 1-.963.726H8.754l-.255-.892L7.326 7ZM16.5 19a1.5 1.5 0 1 0 1.5 1.5a1.5 1.5 0 0 0-1.5-1.5Z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="home" viewBox="0 0 24 24"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="faq" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41c0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="category" viewBox="0 0 24 24"><path fill="currentColor" d="M19 5.5h-6.28l-.32-1a3 3 0 0 0-2.84-2H5a3 3 0 0 0-3 3v13a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-10a3 3 0 0 0-3-3Zm1 13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1h4.56a1 1 0 0 1 .95.68l.54 1.64a1 1 0 0 0 .95.68h7a1 1 0 0 1 1 1Z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="box" viewBox="0 0 24 24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="service" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="business" viewBox="0 0 24 24"><path fill="currentColor" d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10z"/></symbol>
+	<symbol xmlns="http://www.w3.org/2000/svg" id="location" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></symbol>
   </defs>
 </svg>
 
 <!-- Offcanvas para el carrito -->
 <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="offcanvasCart">
   <div class="offcanvas-header justify-content-center">
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+	<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
   <div class="offcanvas-body">
-    <div class="order-md-last">
-      <h4 class="d-flex justify-content-between align-items-center mb-3">
-        <span class="text-primary">Tu carrito</span>
-        <span class="badge bg-primary rounded-pill">0</span>
-      </h4>
-      <ul class="list-group mb-3">
-        <li class="list-group-item d-flex justify-content-between lh-sm">
-          <div>
-            <h6 class="my-0">Carrito vacío</h6>
-            <small class="text-body-secondary">No hay productos agregados</small>
-          </div>
-        </li>
-      </ul>
-      <button class="w-100 btn btn-primary btn-lg" type="submit">Continuar al checkout</button>
-    </div>
+	<div class="order-md-last">
+	  <h4 class="d-flex justify-content-between align-items-center mb-3">
+		<span class="text-primary">Tu carrito</span>
+		<span class="badge bg-primary rounded-pill">0</span>
+	  </h4>
+	  <ul class="list-group mb-3">
+		<li class="list-group-item d-flex justify-content-between lh-sm">
+		  <div>
+			<h6 class="my-0">Carrito vacío</h6>
+			<small class="text-body-secondary">No hay productos agregados</small>
+		  </div>
+		</li>
+	  </ul>
+	  <button class="w-100 btn btn-primary btn-lg" type="submit">Continuar al checkout</button>
+	</div>
   </div>
 </div>
 
 <!-- Offcanvas para el menú de navegación -->
 <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasNavbar">
   <div class="offcanvas-header justify-content-between">
-    <h4 class="fw-normal text-uppercase fs-6">Menú</h4>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+	<h4 class="fw-normal text-uppercase fs-6">Menú</h4>
+	<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
   <div class="offcanvas-body">
-    <ul class="navbar-nav justify-content-end menu-list list-unstyled d-flex flex-column gap-2 mb-0">
-      <li class="nav-item">
-        <a href="{% url 'index' %}" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#home"></use></svg>
-          <span>Inicio</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <button class="btn btn-toggle dropdown-toggle w-100 d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#categories-collapse" aria-expanded="false">
-          <span class="d-flex align-items-center gap-3">
-            <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#category"></use></svg>
-            Categorías
-          </span>
-        </button>
-        <div class="collapse" id="categories-collapse">
-          <ul class="btn-toggle-nav list-unstyled fw-normal ps-4 pb-1">
-            <li><a href="#" class="dropdown-item">Productos</a></li>
-            <li><a href="#" class="dropdown-item">Servicios</a></li>
-          </ul>
-        </div>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#box"></use></svg>
-          <span>Mi Productos</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
-          <span>Mi Servicios</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#business"></use></svg>
-          <span>Mi Sucursales</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#location"></use></svg>
-          <span>Ubica tus productos y servicios</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
-          <span>Mi Favoritos</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
-          <span>Mi Carrito</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link d-flex align-items-center gap-3">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#user"></use></svg>
-          <span>Mi cuenta / Perfil</span>
-        </a>
-      </li>
-    </ul>
+	<ul class="navbar-nav justify-content-end menu-list list-unstyled d-flex flex-column gap-2 mb-0">
+	  <li class="nav-item">
+		<a href="{% url 'index' %}" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#home"></use></svg>
+		  <span>Inicio</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<button class="btn btn-toggle dropdown-toggle w-100 d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#categories-collapse" aria-expanded="false">
+		  <span class="d-flex align-items-center gap-3">
+			<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#category"></use></svg>
+			Categorías
+		  </span>
+		</button>
+		<div class="collapse" id="categories-collapse">
+		  <ul class="btn-toggle-nav list-unstyled fw-normal ps-4 pb-1">
+			<li><a href="#" class="dropdown-item">Productos</a></li>
+			<li><a href="#" class="dropdown-item">Servicios</a></li>
+		  </ul>
+		</div>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#box"></use></svg>
+		  <span>Mi Productos</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
+		  <span>Mi Servicios</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#business"></use></svg>
+		  <span>Mi Sucursales</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#location"></use></svg>
+		  <span>Ubica tus productos y servicios</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
+		  <span>Mi Favoritos</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
+		  <span>Mi Carrito</span>
+		</a>
+	  </li>
+	  <li class="nav-item">
+		<a href="#" class="nav-link d-flex align-items-center gap-3">
+		  <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#user"></use></svg>
+		  <span>Mi cuenta / Perfil</span>
+		</a>
+	  </li>
+	</ul>
   </div>
 </div>
 
 <!-- Barra de navegación superior -->
-<header>
-  <div class="container-fluid">
-    <div class="row py-3 border-bottom align-items-center">
-      
-      <div class="col-sm-4 col-lg-2 text-center text-sm-start d-flex gap-3 justify-content-center justify-content-md-start">
-        <div class="d-flex align-items-start my-0">
-          <a href="{% url 'index' %}">
-            <img src="{% static 'index/images/logo.jpg' %}" alt="logo" class="img-fluid" style="max-height:65px;">
-          </a>
-        </div>
-        <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar"
-          aria-controls="offcanvasNavbar">
-          <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#menu"></use></svg>
-        </button>
-      </div>
-      
-      <div class="col-sm-8 col-lg-10 d-flex gap-5 align-items-center justify-content-end">
-        <ul class="d-flex justify-content-end align-items-center list-unstyled m-0 py-0 my-0">
-          <li>
-            <a href="#" class="p-2 mx-1" data-bs-toggle="modal" data-bs-target="#sesionModal">
-              <svg width="24" height="24"><use xlink:href="#user"></use></svg>
-            </a>
-          </li>
-          <li>
-            <a href="#" class="p-2 mx-1">
-              <svg width="24" height="24"><use xlink:href="#bell"></use></svg>
-            </a>
-          </li>
-          <li>
-            <a href="#" class="p-2 mx-1">
-              <svg width="24" height="24"><use xlink:href="#heart"></use></svg>
-            </a>
-          </li>
-          <li>
-            <a href="#" class="p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-              <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
-            </a>
-          </li>
-        </ul>
-      </div>
-
-    </div>
-  </div>
-</header>
+<div class="top-bar-ecommerce">
+	<div class="top-bar-left">
+		<a href="{% url 'index' %}">
+			<img src="{% static 'barra_superior/images/logo.jpg' %}" alt="Logo" class="img-fluid">
+		</a>
+		<p class="top-bar-text">Bienvenido a la tienda virtual de Todo Aquí</p>
+	</div>
+	
+	<div class="top-bar-right">
+		<ul class="d-flex justify-content-end align-items-center list-unstyled m-0 py-0 my-0">
+			<li>
+				<a href="{% url 'index' %}" class="p-2 mx-1" title="Inicio">
+					<svg width="24" height="24"><use xlink:href="#home"></use></svg>
+				</a>
+			</li>
+			<li>
+				<a href="#" class="p-2 mx-1" data-bs-toggle="modal" data-bs-target="#sesionModal">
+					<svg width="24" height="24"><use xlink:href="#user"></use></svg>
+				</a>
+			</li>
+			<li>
+				<a href="#" class="p-2 mx-1" title="Preguntas Frecuentes">
+					<svg width="24" height="24"><use xlink:href="#faq"></use></svg>
+				</a>
+			</li>
+		</ul>
+	</div>
+</div>
 <div class="container-xl">
-	<div class="card shadow-lg" style="margin-top: 4rem; margin-bottom: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
+	<div class="card shadow-lg" style="margin-top: 6rem; margin-bottom: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
 		<div class="table-responsive">
 		<div class="table-wrapper">
 			<div class="table-title" style="margin: -30px -25px 10px !important;">
@@ -191,6 +177,29 @@
 						<h2> <b>Sucursales</b></h2>
 					</div>
 					<div class="col-sm-6">
+						
+
+						<!-- Botón Continuar -->
+						{% if sqlsucursal|length > 0 %}
+							<a href="#" class="btn btn-success ms-2" id="btnContinuar"><i class="material-icons">check_circle</i> <span>Continuar</span></a>
+						{% else %}
+							<button type="button" class="btn btn-success ms-2" disabled title="Debe agregar al menos una sucursal"><i class="material-icons">check_circle</i> <span>Continuar</span></button>
+						{% endif %}
+</body>
+<script>
+document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
+	e.preventDefault();
+	Swal.fire({
+		icon: 'success',
+		title: '¡Felicidades!',
+		html: 'Has registrado tu empresa <b>{{ empresa_obj.nombre_empresa }}</b> en Todo Aquí con <b>{{ total_sucursales }}</b> sucursal(es).',
+		confirmButtonText: 'Ir al inicio'
+	}).then(() => {
+		window.location.href = "{% url 'index' %}";
+	});
+});
+</script>
+</html>
 						<a href="#addEmployeeModal" class="btn btn-primary" data-bs-toggle="modal"><i class="material-icons">&#xE147;</i> <span>Agregar Sucursal</span></a>
 						<form id="formEliminarTodas" method="POST" action="{% url 'eliminar_todas_sucursales' %}" style="display:inline;">
 							{% csrf_token %}
@@ -217,7 +226,7 @@
 					</tr>
 				</thead>
 				<tbody>
-                    {% for sucursal in sqlsucursal %}
+					{% for sucursal in sqlsucursal %}
 					<tr>
 						<td>
 							<span class="custom-checkbox">
@@ -271,7 +280,7 @@
 <div id="addEmployeeModal" class="modal fade">
 	<div class="modal-dialog modal-lg">
 		<div class="modal-content">
-			<form method="POST" action="{% url 'sucursal' %}" id="sucursalForm">
+			<form method="POST" action="{% url 'sucursalfuncion' %}" id="sucursalForm">
 				{% csrf_token %}
 				<div class="modal-header">						
 					<h4 class="modal-title">Agregar Sucursal</h4>
@@ -510,26 +519,80 @@
 
 <!-- Modal de Confirmación de eliminación de todas las sucursales -->
 <div id="deleteAllModal" class="modal fade" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="deleteAllSucursalesForm" method="POST" action="{% url 'eliminar_todas_sucursales' %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteAllModalLabel">Eliminar todas las Sucursales</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>¿Estás seguro que deseas eliminar todas las sucursales?</p>
-                    <p class="text-warning"><small>Esta acción no se puede deshacer.</small></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar Todas</button>
-                </div>
-            </form>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form id="deleteAllSucursalesForm" method="POST" action="{% url 'eliminar_todas_sucursales' %}">
+				{% csrf_token %}
+				<div class="modal-header">
+					<h5 class="modal-title" id="deleteAllModalLabel">Eliminar todas las Sucursales</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<p>¿Estás seguro que deseas eliminar todas las sucursales?</p>
+					<p class="text-warning"><small>Esta acción no se puede deshacer.</small></p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-danger">Eliminar Todas</button>
+				</div>
+			</form>
+		</div>
+	</div>
 </div>
+
+
+
+
+
+
+
+<!-- Modal para información de sesión -->
+	<div class="modal fade" id="sesionModal" tabindex="-1" aria-labelledby="sesionModalLabel" aria-hidden="true">
+	  <div class="modal-dialog">
+		<div class="modal-content">
+		  <div class="modal-header">
+			<h5 class="modal-title" id="sesionModalLabel">Información de Sesión</h5>
+			<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+		  </div>
+		  <div class="modal-body">
+			{% if user_info %}
+			  <div class="alert alert-success">
+				<h6 class="alert-heading">¡Bienvenido!</h6>
+				<p class="mb-1"><strong>Nombre:</strong> {{ user_info.nombre }}</p>
+				<p class="mb-1"><strong>Email:</strong> {{ user_info.email }}</p>
+				<p class="mb-0"><strong>Tipo de usuario:</strong> 
+				  <span class="badge bg-primary">{{ user_info.tipo }}</span>
+				</p>
+			  </div>
+			  <div class="d-grid gap-2">
+				<a href="{% url 'cerrar_sesion' %}" class="btn btn-danger">
+				  <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+				  Cerrar Sesión
+				</a>
+			  </div>
+			{% else %}
+			  <div class="alert alert-warning">
+				<h6 class="alert-heading">No has iniciado sesión</h6>
+				<p class="mb-0">Para acceder a todas las funcionalidades, por favor inicia sesión.</p>
+			  </div>
+			  <div class="d-grid gap-2">
+				<a href="{% url 'iniciar_sesion' %}" class="btn btn-primary">
+				  <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+				  Iniciar Sesión
+				</a>
+			  </div>
+			{% endif %}
+		  </div>
+		  <div class="modal-footer">
+			<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+		  </div>
+		</div>
+	  </div>
+	</div>
+
+
+
+
 
 <script src="{% static 'sucursal/js/main.js' %}"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap" async defer></script>

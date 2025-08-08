@@ -1,74 +1,141 @@
 {% load static %}
+
 <!DOCTYPE html>
 <html class="no-js" lang="zxx">
 
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <title>Configuración Categoria Servicio</title>
+    <title>Configuración Categoria Producto</title>
     <meta name="description" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="shortcut icon" type="image/x-icon"  href="{% static 'categ_servicio_config/images/favicon.svg' %}" />
-
-    <!-- ========================= CSS here ========================= -->
-    <link rel="stylesheet" href="{% static 'categ_servicio_config/css/bootstrap.min.css' %}" />
     <link rel="stylesheet" href="{% static 'categ_servicio_config/css/LineIcons.3.0.css' %}" />
     <link rel="stylesheet" href="{% static 'categ_servicio_config/css/animate.css' %}" />
     <link rel="stylesheet" href="{% static 'categ_servicio_config/css/tiny-slider.css' %}" />
     <link rel="stylesheet" href="{% static 'categ_servicio_config/css/glightbox.min.css' %}" />
     <link rel="stylesheet" href="{% static 'categ_servicio_config/css/main.css' %}" />
+    <link rel="stylesheet" href="{% static 'categ_servicio_config/css/modal.css' %}" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-   
-</head>
-
-<body>
-    <!-- Variables globales para JavaScript -->
-    <script>
-        window.CSRF_TOKEN = '{{ csrf_token }}';
-        window.DELETE_URL = '/ecommerce/eliminar_categoria_servicio/';
-    </script>
-    
-    <section class="features section">
-
-        <div class="container">
-            {% for categoria in categoria_servicio %}
-            <div class="row">
-                <div class="col-12 wow fadeInUp" data-wow-delay=".2s">
-                    <!-- Start Single Feature -->
-                    <div class="single-featuer">
-                        <img class="shape" src="{% static 'categ_servicio_config/images/features/shape.svg' %}" alt="#">
-                        <img class="shape2" src="{% static 'categ_servicio_config/images/features/shape2.svg' %}" alt="#">
-                        
-                        <span class="serial">{{ forloop.counter|stringformat:"02d" }}</span>
-                        
-                        <div class="service-icon d-flex align-items-center">
-                            <i class="lni lni-microphone"></i>
-                            <h3 class="mb-0 ms-6" style="margin-left: 50px;">{{ categoria.nombre_categoria_serv }}</h3>
+    </head>
+<body style="background-color:#E9ECEF;">
+    {% include 'ecommerce_app/barra_superior_operaciones.html' %}
+    <div class="container pt-2 pb-4 d-flex justify-content-center" style="margin-top: 2rem;" >
+        <div class="card shadow-lg bg-white border-0" style="border-radius: 1rem; max-width: 1200px; width: 100%; min-height: 600px; display: flex; flex-direction: column; align-items: center;">
+            <div class="card-body w-100 d-flex flex-column align-items-center" style="margin-top: 0; padding-top: 0.5rem;">
+                <h2 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Gestión de Servicio</h2>
+                <div class="search-section mb-4 w-100 d-flex justify-content-center" style="max-width: 700px; margin-left:auto; margin-right:auto;">
+                  <div class="card shadow-sm w-100" style="background: #f8f9fa; border-radius: 1rem; border: none;">
+                    <div class="card-body py-3 px-4">
+                      <div class="row g-2 align-items-center" style="width:100%;">
+                        <div class="col-auto d-flex align-items-center gap-2 flex-wrap">
+                          <input type="text" id="busqueda" class="form-control" placeholder="Buscar categoría por nombre..." style="max-width: 260px; border-radius: 2rem; font-size: 1.08rem; padding: 0.7rem 1.2rem; border-width: 1.5px; box-shadow: 0 1px 6px rgba(0,0,0,0.04);">
                         </div>
-
-                        <p>{{ categoria.descripcion_categoria_serv }}</p>
-                        <div class="feature-buttons text-start">
-                            <button class="btn btn-edit"><i class="lni lni-pencil"></i> Editar</button>
-                            <button class="btn btn-delete" onclick="confirmarEliminacion('{{ categoria.id_categoria_serv }}')">
-                                <i class="lni lni-trash"></i> Eliminar
-                            </button>
+                        
+                        <div class="col-auto d-flex align-items-center gap-2">
+                          <select id="filtroEstatus" class="form-select" style="border-radius:2rem; min-width:140px; font-size: 1.08rem; padding: 0.7rem 1.2rem; border-width: 1.5px; box-shadow: 0 1px 6px rgba(0,0,0,0.04);">
+                            <option value="todos">Todos</option>
+                            <option value="Activo">Activas</option>
+                            <option value="Inactivo">Inactivas</option>
+                          </select>
+                          <a href="{% url 'categoria_servicio' %}" class="btn btn-sm ms-1 d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
+                            <i class="lni lni-plus me-1"></i> Agregar Categoría
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex flex-wrap justify-content-center gap-3 w-100">
+                    {% for categoria in categoria_servicio %}
+                    <div class="card shadow-sm bg-white wow fadeInUp" data-wow-delay=".2s" data-estatus="{{ categoria.estatus_categoria_serv }}" style="max-width:300px; min-width:200px; width:100%; border-radius: 0.7rem;">
+                        <div class="card-body p-2 d-flex flex-row align-items-center h-100" style="gap: 0.7rem; min-height: 90px;">
+                            <div class="d-flex flex-column align-items-center justify-content-center" style="min-width:48px; max-width:60px;">
+                                <div style="width:38px; height:38px; background:#e9ecef; border-radius:0.4rem; display:flex; align-items:center; justify-content:center; color:#0d6efd; font-size:1.3rem;">
+                                    <i class="lni lni-folder"></i>
+                                </div>
+                            </div>
+                            <div style="border-left:1px solid #dee2e6; height:45px; margin-right:0.7rem;"></div>
+                            <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-between h-100">
+                                <h3 class="mb-2 fs-6 text-center w-100" style="margin-top: 6px; font-size: 1rem;">{{ categoria.nombre_categoria_serv }}</h3>
+                                <div class="d-flex gap-1" style="margin-top:auto;">
+                                    <button class="btn btn-primary btn-edit btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="abrirModalEditar('{{ categoria.id_categoria_serv }}', '{{ categoria.nombre_categoria_serv|escapejs }}', '{{ categoria.descripcion_categoria_serv|escapejs }}', '{{ categoria.estatus_categoria_serv|escapejs }}')">
+                                        <i class="lni lni-pencil"></i> Editar
+                                    </button>
+                                    {% if categoria.id_categoria_serv %}
+                                    <button class="btn btn-danger btn-delete btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="confirmarEliminacion('{{ categoria.id_categoria_serv }}')">
+                                        <i class="lni lni-trash"></i> Eliminar
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-secondary btn-sm px-2 py-1" style="font-size:0.9rem;" disabled title="No se puede eliminar - ID inválido">
+                                        <i class="lni lni-trash"></i> Eliminar
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <!-- End Single Feature -->
+                    {% endfor %}
                 </div>
             </div>
-            {% endfor %}
         </div>
-    </section>
+    </div>
+
+    <!-- Modal de Edición de Categoría -->
+    <div id="editCategoriaModal" class="modal fade" tabindex="-1" aria-labelledby="editCategoriaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{% url 'editar_categoria_servicio' %}" id="editCategoriaForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="id_categoria" id="edit_id_categoria">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editCategoriaModalLabel">Editar Categoría de Producto</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label for="edit_nombre_categoria">Nombre de Categoría *</label>
+                                    <input type="text" class="form-control" name="nombre_categoria" id="edit_nombre_categoria" required>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="edit_descripcion_categoria">Descripción Categoría</label>
+                                    <textarea class="form-control" name="descripcion_categoria" id="edit_descripcion_categoria" rows="3" placeholder="Ingrese la descripción de la categoría"></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="edit_estatus_categoria">Estatus Categoría *</label>
+                                            <select class="form-control" name="estatus_categoria" id="edit_estatus_categoria" required>
+                                                <option value="">Seleccione un estatus</option>
+                                                <option value="Activo">Activo</option>
+                                                <option value="Inactivo">Inactivo</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- ========================= JS here ========================= -->
-    <script src="{% static 'categ_servicio_config/js/bootstrap.min.js' %}"></script>
     <script src="{% static 'categ_servicio_config/js/wow.min.js' %}"></script>
     <script src="{% static 'categ_servicio_config/js/tiny-slider.js' %}"></script>
     <script src="{% static 'categ_servicio_config/js/glightbox.min.js' %}"></script>
     <script src="{% static 'categ_servicio_config/js/count-up.min.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{% static 'categ_servicio_config/js/main.js' %}"></script>
+    <script src="{% static 'categ_servicio_config/js/main.js' %}?v=6"></script>
+    <script src="{% static 'categ_servicio_config/js/modal.js' %}?v=3"></script>
+    <script src="{% static 'categ_servicio_config/js/filtrado.js' %}?v=1"></script>
 
 </body>
 

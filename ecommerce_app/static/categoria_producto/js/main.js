@@ -177,6 +177,15 @@ $(document).ready(function() {
                         icon: 'error',
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
+                    }).then(() => {
+                        // Foco automático según el mensaje de error
+                        if (response.message && response.message.toLowerCase().includes('nombre')) {
+                            $('#nombre_categoria').focus();
+                        } else if (response.message && response.message.toLowerCase().includes('estatus')) {
+                            $('#estatus_categoria').focus();
+                        } else if (response.message && response.message.toLowerCase().includes('descrip')) {
+                            $('#descripcion_categoria').focus();
+                        }
                     });
                 }
             },

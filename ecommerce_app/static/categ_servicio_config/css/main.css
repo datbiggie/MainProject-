@@ -1,3 +1,25 @@
+/* Botón Agregar Categoría color personalizado */
+.btn-agregar-categoria {
+  background-color: #9de3c2 !important;
+  border-color: #9de3c2 !important;
+  color: #1a3d34 !important;
+}
+.btn-agregar-categoria:hover, .btn-agregar-categoria:focus {
+  background-color: #7fdcb2 !important;
+  border-color: #7fdcb2 !important;
+  color: #1a3d34 !important;
+}
+/* Forzar hover azul en el botón de buscar de la sección de categorías */
+.btn.btn-primary.search-btn {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+.btn.btn-primary.search-btn:hover,
+.btn.btn-primary.search-btn:focus {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: #fff;
+}
 /*======================================
     Variables
 ========================================*/
@@ -566,7 +588,7 @@ ol {
 }
 
 .pt-60 {
-  padding-top: 60px;
+  padding-top: 30px;
 }
 
 .pt-65 {
@@ -1045,7 +1067,7 @@ ol {
 
 @media (max-width: 767px) {
   .section {
-    padding-top: 60px;
+    padding-top: 10px;
     padding-bottom: 60px;
   }
 }
@@ -1489,7 +1511,7 @@ ol {
 }
 
 /*======================================
-	01. Start Header CSS
+  01. Start Header CSS
 ========================================*/
 .header {
   width: 100%;
@@ -2238,7 +2260,7 @@ ol {
 }
 
 /*======================================
-	Start Countdown CSS
+  Start Countdown CSS
 ========================================*/
 .count-down {
   background-color: #F4F7FA;
@@ -2446,7 +2468,7 @@ ol {
 }
 
 .single-featuer {
-  padding: 35px;
+  padding: 20px;
   border-radius: 8px;
   -webkit-box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.048);
           box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.048);
@@ -2580,7 +2602,7 @@ ol {
 }
 
 /*=============================
-	Pricing Table CSS
+  Pricing Table CSS
 ===============================*/
 .pricing-table {
   background-image: url("../images/pricing/pricing-bg.jpg");
@@ -2991,7 +3013,7 @@ ol {
 }
 
 /*======================================
-	Footer CSS
+  Footer CSS
 ========================================*/
 .footer {
   background-color: #fff;
@@ -3239,7 +3261,9 @@ ol {
 .feature-buttons {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
+    position: absolute;
+    right: 100px;
+    top: 40px;
 }
 
 .feature-buttons .btn {
@@ -3254,23 +3278,25 @@ ol {
 }
 
 .btn-edit {
-    background-color: #4CAF50;
-    color: white;
+    background-color: #0d6efd !important; /* Azul Bootstrap */
+    color: #fff !important;
     border: none;
 }
 
 .btn-edit:hover {
-    background-color: #45a049;
+    background-color: #0b5ed7 !important; /* Azul Bootstrap hover */
+    color: #fff !important;
 }
 
 .btn-delete {
-    background-color: #f44336;
-    color: white;
+    background-color: #b80000 !important;
+    color: #fff !important;
     border: none;
 }
 
 .btn-delete:hover {
-    background-color: #da190b;
+    background-color: #b80000 !important;
+    color: #fff !important;
 }
 
 .feature-buttons .btn i {

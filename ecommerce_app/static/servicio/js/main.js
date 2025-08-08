@@ -134,6 +134,12 @@ $(document).ready(function() {
                         icon: 'error',
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
+                    }).then(() => {
+                        // Foco automático según el campo de error
+                        if (response.field) {
+                            const $el = document.getElementById(response.field);
+                            if ($el) $el.focus();
+                        }
                     });
                 }
             },

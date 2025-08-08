@@ -1,4 +1,4 @@
-// Función para confirmar eliminación de producto (debe ser global)
+// Función para confirmar eliminación de producto (sin variables globales)
 function confirmarEliminacionProducto(idProducto, nombreProducto) {
     Swal.fire({
         title: '¿Estás seguro?',
@@ -14,8 +14,11 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
             // Crear FormData para enviar los datos
             const formData = new FormData();
             formData.append('id_producto', idProducto);
-            formData.append('csrfmiddlewaretoken', window.CSRF_TOKEN);
-            
+            // Obtener el token CSRF del primer input oculto del DOM
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                formData.append('csrfmiddlewaretoken', csrfInput.value);
+            }
             // Mostrar indicador de carga
             Swal.fire({
                 title: 'Eliminando...',
@@ -25,13 +28,12 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
                     Swal.showLoading();
                 }
             });
-            
-            // Enviar solicitud de eliminación
-            fetch(window.DELETE_PRODUCT_URL, {
+            // Enviar solicitud de eliminación (URL hardcodeada)
+            fetch('/ecommerce/eliminar_producto/', {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRFToken': window.CSRF_TOKEN
+                    'X-CSRFToken': csrfInput ? csrfInput.value : ''
                 }
             })
             .then(response => response.json())

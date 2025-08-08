@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro Personas</title>
     <link rel="stylesheet" href="{% static 'registrar_persona/css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'barra_superior/css/main.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -22,7 +23,7 @@
 <div class="top-bar-ecommerce">
     <div class="top-bar-left">
         <a href="{% url 'index' %}">
-            <img src="{% static 'iniciar_sesion/images/logo.jpg' %}" alt="Logo" class="img-fluid">
+            <img src="{% static 'barra_superior/images/logo.jpg' %}" alt="Logo" class="img-fluid">
         </a>
         <p class="top-bar-text">Bienvenido a la tienda virtual de Todo Aquí</p>
     </div>
@@ -35,7 +36,7 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="p-2 mx-1" title="Perfil">
+                <a href="#" class="p-2 mx-1" data-bs-toggle="modal" data-bs-target="#sesionModal">
                     <svg width="24" height="24"><use xlink:href="#user"></use></svg>
                 </a>
             </li>
@@ -45,6 +46,50 @@
                 </a>
             </li>
         </ul>
+    </div>
+</div>
+
+<!-- Modal para información de sesión -->
+<div class="modal fade" id="sesionModal" tabindex="-1" aria-labelledby="sesionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sesionModalLabel">Información de Sesión</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if user_info %}
+                    <div class="alert alert-success">
+                        <h6 class="alert-heading">¡Bienvenido!</h6>
+                        <p class="mb-1"><strong>Nombre:</strong> {{ user_info.nombre }}</p>
+                        <p class="mb-1"><strong>Email:</strong> {{ user_info.email }}</p>
+                        <p class="mb-0"><strong>Tipo de usuario:</strong> 
+                            <span class="badge bg-primary">{{ user_info.tipo }}</span>
+                        </p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'cerrar_sesion' %}" class="btn btn-danger">
+                            <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+                            Cerrar Sesión
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">No has iniciado sesión</h6>
+                        <p class="mb-0">Para acceder a todas las funcionalidades, por favor inicia sesión.</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary">
+                            <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+                            Iniciar Sesión
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
     </div>
 </div>
 <div class="formbold-main-wrapper">
@@ -180,6 +225,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{% static 'registrar_persona/js/main.js' %}"></script>
 </body>
 </html>

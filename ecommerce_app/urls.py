@@ -4,12 +4,12 @@ from .views import *
 urlpatterns = [
    
     path('iniciar_sesion/', iniciar_sesion, name='iniciar_sesion'),
-    path('login-ajax/', login_ajax, name='login_ajax'),
+    path('login_ajax/', login_ajax, name='login_ajax'),
     path('validate-email/', validate_email, name='validate_email'),
     path('prueba/', prueba, name='prueba'),
     path('registrar_persona/',  registrar_persona, name='registrar_persona'),
     path('registrar_empresa/', registrar_empresa, name='registrar_empresa'),
-    path('sucursal/', sucursalfuncion, name='sucursal'),
+    path('sucursal/', sucursalfuncion, name='sucursalfuncion'),
     path('editar_sucursal/', editar_sucursal, name='editar_sucursal'),
     path('eliminar_sucursal/', eliminar_sucursal, name='eliminar_sucursal'),
     path('eliminar_todas_sucursales/', eliminar_todas_sucursales, name='eliminar_todas_sucursales'),   
@@ -26,8 +26,13 @@ urlpatterns = [
     path('eliminar_categoria_servicio/', eliminar_categoria_servicio_funcion, name='eliminar_categoria_servicio_funcion'),
     path('eliminar_categoria_producto/', eliminar_categoria_producto, name='eliminar_categoria_producto'),
     path('editar_categoria_producto/', editar_categoria_producto, name='editar_categoria_producto'),
+    path('editar_categoria_servicio/', editar_categoria_servicio, name='editar_categoria_servicio'),
     path('cerrar_sesion/', cerrar_sesion, name='cerrar_sesion'),
-    path('logout-ajax/', logout_ajax, name='logout_ajax'),
+    path('logout_ajax/', logout_ajax, name='logout_ajax'),
     path('get-user-info/', get_user_info, name='get_user_info'),
     path('index/', index, name='index'),
-] 
+    path('api/categorias_producto/', views.api_categorias_producto, name='api_categorias_producto'),
+    path('api/categorias_servicio/', views.api_categorias_servicio, name='api_categorias_servicio'),
+    path('api/filtrar_categorias_producto/', views.api_filtrar_categorias_producto, name='api_filtrar_categorias_producto'),
+    path('api/filtrar_productos/', views.api_filtrar_productos, name='api_filtrar_productos'),
+]

@@ -47,11 +47,15 @@ a {
     outline: none;
     -webkit-box-shadow: none;
     box-shadow: none;
-    border-color: #000; }
+    border-color: #2563eb; /* azul */
+    border-bottom-width: 3px;
+  }
 
-.col-form-label {
+label, .col-form-label {
   color: #000;
-  font-size: 13px; }
+  font-size: 13px;
+  font-weight: bold;
+}
 
 .btn, .form-control, .custom-select {
   height: 45px; }
@@ -60,7 +64,9 @@ a {
   outline: none;
   -webkit-box-shadow: none;
   box-shadow: none;
-  border-color: #000; }
+  border-color: #2563eb; /* azul */
+  border-bottom-width: 3px;
+}
 
 .btn {
   border: none;

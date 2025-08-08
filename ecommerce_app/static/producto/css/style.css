@@ -2,7 +2,7 @@ body {
   font-family: "Roboto", sans-serif;
   background-color: #fff;
   line-height: 1.9;
-  color: #000000;
+  color: #8c8c8c;
   position: relative; }
   body:before {
     z-index: -1;
@@ -12,7 +12,8 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    background: #1769aa; }
+    background: #1769aa;
+     }
 
 h1, h2, h3, h4, h5, h6,
 .h1, .h2, .h3, .h4, .h5, .h6 {
@@ -30,7 +31,7 @@ a {
   color: #000; }
 
 .content {
-  padding: 7rem 0; }
+  padding: 4rem 0; }
 
 .heading {
   font-size: 2.5rem;
@@ -48,7 +49,9 @@ a {
     outline: none;
     -webkit-box-shadow: none;
     box-shadow: none;
-    border-color: #000; }
+    border-color: #2563eb; /* azul */
+    border-bottom-width: 3px;
+  }
 
 .form-control::placeholder {
   color: #6c757d;
@@ -66,7 +69,9 @@ a {
   outline: none;
   -webkit-box-shadow: none;
   box-shadow: none;
-  border-color: #000; }
+  border-color: #2563eb; /* azul */
+  border-bottom-width: 3px;
+}
 
 .btn {
   border: none;
@@ -118,13 +123,14 @@ a {
       font-size: 20px;
       margin-bottom: 30px; }
 
-.contact-wrap .form-group .col-form-label {
+label, .contact-wrap .form-group .col-form-label {
   font-size: 14px;
   color: #000000 !important;
   margin: 0 0 10px 0;
   display: inline-block;
   padding: 0;
-  font-weight: 500; }
+  font-weight: bold;
+}
 
 label.error {
   font-size: 12px;

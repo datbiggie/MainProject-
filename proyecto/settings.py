@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-b9b+srgz@fc09&ve+#+=2=il$vu&&g@mq$_)#ub4q43o8qw8h7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 
 
 # Application definition
@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'ecommerce_app.middleware.JsonResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'proyecto.urls'

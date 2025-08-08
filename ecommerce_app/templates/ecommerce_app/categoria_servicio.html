@@ -1,4 +1,5 @@
-{% load static %}
+{% load static %}       
+{% include 'ecommerce_app/barra_superior_operaciones.html' %}
 <!doctype html>
 <html lang="es">
   <head>
@@ -19,6 +20,7 @@
 
     <title>Categoría de Servicios</title>
   </head>
+   
   <body>
   
   <div class="content">
@@ -26,7 +28,7 @@
       <div class="row align-items-stretch no-gutters contact-wrap">
         <div class="col-md-8">
           <div class="form h-100">
-            <h1 class="text-center mb-4" style="color: #0f0f0f; font-weight: 700; letter-spacing: 1px;">CATEGORÍA DE SERVICIO</h1>
+            <h1 class="text-center mb-4" style="color: #0f0f0f; font-weight: 700; letter-spacing: 1px;">CATEGORÍA DE SERVICIOS</h1>
             <form class="mb-5" method="post" id="categoriaForm" name="categoriaForm" action="">
                 {% csrf_token %}
               <div class="row">
@@ -54,13 +56,16 @@
                 </div>
                 <div class="col-md-6 form-group mb-5">
                   <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría Servicio *</label>
-                  <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY">
+                  <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" readonly>
                 </div>
               </div>
 
               <div class="row">
                 <div class="col-md-12 form-group">
                   <input type="submit" value="Guardar Categoría" class="btn btn-primary rounded-0 py-2 px-4">
+                  <a href="{% url 'categ_servicio_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500;">
+                    Ver Categorías
+                  </a>
                   <span class="submitting"></span>
                 </div>
               </div>
@@ -91,6 +96,40 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
   <script src="{% static 'categoria_servicio/js/main.js' %}"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    // Obtener lista de categorías existentes al cargar la página
+    let categoriasExistentes = [];
+    $(document).ready(function() {
+      $.ajax({
+        url: '/api/categorias_servicio/',
+        method: 'GET',
+        success: function(data) {
+          categoriasExistentes = data.categorias.map(c => c.toLowerCase());
+        }
+      });
+
+      $('#categoriaForm').on('submit', function(e) {
+        const nombre = $('#nombre_categoria').val().trim().toLowerCase();
+        const estatus = $('#estatus_categoria').val();
+        if (!nombre) {
+          e.preventDefault();
+          Swal.fire('Error', 'El nombre de la categoría es obligatorio.', 'error');
+          return false;
+        }
+        if (categoriasExistentes.includes(nombre)) {
+          e.preventDefault();
+          Swal.fire('Error', 'Ya existe una categoría con ese nombre.', 'error');
+          return false;
+        }
+        if (!estatus) {
+          e.preventDefault();
+          Swal.fire('Error', 'Debe seleccionar un estatus.', 'error');
+          return false;
+        }
+      });
+    });
+  </script>
 
   </body>
 </html>

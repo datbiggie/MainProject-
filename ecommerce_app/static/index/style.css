@@ -1,3 +1,28 @@
+/* Carrusel principal SIEMPRE del mismo tamaño, imágenes siempre iguales */
+.main-swiper.hero-carousel {
+  height: 400px !important;
+  min-height: 400px !important;
+  max-height: 400px !important;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-swiper.hero-carousel .swiper-slide {
+  height: 100% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  padding: 0 !important;
+}
+.main-swiper.hero-carousel img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto;
+}
 body {
   --heading-font        : "Inter", sans-serif;
   --bs-link-color: #333;
@@ -605,21 +630,21 @@ a.btn-link.text-light:after {
 .navbar .megamenu{ padding: 1rem; }
 /* ============ desktop view ============ */
 @media all and (min-width: 992px) {
-	
-	.navbar .has-megamenu{position:static!important;}
-	.navbar .megamenu{left:0; right:0; width:100%; margin-top:0;  }
-	
+  
+  .navbar .has-megamenu{position:static!important;}
+  .navbar .megamenu{left:0; right:0; width:100%; margin-top:0;  }
+  
 }	
 /* ============ desktop view .end// ============ */
 
 
 /* ============ mobile view ============ */
 @media(max-width: 991px){
-	.navbar.fixed-top .navbar-collapse, .navbar.sticky-top .navbar-collapse{
-		overflow-y: auto;
-	    max-height: 90vh;
-	    margin-top:10px;
-	}
+  .navbar.fixed-top .navbar-collapse, .navbar.sticky-top .navbar-collapse{
+    overflow-y: auto;
+      max-height: 90vh;
+      margin-top:10px;
+  }
 }
 /* ============ mobile view .end// ============ */
 
