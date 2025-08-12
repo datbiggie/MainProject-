@@ -85,8 +85,8 @@
                         <img class="shape2" src="{% static 'producto_sucursal/images/features/shape2.svg' %}" alt="#" style="max-width: 32px;">
                         <span class="serial" style="font-size: 0.95rem;">{{ forloop.counter }}</span>
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
-                            {% if producto_all.imagen_producto %}
-                                <img src="{{ producto_all.imagen_producto.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                            {% if producto_all.primera_imagen and producto_all.primera_imagen.ruta_imagen %}
+                                <img src="{{ producto_all.primera_imagen.ruta_imagen.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
                             {% else %}
                                 <i class="lni lni-microphone" style="font-size: 2rem; color: #b0b0b0;"></i>
                             {% endif %}
@@ -99,10 +99,9 @@
                                     data-marca="{{ producto_all.marca_producto|default:'' }}"
                                     data-modelo="{{ producto_all.modelo_producto|default:'' }}"
                                     data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod|default:'' }}"
-                                    data-estatus="{{ producto_all.estatus_producto|default:'' }}"
                                     data-descripcion="{{ producto_all.descripcion_producto|default:'' }}"
                                     data-caracteristicas="{{ producto_all.caracteristicas_generales|default:'' }}"
-                                    data-imagen="{{ producto_all.imagen_producto.url|default:'' }}">
+                                    data-imagen="{% if producto_all.primera_imagen and producto_all.primera_imagen.ruta_imagen %}{{ producto_all.primera_imagen.ruta_imagen.url }}{% endif %}">
                                 <i class="lni lni-pencil"></i> Editar
                             </button>
                             <button class="btn btn-delete" data-id="{{ producto_all.id_producto }}" data-nombre="{{ producto_all.nombre_producto }}">
@@ -133,19 +132,19 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Nombre del Producto</label>
-                                    <input type="text" class="form-control" name="nombre_producto" id="edit_nombre" required>
+                                    <input type="text" class="form-control enhanced-input" name="nombre_producto" id="edit_nombre" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Marca</label>
-                                    <input type="text" class="form-control" name="marca_producto" id="edit_marca">
+                                    <input type="text" class="form-control enhanced-input" name="marca_producto" id="edit_marca">
                                 </div>
                                 <div class="form-group">
                                     <label>Modelo</label>
-                                    <input type="text" class="form-control" name="modelo_producto" id="edit_modelo">
+                                    <input type="text" class="form-control enhanced-input" name="modelo_producto" id="edit_modelo">
                                 </div>
                                 <div class="form-group">
                                     <label>Categoría</label>
-                                    <select class="form-control" name="categoria_producto" id="edit_categoria" required>
+                                    <select class="form-control enhanced-input" name="categoria_producto" id="edit_categoria" required>
                                         <option value="">Seleccione una categoría</option>
                                         {% for categoria in categoria_producto_all  %}
                                             <option value="{{ categoria.id_categoria_prod }}">{{ categoria.nombre_categoria_prod }}</option>
@@ -153,39 +152,40 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Estatus</label>
-                                    <select class="form-control" name="estatus_producto" id="edit_estatus" required>
-                                        <option value="">Seleccione un estatus</option>
-                                        <option value="activo">Activo</option>
-                                        <option value="inactivo">Inactivo</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
                                     <label>Descripción</label>
-                                    <textarea class="form-control" name="descripcion_producto" id="edit_descripcion" style="height: 80px;"></textarea>
+                                    <textarea class="form-control enhanced-input" name="descripcion_producto" id="edit_descripcion" style="height: 80px;"></textarea>
                                 </div>
                                 <div class="form-group">
                                     <label>Características Generales</label>
-                                    <textarea class="form-control" name="caracteristicas_generales" id="edit_caracteristicas" style="height: 80px;" required></textarea>
+                                    <textarea class="form-control enhanced-input" name="caracteristicas_generales" id="edit_caracteristicas" style="height: 80px;" required></textarea>
                                 </div>
+                                <!-- El campo estatus_producto se ha eliminado ya que ahora está en producto_sucursal -->
+                            </div>
+                            <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Imagen</label>
+                                    <label>Imágenes Actuales del Producto</label>
+                                    <div id="current_images_container" class="row mb-3">
+                                        <!-- Las imágenes actuales se cargarán aquí dinámicamente -->
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Agregar Nuevas Imágenes</label>
                                     <div class="file-upload-wrapper" style="max-width: 200px;">
                                         <div class="file-upload-container">
-                                            <input type="file" name="imagen_producto" id="edit_imagen_producto" class="form-control file-input" accept="image/*">
+                                            <input type="file" name="imagenes_producto" id="edit_imagenes_producto" class="form-control file-input" accept="image/*" multiple>
                                             <div class="file-upload-placeholder">
                                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                     <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                                     <path d="M17 8L12 3L7 8" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                                     <path d="M12 3V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                                 </svg>
-                                                <span>Seleccionar imagen</span>
+                                                <span>Agregar más imágenes</span>
                                             </div>
                                             <div class="image-preview" id="edit_imagePreview"></div>
                                         </div>
                                     </div>
+                                    <div class="form-text">Puedes agregar más imágenes (máximo 5 en total).</div>
                                 </div>
                             </div>
                         </div>
@@ -199,6 +199,49 @@
         </div>
     </div>
 
+    <!-- ========================= Enhanced Input Styles ========================= -->
+    <style>
+        .enhanced-input {
+            border: 1px solid #e0e0e0 !important;
+            border-radius: 6px !important;
+            padding: 12px 15px !important;
+            font-size: 14px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: none !important;
+            color: #333 !important;
+        }
+        
+        .enhanced-input:focus {
+            border-color: #2196F3 !important;
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.1) !important;
+            outline: none !important;
+        }
+        
+        .enhanced-input::placeholder {
+            color: #999 !important;
+        }
+        
+        .enhanced-input[type="select"], select.enhanced-input {
+            appearance: none !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23333' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 15px center !important;
+            padding-right: 35px !important;
+        }
+        
+        textarea.enhanced-input {
+            resize: vertical !important;
+            min-height: 100px !important;
+        }
+        
+        .modal label {
+            color: #000 !important;
+            font-weight: 500 !important;
+            margin-bottom: 8px !important;
+            font-size: 14px !important;
+        }
+    </style>
+    
     <!-- ========================= JS here ========================= -->
     <script src="{% static 'producto_sucursal/js/wow.min.js' %}"></script>
     <script src="{% static 'producto_sucursal/js/tiny-slider.js' %}"></script>

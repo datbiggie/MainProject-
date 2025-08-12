@@ -99,8 +99,8 @@ Author: GrayGrids
 
     // Event delegation para el input de imagen
     document.addEventListener('change', function(e) {
-        if (e.target && e.target.id === 'edit_imagen_producto') {
-            console.log('Evento change detectado en edit_imagen_producto');
+        if (e.target && e.target.id === 'edit_imagenes_producto') {
+            console.log('Evento change detectado en edit_imagenes_producto');
             previewEditImage(e.target);
         }
     });
@@ -112,7 +112,7 @@ Author: GrayGrids
         if (editModal) {
             editModal.addEventListener('shown.bs.modal', function() {
                 console.log('Modal abierto, agregando evento de imagen');
-                const editImageInput = document.getElementById('edit_imagen_producto');
+                const editImageInput = document.getElementById('edit_imagenes_producto');
                 if (editImageInput) {
                     editImageInput.addEventListener('change', function() {
                         console.log('Evento change en modal abierto');

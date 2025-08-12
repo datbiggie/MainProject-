@@ -1,5 +1,4 @@
 {% load static %}
-{% include 'ecommerce_app/barra_superior_index.html' %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -20,7 +19,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   </head>
     <body>
 
@@ -28,6 +27,11 @@
       <div class="preloader">
       </div>
       </div>
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+
+
+
        <section class="main-swiper swiper hero-carousel">
       <div class="swiper-wrapper">
         <!-- Slide 1 -->
@@ -721,53 +725,7 @@
     <script src="{% static 'index/js/plugins.js' %}"></script>
     <script src="{% static 'index/js/script.js' %}"></script>
     
-    <!-- Modal para información de sesión -->
-    <div class="modal fade" id="sesionModal" tabindex="-1" aria-labelledby="sesionModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="sesionModalLabel">Información de Sesión</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            {% if user_info %}
-              <div class="alert alert-success">
-                <h6 class="alert-heading">¡Bienvenido!</h6>
-                <p class="mb-1"><strong>Nombre:</strong> {{ user_info.nombre }}</p>
-                <p class="mb-1"><strong>Email:</strong> {{ user_info.email }}</p>
-                {% if user_info.empresa_nombre %}
-                  <p class="mb-0"><strong>Empresa Registrada:</strong> 
-                    <span class="badge bg-success">{{ user_info.empresa_nombre }}</span>
-                  </p>
-                {% else %}
-                  <p class="mb-0"><strong>Empresa asociada:</strong> <span class="text-muted">Sin empresa</span></p>
-                  {% endif %}
-              </div>
-              <div class="d-grid gap-2">
-                <a href="{% url 'cerrar_sesion' %}" class="btn btn-danger">
-                  <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
-                  Cerrar Sesión
-                </a>
-              </div>
-            {% else %}
-              <div class="alert alert-warning">
-                <h6 class="alert-heading">No has iniciado sesión</h6>
-                <p class="mb-0">Para acceder a todas las funcionalidades, por favor inicia sesión.</p>
-              </div>
-              <div class="d-grid gap-2">
-                <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary">
-                  <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
-                  Iniciar Sesión
-                </a>
-              </div>
-            {% endif %}
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
     <script src="{% static 'index/js/rating-system.js' %}"></script>
   </body>

@@ -1,0 +1,458 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Perfil Empresa</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="{% static 'perfil_empresa/css/vendor.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'perfil_empresa/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  </head>
+    <body>
+
+    <div class="preloader-wrapper">
+      <div class="preloader">
+      </div>
+      </div>
+
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<!-- Presentación de la Empresa -->
+<section class="empresa-presentacion py-4 border-bottom">
+  <div class="container-lg">
+    <div class="row align-items-center">
+      <div class="col-md-2 text-center mb-3 mb-md-0">
+        <div class="logo-empresa-circular">
+          {% if empresa.logo_empresa %}
+            <img src="{{ empresa.logo_empresa.url }}" alt="Logo Empresa">
+          {% else %}
+            <img src="{% static 'perfil_empresa/images/logo.jpg' %}" alt="Logo Empresa">
+          {% endif %}
+        </div>
+
+        <!-- Formulario para subir/cambiar logo -->
+        <form method="post" enctype="multipart/form-data" action="{% url 'cambiar_logo_empresa' %}" class="mt-2">
+          {% csrf_token %}
+          <input type="file" name="logo" accept="image/*" class="form-control form-control-sm mb-2" style="max-width:180px; margin:0 auto;">
+          <button type="submit" class="btn btn-outline-primary btn-sm">Actualizar logo</button>
+        </form>
+      </div>
+      <div class="col-md-10">
+  <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ empresa.nombre_empresa|default:'Nombre de la Empresa' }}</h1>
+  <p class="lead mb-0" style="color:#444;">{{ empresa.descripcion_empresa|default:'Aquí va una breve descripción de la empresa, su misión, visión o cualquier información relevante que quieras mostrar a los usuarios.' }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container-fluid">
+  <div class="row gx-2 gy-3 align-items-stretch mt-4">
+    <div class="col-md-3 col-12 ps-0">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero" style="background: #f4f8fb;">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#user"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Sobre la Empresa</h5>
+          <ul class="list-unstyled small text-start mb-2" style="min-width:180px;">
+            <li><strong style="color:#111;">Tipo:</strong> <span style="color:#111;">{{ empresa.tipo_empresa|default:'-' }}</span></li>
+            <li><strong style="color:#111;">Ubicación:</strong> <span style="color:#111;">{{ empresa.estado_empresa|default:'-' }}, {{ empresa.pais_empresa|default:'-' }}</span></li>
+            <li><strong style="color:#111;">Tel/WhatsApp:</strong> <span style="color:#111;">04249692650</span></li>
+            <li><strong style="color:#111;">Email:</strong> <span style="color:#111;">{{ empresa.email|default:'-' }}</span></li>
+            <li><strong style="color:#111;">Web/Perfil:</strong> {% if empresa.sitio_web %}<a href="{{ empresa.sitio_web }}" target="_blank">Sitio Web</a>{% else %}-{% endif %}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-12">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#delivery"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Sucursales Asociadas</h5>
+          <p class="mb-3 small">Explora los productos más destacados.</p>
+          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-12">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#category"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Productos Destacados</h5>
+          <p class="mb-3 small">Explora los productos más destacados.</p>
+          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-12">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#secure"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Servicios Destacados</h5>
+          <p class="mb-3 small">Explora los servicios más destacados.</p>
+          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <section class="pb-5">
+      <div class="container-lg">
+
+        <div class="row">
+          <div class="col-md-12">
+
+            <div class="section-header d-flex flex-wrap justify-content-between my-4">
+              
+              <h2 class="section-title">Productos Agregados Recientemente</h2>
+
+              <div class="d-flex align-items-center">
+                <a href="#" class="btn btn-blue rounded-1">View All</a>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-12">
+
+            <div class="product-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
+                  
+              <div class="col">
+                <div class="product-item">
+                  <figure>
+                    <a href="index.html" title="Product Title">
+                      <img src="{% static 'perfil_empresa/images/product-thumb-1.png' %}" alt="Product Thumbnail" class="tab-image">
+                    </a>
+                  </figure>
+                  <div class="d-flex flex-column text-center">
+                    <h3 class="fs-6 fw-normal">Whole Wheat Sandwich Bread</h3>
+                    <div>
+                      <div class="rating-container" data-product-id="1">
+                        <div class="stars-container">
+                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
+                        </div>
+                        <span class="rating-text">(222)</span>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-center align-items-center gap-2">
+                      <del>$24.00</del>
+                      <span class="text-dark fw-semibold">$18.00</span>
+                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
+                    </div>
+                    <div class="button-area p-3 pt-0">
+                      <div class="row g-1 mt-2">
+                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
+                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
+                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+           
+
+          
+
+         
+        
+              
+            </div>
+            <!-- / product-grid -->
+
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+   
+
+
+ <section class="pb-5">
+      <div class="container-lg">
+
+        <div class="row">
+          <div class="col-md-12">
+
+            <div class="section-header d-flex flex-wrap justify-content-between my-4">
+              
+              <h2 class="section-title">Servicios Agregados Recientemente</h2>
+
+              <div class="d-flex align-items-center">
+                <a href="#" class="btn btn-blue rounded-1">View All</a>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-12">
+
+            <div class="product-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
+                  
+              <div class="col">
+                <div class="product-item">
+                  <figure>
+                    <a href="index.html" title="Product Title">
+                      <img src="{% static 'perfil_empresa/images/product-thumb-1.png' %}" alt="Product Thumbnail" class="tab-image">
+                    </a>
+                  </figure>
+                  <div class="d-flex flex-column text-center">
+                    <h3 class="fs-6 fw-normal">Whole Wheat Sandwich Bread</h3>
+                    <div>
+                      <div class="rating-container" data-product-id="1">
+                        <div class="stars-container">
+                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
+                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
+                        </div>
+                        <span class="rating-text">(222)</span>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-center align-items-center gap-2">
+                      <del>$24.00</del>
+                      <span class="text-dark fw-semibold">$18.00</span>
+                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
+                    </div>
+                    <div class="button-area p-3 pt-0">
+                      <div class="row g-1 mt-2">
+                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
+                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
+                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+           
+
+          
+
+         
+        
+              
+            </div>
+            <!-- / product-grid -->
+
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="py-5">
+      <div class="container-lg">
+        <div class="row row-cols-1 row-cols-sm-3 row-cols-lg-5">
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#package"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Todo en un solo lugar</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#secure"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Ofertas personalizadas</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#quality"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Ahorro optimizado</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#savings"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Actualizaciones en tiempo real</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#offers"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Ofertas diarias</h5>
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="py-5">
+      <div class="container-lg">
+        <div class="row">
+
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <img src="{% static 'perfil_empresa/images/logo.jpg' %}" width="160" height="180" alt="logo">
+              <div class="social-links mt-3">
+                <ul class="d-flex list-unstyled gap-2">
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-facebook">
+                      <svg width="16" height="16"><use xlink:href="#facebook"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-youtube">
+                      <svg width="16" height="16"><use xlink:href="#youtube"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-instagram">
+                      <svg width="16" height="16"><use xlink:href="#instagram"></use></svg>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Todo Aquí</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Sobre Nosotros</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Condiciones </a>
+                </li>    
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Enlaces rápidos</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Ofertas</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Descuentos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Tiendas</a>
+                </li>
+              
+               
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Servicio al cliente</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">FAQ</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Contactos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Política de Privacidad</a>
+                </li>
+                
+              </ul>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Suscríbete con nosotros</h5>
+              <p>Suscríbete a nuestro boletín para recibir actualizaciones sobre nuestras grandes ofertas.</p>
+              <a href="{% url 'iniciar_sesion' %}" class="btn btn-dark rounded-end rounded-0 mt-3 d-inline-block">Subscribir</a>
+
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </footer>
+    
+  <script src="{% static 'perfil_empresa/js/jquery-1.11.0.min.js' %}"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+  <script src="{% static 'perfil_empresa/js/plugins.js' %}"></script>
+  <script src="{% static 'perfil_empresa/js/script.js' %}"></script>
+    
+   
+
+  <script src="{% static 'perfil_empresa/js/rating-system.js' %}"></script>
+  </body>
+</html>

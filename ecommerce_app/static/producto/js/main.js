@@ -63,9 +63,18 @@ function previewImage(input) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+// Código movido al bloque $(document).ready() para evitar conflictos
+
+$(document).ready(function() {
+    // Verificar que SweetAlert2 está cargado
+    if (typeof Swal === 'undefined') {
+        console.error('SweetAlert2 no está cargado');
+    } else {
+        console.log('SweetAlert2 está cargado correctamente');
+    }
+    
+    // Manejo de parámetros URL para mensajes
     const urlParams = new URLSearchParams(window.location.search);
-    // Mensaje de éxito al crear producto
     if (urlParams.get('success') === 'true') {
         Swal.fire({
             title: '¡Producto Registrado!',
@@ -89,7 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Aceptar'
         });
     } else if (urlParams.has('error')) {
-        // Si hay mensaje de error y parámetro de campo, enfocar el campo correspondiente
         const errorMsg = urlParams.get('error_msg') || 'Ha ocurrido un error al procesar la solicitud';
         const errorField = urlParams.get('error_field');
         Swal.fire({
@@ -104,81 +112,53 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
 
-$(document).ready(function() {
-    // Verificar que SweetAlert2 está cargado
-    if (typeof Swal === 'undefined') {
-        console.error('SweetAlert2 no está cargado');
-    } else {
-        console.log('SweetAlert2 está cargado correctamente');
+    // Función para crear previsualización de imagen
+    function createImagePreview(file, previewContainer) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.width = '100%';
+            img.style.maxWidth = '150px';
+            img.style.height = '100px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '8px';
+            img.style.border = '2px solid #ddd';
+            img.style.marginTop = '10px';
+            previewContainer.appendChild(img);
+        };
+        reader.readAsDataURL(file);
     }
-
-    // Manejar la previsualización de la imagen
-    $('#imagen_producto').on('change', function() {
-        console.log('Cambio detectado en el input de imagen');
-        const input = this;
-        const container = input.closest('.file-upload-container');
-        const preview = document.getElementById('imagePreview');
-        const file = input.files[0];
+    
+    // Configurar event listeners para cada input de imagen
+    for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById(`imagen_${i}`);
+        const preview = document.getElementById(`preview_${i}`);
         
-        console.log('Archivo seleccionado:', file);
-        
-        if (file) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                console.log('Imagen cargada en el reader');
-                // Crear la imagen
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.alt = 'Preview';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'contain';
-                
-                // Limpiar y agregar la imagen
-                preview.innerHTML = '';
-                preview.appendChild(img);
-                
-                // Mostrar la previsualización
-                preview.style.display = 'block';
-                container.classList.add('has-image');
-                
-                // Ocultar el placeholder
-                const placeholder = container.querySelector('.file-upload-placeholder');
-                if (placeholder) {
-                    placeholder.style.display = 'none';
+        if (input && preview) {
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    createImagePreview(file, preview);
+                } else {
+                    preview.innerHTML = '';
                 }
-                
-                console.log('Previsualización actualizada');
-            };
-            
-            reader.onerror = function(error) {
-                console.error('Error al leer la imagen:', error);
-                Swal.fire({
-                    title: 'Error',
-                    text: 'Error al cargar la imagen',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar',
-                    confirmButtonColor: '#3b82f6'
-                });
-            };
-            
-            reader.readAsDataURL(file);
-        } else {
-            console.log('No se seleccionó ningún archivo');
-            preview.innerHTML = '';
-            preview.style.display = 'none';
-            container.classList.remove('has-image');
-            
-            // Mostrar el placeholder
-            const placeholder = container.querySelector('.file-upload-placeholder');
-            if (placeholder) {
-                placeholder.style.display = 'flex';
+            });
+        }
+    }
+    
+    // Función para verificar si al menos una imagen está seleccionada
+    function hasAtLeastOneImage() {
+        for (let i = 1; i <= 5; i++) {
+            const input = document.getElementById(`imagen_${i}`);
+            if (input && input.files.length > 0) {
+                return true;
             }
         }
-    });
+        return false;
+    }
 
     // Manejar el envío del formulario
     const form = $('#productoForm');
@@ -198,14 +178,44 @@ $(document).ready(function() {
             return false;
         }
 
+        // Validar que al menos una imagen esté seleccionada
+        if (!hasAtLeastOneImage()) {
+            Swal.fire({
+                title: 'Error',
+                text: 'Debes seleccionar al menos una imagen para el producto',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
         const submitButton = form.find('input[type="submit"]');
         submitButton.prop('disabled', true);
         isSubmitting = true;
 
+        // Crear FormData personalizado para enviar las imágenes con el nombre correcto
+        const formData = new FormData(this);
+        
+        // Remover los campos de imagen individuales
+        formData.delete('imagen_1');
+        formData.delete('imagen_2');
+        formData.delete('imagen_3');
+        formData.delete('imagen_4');
+        formData.delete('imagen_5');
+        
+        // Agregar todas las imágenes seleccionadas con el nombre 'imagenes_producto'
+        for (let i = 1; i <= 5; i++) {
+            const imageInput = document.getElementById(`imagen_${i}`);
+            if (imageInput && imageInput.files.length > 0) {
+                formData.append('imagenes_producto', imageInput.files[0]);
+            }
+        }
+
         $.ajax({
             url: form.attr('action'),
             type: 'POST',
-            data: new FormData(this),
+            data: formData,
             processData: false,
             contentType: false,
             success: function(response) {

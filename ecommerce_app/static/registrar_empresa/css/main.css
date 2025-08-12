@@ -270,9 +270,6 @@
 
 .top-bar-right .list-unstyled li:nth-child(2) a svg {
     color: #ffc107;
-}
-
-.top-bar-right .list-unstyled li:nth-child(3) a svg {
     color: #dc3545;
 }
 

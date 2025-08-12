@@ -404,18 +404,58 @@ function initMap() {
         console.error('Error al inicializar el mapa:', error);
         mapInitialized = false;
         editMapInitialized = false;
-        const mapElement = document.getElementById('map');
-        if (mapElement) {
-            mapElement.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px;">
-                    <h3>Error al cargar el mapa</h3>
-                    <p>Por favor, verifica tu conexión a internet y recarga la página.</p>
-                    <p>Si el problema persiste, contacta al administrador.</p>
-                    <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Recargar Página
-                    </button>
+        
+        // Determinar el tipo de error
+        let errorType = 'Error desconocido';
+        let errorDetails = '';
+        
+        if (error.message.includes('Network')) {
+            errorType = 'Error de red';
+            errorDetails = 'Verifica tu conexión a internet';
+        } else if (error.message.includes('API')) {
+            errorType = 'Error de API';
+            errorDetails = 'Problema con la clave de Google Maps';
+        } else if (error.message.includes('quota')) {
+            errorType = 'Límite excedido';
+            errorDetails = 'Se ha excedido el límite de uso de la API';
+        }
+        
+        const errorMessage = `
+            <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px; margin: 10px;">
+                <h3>❌ Error al cargar el mapa</h3>
+                <p><strong>${errorType}</strong></p>
+                <p>${errorDetails}</p>
+                <div style="margin: 15px 0; padding: 10px; background-color: #fff3cd; border-radius: 4px; font-size: 14px;">
+                    <strong>Posibles soluciones:</strong><br>
+                    • Verifica tu conexión a internet<br>
+                    • Recarga la página<br>
+                    • Intenta más tarde<br>
+                    • Contacta al administrador si persiste
                 </div>
-            `;
+                <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    🔄 Recargar Página
+                </button>
+                <button onclick="loadGoogleMapsRobustly()" style="margin-top: 10px; margin-left: 10px; padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    🔄 Reintentar
+                </button>
+            </div>
+        `;
+        
+        const mapElement = document.getElementById('map');
+        const editMapElement = document.getElementById('edit_map');
+        
+        if (mapElement) {
+            mapElement.innerHTML = errorMessage;
+        }
+        if (editMapElement) {
+            editMapElement.innerHTML = errorMessage;
+        }
+        
+        // Actualizar estado de ubicación
+        const locationStatus = document.getElementById('locationStatus');
+        if (locationStatus) {
+            locationStatus.innerHTML = `<span id="locationIcon">❌</span> ${errorType}: ${errorDetails}`;
+            locationStatus.style.color = '#dc3545';
         }
     }
 }
@@ -637,38 +677,133 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
     return false;
 };
 
+// Función para diagnosticar conectividad
+function diagnosticarConectividad() {
+    console.log('Iniciando diagnóstico de conectividad...');
+    
+    // Verificar conectividad básica
+    if (!navigator.onLine) {
+        return {
+            conectado: false,
+            mensaje: 'Sin conexión a internet detectada'
+        };
+    }
+    
+    // Intentar hacer ping a Google
+    return fetch('https://www.google.com/favicon.ico', {
+        method: 'HEAD',
+        mode: 'no-cors',
+        cache: 'no-cache'
+    })
+    .then(() => {
+        console.log('Conectividad a Google confirmada');
+        return {
+            conectado: true,
+            mensaje: 'Conexión a internet OK'
+        };
+    })
+    .catch(() => {
+        console.log('Problemas de conectividad detectados');
+        return {
+            conectado: false,
+            mensaje: 'Problemas de conectividad a internet'
+        };
+    });
+}
+
 // Función para cargar Google Maps de forma robusta
 function loadGoogleMapsRobustly() {
-    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-        console.log('Google Maps ya está cargado, inicializando mapa...');
-        initMap();
-        return;
-    }
-
-    console.log('Esperando a que Google Maps se cargue...');
-    let attempts = 0;
-    const maxAttempts = 10;
+    console.log('Iniciando carga robusta de Google Maps...');
     
-    const checkGoogleMaps = function() {
-        attempts++;
-        console.log(`Intento ${attempts} de ${maxAttempts} para cargar Google Maps...`);
+    // Primero diagnosticar conectividad
+    diagnosticarConectividad().then(resultado => {
+        console.log('Resultado diagnóstico:', resultado);
         
-        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-            console.log('Google Maps cargado exitosamente, inicializando mapa...');
-            initMap();
-        } else if (attempts < maxAttempts) {
-            setTimeout(checkGoogleMaps, 1000);
-        } else {
-            console.error('No se pudo cargar Google Maps después de múltiples intentos');
+        if (!resultado.conectado) {
+            const errorMessage = `
+                <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px; margin: 10px;">
+                    <h3>🌐 Sin conexión a internet</h3>
+                    <p><strong>${resultado.mensaje}</strong></p>
+                    <p>Por favor verifica tu conexión y vuelve a intentar.</p>
+                    <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        🔄 Reintentar
+                    </button>
+                </div>
+            `;
+            
+            const mapElement = document.getElementById('map');
+            const editMapElement = document.getElementById('edit_map');
+            
+            if (mapElement) mapElement.innerHTML = errorMessage;
+            if (editMapElement) editMapElement.innerHTML = errorMessage;
+            
             const locationStatus = document.getElementById('locationStatus');
             if (locationStatus) {
-                locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error al cargar Google Maps. <button onclick="reloadPageWithCacheClear()" style="background: none; border: none; color: #007bff; text-decoration: underline; cursor: pointer;">Recargar página</button>';
+                locationStatus.innerHTML = '<span id="locationIcon">🌐</span> Sin conexión a internet';
                 locationStatus.style.color = '#dc3545';
             }
+            return;
         }
-    };
-    
-    setTimeout(checkGoogleMaps, 500);
+        
+        // Si hay conectividad, proceder con la carga de Google Maps
+        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+            console.log('Google Maps ya está cargado, inicializando mapa...');
+            initMap();
+            return;
+        }
+
+        console.log('Esperando a que Google Maps se cargue...');
+        let attempts = 0;
+        const maxAttempts = 15; // Aumentado el número de intentos
+        
+        const checkGoogleMaps = function() {
+            attempts++;
+            console.log(`Intento ${attempts} de ${maxAttempts} para cargar Google Maps...`);
+            
+            if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+                console.log('Google Maps cargado exitosamente, inicializando mapa...');
+                initMap();
+            } else if (attempts < maxAttempts) {
+                setTimeout(checkGoogleMaps, 1500); // Aumentado el tiempo entre intentos
+            } else {
+                console.error('No se pudo cargar Google Maps después de múltiples intentos');
+                
+                const errorMessage = `
+                    <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px; margin: 10px;">
+                        <h3>🗺️ Error al cargar Google Maps</h3>
+                        <p><strong>No se pudo conectar con los servidores de Google Maps</strong></p>
+                        <div style="margin: 15px 0; padding: 10px; background-color: #fff3cd; border-radius: 4px; font-size: 14px;">
+                            <strong>Posibles causas:</strong><br>
+                            • Problemas temporales con Google Maps<br>
+                            • Firewall o proxy bloqueando la conexión<br>
+                            • Problemas con la clave API<br>
+                            • Restricciones de red
+                        </div>
+                        <button onclick="reloadPageWithCacheClear()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🔄 Recargar página
+                        </button>
+                        <button onclick="loadGoogleMapsRobustly()" style="margin-top: 10px; margin-left: 10px; padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🔄 Reintentar carga
+                        </button>
+                    </div>
+                `;
+                
+                const mapElement = document.getElementById('map');
+                const editMapElement = document.getElementById('edit_map');
+                
+                if (mapElement) mapElement.innerHTML = errorMessage;
+                if (editMapElement) editMapElement.innerHTML = errorMessage;
+                
+                const locationStatus = document.getElementById('locationStatus');
+                if (locationStatus) {
+                    locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error al cargar Google Maps';
+                    locationStatus.style.color = '#dc3545';
+                }
+            }
+        };
+        
+        setTimeout(checkGoogleMaps, 1000);
+    });
 }
 
 // Función para recargar la página limpiando el caché
@@ -678,8 +813,330 @@ function reloadPageWithCacheClear() {
     window.location.reload(true);
 }
 
+// Función para manejar errores de autenticación de Google Maps
+window.gm_authFailure = function() {
+    console.error('Error de autenticación de Google Maps');
+    const mapElement = document.getElementById('map');
+    const editMapElement = document.getElementById('edit_map');
+    
+    const errorMessage = `
+        <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px; margin: 10px;">
+            <h3>❌ Error de conexión con Google Maps</h3>
+            <p><strong>Problema de autenticación detectado</strong></p>
+            <p>Esto puede deberse a:</p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>Problemas con la clave API de Google Maps</li>
+                <li>Restricciones de dominio en la API</li>
+                <li>Límites de uso excedidos</li>
+                <li>Problemas de conectividad a internet</li>
+            </ul>
+            <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                🔄 Recargar Página
+            </button>
+        </div>
+    `;
+    
+    if (mapElement) {
+        mapElement.innerHTML = errorMessage;
+    }
+    if (editMapElement) {
+        editMapElement.innerHTML = errorMessage;
+    }
+    
+    // Actualizar estado de ubicación
+    const locationStatus = document.getElementById('locationStatus');
+    if (locationStatus) {
+        locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error de conexión con Google Maps';
+        locationStatus.style.color = '#dc3545';
+    }
+    
+    const editLocationStatus = document.getElementById('editLocationStatus');
+    if (editLocationStatus) {
+        editLocationStatus.innerHTML = '<span id="editLocationIcon">❌</span> Error de conexión con Google Maps';
+        editLocationStatus.style.color = '#dc3545';
+    }
+};
+
 // Inicialización cuando el documento está listo
+
 $(document).ready(function() {
     // Iniciar la carga robusta de Google Maps
     loadGoogleMapsRobustly();
+
+    // Evento para abrir el modal de productos de sucursal
+    $(document).on('click', '.productos-sucursal', function() {
+        const sucursalId = $(this).data('id');
+        // Guardar el id de sucursal en el input oculto del modal
+        $('#inputSucursalIdProducto').val(sucursalId);
+
+        // Limpiar selects y campos del formulario
+        $('#selectProducto').html('<option value="">Cargando productos...</option>');
+        $('#inputStock').val('');
+        $('#inputPrecio').val('');
+
+        // AJAX para obtener productos disponibles
+        $.ajax({
+            url: '/ecommerce/api/productos_servicios_disponibles/',
+            method: 'GET',
+            data: { sucursal_id: sucursalId, tipo: 'productos' },
+            dataType: 'json',
+            success: function(data) {
+                // Productos
+                let prodOptions = '<option value="">Seleccione un producto</option>';
+                if (data.productos && data.productos.length > 0) {
+                    data.productos.forEach(function(prod) {
+                        prodOptions += `<option value="${prod.id}">${prod.nombre}</option>`;
+                    });
+                } else {
+                    prodOptions += '<option value="">No hay productos disponibles</option>';
+                }
+                $('#selectProducto').html(prodOptions);
+            },
+            error: function() {
+                $('#selectProducto').html('<option value="">Error al cargar productos</option>');
+            }
+        });
+    });
+    
+    // Evento para abrir el modal de servicios de sucursal
+    $(document).on('click', '.servicios-sucursal', function() {
+        const sucursalId = $(this).data('id');
+        // Guardar el id de sucursal en el input oculto del modal
+        $('#inputSucursalIdServicio').val(sucursalId);
+
+        // Limpiar selects y campos del formulario
+        $('#selectServicio').html('<option value="">Cargando servicios...</option>');
+        $('#inputPrecioServicio').val('');
+
+        // AJAX para obtener servicios disponibles
+        $.ajax({
+            url: '/ecommerce/api/productos_servicios_disponibles/',
+            method: 'GET',
+            data: { sucursal_id: sucursalId, tipo: 'servicios' },
+            dataType: 'json',
+            success: function(data) {
+                // Servicios
+                let servOptions = '<option value="">Seleccione un servicio</option>';
+                if (data.servicios && data.servicios.length > 0) {
+                    data.servicios.forEach(function(serv) {
+                        servOptions += `<option value="${serv.id}">${serv.nombre}</option>`;
+                    });
+                } else {
+                    servOptions += '<option value="">No hay servicios disponibles</option>';
+                }
+                $('#selectServicio').html(servOptions);
+            },
+            error: function() {
+                $('#selectServicio').html('<option value="">Error al cargar servicios</option>');
+            }
+        });
+    });
+
+    // Manejar el envío del formulario de productos de sucursal
+    $('#formAgregarProductoSucursal').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Obtener valores del formulario
+        const sucursalId = $('#inputSucursalIdProducto').val();
+        const productoId = $('#selectProducto').val();
+        const stock = $('#inputStock').val();
+        const precio = $('#inputPrecio').val();
+        const estatusProducto = $('#selectEstatusProducto').val();
+        
+        // Validaciones básicas
+        if (!sucursalId) {
+            Swal.fire({
+                title: 'Error',
+                text: 'No se ha seleccionado una sucursal',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Validar que se haya seleccionado un producto
+        if (!productoId) {
+            Swal.fire({
+                title: 'Error',
+                text: 'Debe seleccionar un producto',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Validar stock y precio
+        if (!stock) {
+            Swal.fire({
+                title: 'Error',
+                text: 'El stock es obligatorio para productos',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        if (!precio) {
+            Swal.fire({
+                title: 'Error',
+                text: 'El precio es obligatorio para productos',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Enviar datos al servidor
+        $.ajax({
+            url: '/ecommerce/api/guardar_producto_servicio_sucursal/',
+            method: 'POST',
+            data: {
+                sucursal_id: sucursalId,
+                producto_id: productoId,
+                servicio_id: '',
+                stock: stock,
+                precio: precio,
+                estatus_producto_sucursal: estatusProducto,
+                csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Mostrar mensaje de éxito
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    }).then((result) => {
+                        // Cerrar el modal
+                        $('#productosSucursalModal').modal('hide');
+                        
+                        // Opcional: recargar la página para mostrar los cambios
+                        // window.location.reload();
+                    });
+                } else {
+                    // Mostrar mensaje de error
+                    Swal.fire({
+                        title: 'Error',
+                        text: response.message,
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                }
+            },
+            error: function() {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ha ocurrido un error al procesar la solicitud',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar',
+                    confirmButtonColor: '#3b82f6'
+                });
+            }
+        });
+    });
+    
+    // Manejar el envío del formulario de servicios de sucursal
+    $('#formAgregarServicioSucursal').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Obtener valores del formulario
+        const sucursalId = $('#inputSucursalIdServicio').val();
+        const servicioId = $('#selectServicio').val();
+        const precio = $('#inputPrecioServicio').val();
+        const estatusServicio = $('#selectEstatusServicio').val();
+        
+        // Validaciones básicas
+        if (!sucursalId) {
+            Swal.fire({
+                title: 'Error',
+                text: 'No se ha seleccionado una sucursal',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Validar que se haya seleccionado un servicio
+        if (!servicioId) {
+            Swal.fire({
+                title: 'Error',
+                text: 'Debe seleccionar un servicio',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Validar precio
+        if (!precio) {
+            Swal.fire({
+                title: 'Error',
+                text: 'El precio es obligatorio para servicios',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+        
+        // Enviar datos al servidor
+        $.ajax({
+            url: '/ecommerce/api/guardar_producto_servicio_sucursal/',
+            method: 'POST',
+            data: {
+                sucursal_id: sucursalId,
+                producto_id: '',
+                servicio_id: servicioId,
+                stock: 0,
+                precio: precio,
+                estatus_servicio_sucursal: estatusServicio,
+                csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Mostrar mensaje de éxito
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    }).then((result) => {
+                        // Cerrar el modal
+                        $('#serviciosSucursalModal').modal('hide');
+                        
+                        // Opcional: recargar la página para mostrar los cambios
+                        // window.location.reload();
+                    });
+                } else {
+                    // Mostrar mensaje de error
+                    Swal.fire({
+                        title: 'Error',
+                        text: response.message,
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                }
+            },
+            error: function() {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ha ocurrido un error al procesar la solicitud',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar',
+                    confirmButtonColor: '#3b82f6'
+                });
+            }
+        });
+    });
 });

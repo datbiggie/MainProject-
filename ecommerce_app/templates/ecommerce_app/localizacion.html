@@ -1,0 +1,462 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Localización - {% if query %}{{ query }}{% else %}Mapa{% endif %}</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="{% static 'localizacion/css/vendor.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'localizacion/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+      #map {
+        height: 500px;
+        width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .resultado-card {
+        transition: transform 0.2s;
+        cursor: pointer;
+      }
+      .resultado-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .distancia-badge {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+    <body>
+
+    <div class="preloader-wrapper">
+      <div class="preloader">
+      </div>
+      </div>
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+
+
+
+
+
+    <section class="py-5">
+      <div class="container-lg">
+        {% if query %}
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between">
+              <h2 class="mb-0">
+                <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                Resultados cercanos para: <span class="text-primary">{{ query }}</span>
+              </h2>
+              <a href="{% url 'busquedad' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver a búsqueda
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
+        <div class="row">
+          <div class="col-lg-8 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                  <i class="fas fa-map me-2"></i>
+                  {% if query %}Ubicaciones encontradas{% else %}Mapa de localización{% endif %}
+                </h5>
+              </div>
+              <div class="card-body p-0">
+                <div id="map"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-lg-4">
+            {% if resultados %}
+            <div class="card">
+              <div class="card-header bg-success text-white py-2">
+                <h6 class="mb-0 small">
+                  <i class="fas fa-list me-1"></i>
+                  {{ resultados|length }} resultado{{ resultados|length|pluralize }}
+                </h6>
+              </div>
+              <div class="card-body p-1" style="max-height: 500px; overflow-y: auto; padding-top: 5px !important; display: flex; flex-direction: column-reverse;">
+                {% for resultado in resultados %}
+                <div class="card mb-1 shadow-sm resultado-card" 
+                     onclick="focusMarker('{{ forloop.counter0 }}')"
+                     style="cursor: pointer; transition: all 0.2s ease; border-left: 2px solid #007bff; height: 60px; max-height: 60px; overflow: hidden;"
+                     onmouseover="this.style.transform = 'translateY(-1px)'; this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';" 
+                     onmouseout="this.style.transform = 'translateY(0)'; this.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';">
+                  <div class="card-body py-0 px-1">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="flex-grow-1 me-2">
+                        <h6 class="mb-0 text-primary fw-bold text-truncate" style="font-size: 0.8rem; line-height: 1.1;">{{ resultado.nombre }}</h6>
+                        <div class="d-flex align-items-center text-muted mt-1" style="font-size: 0.65rem;">
+                          <i class="fas fa-map-marker-alt me-1 text-danger" style="font-size: 0.6rem;"></i>
+                          <span class="text-truncate">{{ resultado.direccion|default:"Sin dirección"|truncatechars:20 }}</span>
+                        </div>
+                      </div>
+                      <div class="d-flex flex-column align-items-end">
+                        <span class="badge bg-info text-white mb-1" style="font-size: 0.6rem;">
+                          {{ resultado.distancia|floatformat:1 }}km
+                        </span>
+                        {% if resultado.precio %}
+                        <span class="badge bg-success text-white" style="font-size: 0.6rem;">
+                          ${{ resultado.precio }}
+                        </span>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% else %}
+            <div class="card">
+              <div class="card-body text-center">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay resultados</h5>
+                <p class="text-muted">{% if query %}No se encontraron resultados para "{{ query }}" en tu área.{% else %}Realiza una búsqueda para ver resultados en el mapa.{% endif %}</p>
+                <a href="{% url 'busquedad' %}" class="btn btn-primary">
+                  <i class="fas fa-search me-1"></i> Realizar búsqueda
+                </a>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        {% if not query %}
+        <div class="row mt-5">
+          <div class="col-12 text-center">
+            <h3 class="mb-4">¿Cómo funciona la localización?</h3>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+              <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body text-center">
+                    <i class="fas fa-search fa-3x text-primary mb-3"></i>
+                    <h5>1. Busca</h5>
+                    <p class="text-muted">Realiza una búsqueda de productos o servicios</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body text-center">
+                    <i class="fas fa-map-marker-alt fa-3x text-success mb-3"></i>
+                    <h5>2. Localiza</h5>
+                    <p class="text-muted">Haz clic en "Generar Localización" para ver resultados cercanos</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body text-center">
+                    <i class="fas fa-route fa-3x text-warning mb-3"></i>
+                    <h5>3. Encuentra</h5>
+                    <p class="text-muted">Ve los 5 resultados más cercanos a tu ubicación</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <footer class="py-5">
+      <div class="container-lg">
+        <div class="row">
+
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <img src="{% static 'localizacion/images/logo.jpg' %}" width="160" height="180" alt="logo">
+              <div class="social-links mt-3">
+                <ul class="d-flex list-unstyled gap-2">
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-facebook">
+                      <svg width="16" height="16"><use xlink:href="#facebook"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-youtube">
+                      <svg width="16" height="16"><use xlink:href="#youtube"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-instagram">
+                      <svg width="16" height="16"><use xlink:href="#instagram"></use></svg>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Todo Aquí</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Sobre Nosotros</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Condiciones </a>
+                </li>    
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Enlaces rápidos</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Ofertas</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Descuentos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Tiendas</a>
+                </li>
+              
+               
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Servicio al cliente</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">FAQ</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Contactos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Política de Privacidad</a>
+                </li>
+                
+              </ul>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Suscríbete con nosotros</h5>
+              <p>Suscríbete a nuestro boletín para recibir actualizaciones sobre nuestras grandes ofertas.</p>
+              <a href="{% url 'iniciar_sesion' %}" class="btn btn-dark rounded-end rounded-0 mt-3 d-inline-block">Subscribir</a>
+
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </footer>
+    
+    <script src="{% static 'localizacion/js/jquery-1.11.0.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="{% static 'localizacion/js/plugins.js' %}"></script>
+    <script src="{% static 'localizacion/js/script.js' %}"></script>
+    
+
+
+    <script src="{% static 'localizacion/js/rating-system.js' %}"></script>
+    
+    <script>
+      let map;
+      let markers = [];
+      let userLocation = null;
+      
+      // Datos de resultados pasados desde Django
+      const resultados = JSON.parse('{{ resultados_json|safe|default:"[]" }}');
+      
+      function initMap() {
+        // Configuración inicial del mapa
+        const defaultLocation = { lat: -34.6037, lng: -58.3816 }; // Buenos Aires por defecto
+        
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: defaultLocation,
+          styles: [
+            {
+              featureType: 'poi',
+              elementType: 'labels',
+              stylers: [{ visibility: 'off' }]
+            }
+          ]
+        });
+        
+        // Obtener ubicación del usuario
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              };
+              
+              // Centrar mapa en la ubicación del usuario
+              map.setCenter(userLocation);
+              
+              // Agregar marcador del usuario
+              new google.maps.Marker({
+                position: userLocation,
+                map: map,
+                title: 'Tu ubicación',
+                icon: {
+                  url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                  scaledSize: new google.maps.Size(40, 40)
+                }
+              });
+              
+              // Agregar marcadores de resultados
+              addResultMarkers();
+            },
+            function() {
+              console.log('Error: No se pudo obtener la ubicación.');
+              // Si no se puede obtener la ubicación, solo mostrar los marcadores
+              addResultMarkers();
+            }
+          );
+        } else {
+          console.log('Error: Tu navegador no soporta geolocalización.');
+          addResultMarkers();
+        }
+      }
+      
+      function addResultMarkers() {
+        if (!resultados || resultados.length === 0) return;
+        
+        const bounds = new google.maps.LatLngBounds();
+        
+        // Agregar marcador del usuario a los bounds si existe
+        if (userLocation) {
+          bounds.extend(userLocation);
+        }
+        
+        resultados.forEach((resultado, index) => {
+          if (resultado.lat && resultado.lng) {
+            const position = {
+              lat: parseFloat(resultado.lat),
+              lng: parseFloat(resultado.lng)
+            };
+            
+            const marker = new google.maps.Marker({
+              position: position,
+              map: map,
+              title: resultado.nombre,
+              icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                scaledSize: new google.maps.Size(35, 35)
+              }
+            });
+            
+            // InfoWindow para mostrar información del resultado
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div style="max-width: 250px;">
+                  <h6 class="text-primary mb-2">${resultado.nombre}</h6>
+                  ${resultado.descripcion ? `<p class="small text-muted mb-2">${resultado.descripcion}</p>` : ''}
+                  <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                    <small>${resultado.direccion || 'Dirección no disponible'}</small>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center">
+                    ${resultado.precio ? `<span class="badge bg-warning text-dark">$${resultado.precio}</span>` : ''}
+                    <small class="text-muted">${resultado.distancia.toFixed(1)} km</small>
+                  </div>
+                </div>
+              `
+            });
+            
+            marker.addListener('click', () => {
+              // Cerrar todas las ventanas abiertas
+              markers.forEach(m => m.infoWindow && m.infoWindow.close());
+              infoWindow.open(map, marker);
+            });
+            
+            markers.push({ marker, infoWindow });
+            bounds.extend(position);
+          }
+        });
+        
+        // Ajustar el mapa para mostrar todos los marcadores
+        if (bounds.isEmpty() === false) {
+          map.fitBounds(bounds);
+          
+          // Asegurar un zoom mínimo
+          google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+            if (map.getZoom() > 15) {
+              map.setZoom(15);
+            }
+          });
+        }
+      }
+      
+      // Función para enfocar un marcador específico desde la lista
+      function focusMarker(index) {
+        if (markers[index]) {
+          const marker = markers[index].marker;
+          const infoWindow = markers[index].infoWindow;
+          
+          // Centrar mapa en el marcador
+          map.setCenter(marker.getPosition());
+          map.setZoom(16);
+          
+          // Cerrar todas las ventanas abiertas
+          markers.forEach(m => m.infoWindow && m.infoWindow.close());
+          
+          // Abrir la ventana de información
+          infoWindow.open(map, marker);
+          
+          // Animar el marcador
+          marker.setAnimation(google.maps.Animation.BOUNCE);
+          setTimeout(() => {
+            marker.setAnimation(null);
+          }, 2000);
+        }
+      }
+      
+      // Manejar errores de carga del mapa
+      window.gm_authFailure = function() {
+        document.getElementById('map').innerHTML = 
+          '<div class="d-flex align-items-center justify-content-center h-100 text-danger">' +
+          '<div class="text-center">' +
+          '<i class="fas fa-exclamation-triangle fa-3x mb-3"></i>' +
+          '<h5>Error al cargar el mapa</h5>' +
+          '<p>No se pudo cargar Google Maps. Verifica la clave API.</p>' +
+          '</div>' +
+          '</div>';
+      };
+    </script>
+    
+    <!-- Google Maps API - Cargado después de definir las funciones -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap" async defer></script>
+  </body>
+</html>

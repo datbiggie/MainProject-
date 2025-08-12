@@ -1,0 +1,385 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Busquedad</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="{% static 'index/css/vendor.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'busquedad/css_busquedad/cc_busquedad.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  </head>
+    <body>
+
+    <div class="preloader-wrapper">
+      <div class="preloader">
+      </div>
+      </div>
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<div class="container-lg py-4">
+  <div class="row">
+    <div class="col-auto pe-0">
+  <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3" style="background: #f4f8fb; min-height: 380px; width: 240px; margin-right: 2.5rem;">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#package"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Filtrar por</h5>
+          <div class="text-start mb-3">
+            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Condición</div>
+            <div class="d-flex flex-column gap-2 ps-2">
+              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
+                <span>Nuevo</span>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
+              </a>
+              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
+                <span>Usado</span>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">369</span>
+              </a>
+            </div>
+            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Marca</div>
+            <div class="d-flex flex-column gap-2 ps-2">
+              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
+                <span>Lenovo</span>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
+              </a>
+             
+            </div>
+            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Modelo</div>
+            <div class="d-flex flex-column gap-2 ps-2">
+              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
+                <span>Ideapad3</span>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
+              </a>
+
+            </div>
+            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Localización</div>
+            <div class="d-flex flex-column gap-2 ps-2">
+              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
+                <span>Rango menor a 2KM</span>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
+              </a>
+              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
+                <span>Rango mayor a 2KM</span>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">369</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col ps-0">
+      <!-- Título de resultados -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h4 class="mb-0">{% if query %}Resultados para "{{ query }}"{% else %}Todos los productos y servicios{% endif %}</h4>
+          <span class="text-muted">{{ total_resultados }} resultado(s)</span>
+        </div>
+        <a href="#" id="btnGenerarLocalizacion" class="btn btn-primary" style="background-color: #007bff; border-color: #007bff; font-weight: 500;" onclick="generarLocalizacion()">
+           <i class="fas fa-map text-warning me-2"></i>Generar Localización
+         </a>
+      </div>
+
+      {% if resultados %}
+        {% for item in resultados %}
+          <div class="ml-horizontal-card mb-3">
+            {% if item.imagen %}
+              <img src="{{ item.imagen }}" class="ml-horizontal-card-img" alt="{{ item.nombre }}">
+            {% else %}
+              <div class="ml-horizontal-card-img d-flex align-items-center justify-content-center bg-light">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image text-secondary" viewBox="0 0 16 16">
+                  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                  <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                </svg>
+              </div>
+            {% endif %}
+            <div class="ml-horizontal-card-body">
+              <div class="ml-horizontal-card-title">{{ item.nombre }}</div>
+              <div class="text-muted mb-2">{{ item.descripcion|truncatechars:100 }}</div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="ml-horizontal-card-price">
+                  {% if item.tipo == 'producto' %}
+                    ${{ item.precio }}
+                  {% else %}
+                    {% if item.precio == 'Consultar' %}
+                      Precio: Consultar
+                    {% else %}
+                      ${{ item.precio }}
+                    {% endif %}
+                  {% endif %}
+                </div>
+                <div>
+                  <span class="badge {% if item.tipo == 'producto' %}bg-primary{% else %}bg-success{% endif %} rounded-pill">{{ item.tipo|title }}</span>
+                  <span class="badge bg-secondary rounded-pill ms-1">{{ item.sucursal }}</span>
+                  {% if item.tipo == 'producto' and item.stock %}
+                    <span class="badge bg-info rounded-pill ms-1">Stock: {{ item.stock }}</span>
+                  {% endif %}
+                  {% if item.tipo == 'producto' and item.condicion %}
+                    <span class="badge {% if item.condicion == 'Nuevo' %}bg-success{% else %}bg-warning{% endif %} rounded-pill ms-1">{{ item.condicion }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="alert alert-info">
+          {% if query %}
+            No se encontraron resultados para "{{ query }}". Intenta con otra búsqueda.
+          {% else %}
+            Realiza una búsqueda para ver productos y servicios.
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <section class="py-5">
+      <div class="container-lg">
+        <div class="row row-cols-1 row-cols-sm-3 row-cols-lg-5">
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#package"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Todo en un solo lugar</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#secure"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Ofertas personalizadas</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#quality"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Ahorro optimizado</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#savings"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Actualizaciones en tiempo real</h5>
+                
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-3 border border-dark-subtle p-3">
+              <div class="text-dark mb-3">
+                <svg width="32" height="32"><use xlink:href="#offers"></use></svg>
+              </div>
+              <div class="card-body p-0">
+                <h5>Ofertas diarias</h5>
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="py-5">
+      <div class="container-lg">
+        <div class="row">
+
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <img src="{% static 'index/images/logo.jpg' %}" width="160" height="180" alt="logo">
+              <div class="social-links mt-3">
+                <ul class="d-flex list-unstyled gap-2">
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-facebook">
+                      <svg width="16" height="16"><use xlink:href="#facebook"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-youtube">
+                      <svg width="16" height="16"><use xlink:href="#youtube"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-instagram">
+                      <svg width="16" height="16"><use xlink:href="#instagram"></use></svg>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Todo Aquí</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Sobre Nosotros</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Condiciones </a>
+                </li>    
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Enlaces rápidos</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Ofertas</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Descuentos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Tiendas</a>
+                </li>
+              
+               
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Servicio al cliente</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">FAQ</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Contactos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Política de Privacidad</a>
+                </li>
+                
+              </ul>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Suscríbete con nosotros</h5>
+              <p>Suscríbete a nuestro boletín para recibir actualizaciones sobre nuestras grandes ofertas.</p>
+              <a href="{% url 'iniciar_sesion' %}" class="btn btn-dark rounded-end rounded-0 mt-3 d-inline-block">Subscribir</a>
+
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </footer>
+    
+    <script src="{% static 'index/js/jquery-1.11.0.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="{% static 'index/js/plugins.js' %}"></script>
+    <script src="{% static 'index/js/script.js' %}"></script>
+    
+
+
+    <script src="{% static 'index/js/rating-system.js' %}"></script>
+    
+    <script>
+    function generarLocalizacion() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const query = "{{ query|escapejs }}";
+                window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query) + "&lat=" + lat + "&lng=" + lng;
+            }, function(error) {
+                // Si no se puede obtener la ubicación, ir sin coordenadas
+                const query = "{{ query|escapejs }}";
+                window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query);
+            });
+        } else {
+            // Si geolocalización no está disponible, ir sin coordenadas
+            const query = "{{ query|escapejs }}";
+            window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query);
+        }
+    }
+    </script>
+  </body>
+</html>

@@ -1,3 +1,252 @@
+from django.views.decorators.http import require_GET, require_POST
+from django.http import JsonResponse
+from .models import producto, servicio, producto_sucursal, servicio_sucursal, sucursal, imagen_producto, imagen_servicio
+
+# API para obtener productos y servicios NO asociados a una sucursal
+@require_GET
+def api_productos_servicios_disponibles(request):
+    try:
+        id_sucursal = request.GET.get('id_sucursal') or request.GET.get('sucursal_id')
+        tipo = request.GET.get('tipo', 'todos')  # Nuevo parámetro para filtrar por tipo (productos, servicios o todos)
+        
+        if not id_sucursal:
+            return JsonResponse({'success': False, 'message': 'ID de sucursal requerido'})
+
+        # Inicializar listas vacías
+        productos_list = []
+        servicios_list = []
+        
+        # Si se solicitan productos o todos
+        if tipo == 'productos' or tipo == 'todos':
+            productos_asociados_qs = producto_sucursal.objects.filter(id_sucursal_fk=id_sucursal).values_list('id_producto_fk', flat=True)
+            productos_asociados_list = list(productos_asociados_qs)
+            
+            if productos_asociados_list:
+                productos_disponibles = producto.objects.exclude(id_producto__in=productos_asociados_list)
+            else:
+                productos_disponibles = producto.objects.all()
+                
+            productos_list = [
+                {'id': p.id_producto, 'nombre': p.nombre_producto}
+                for p in productos_disponibles
+            ]
+        
+        # Si se solicitan servicios o todos
+        if tipo == 'servicios' or tipo == 'todos':
+            servicios_asociados_qs = servicio_sucursal.objects.filter(id_sucursal_fk=id_sucursal).values_list('id_servicio_fk', flat=True)
+            servicios_asociados_list = list(servicios_asociados_qs)
+            
+            if servicios_asociados_list:
+                servicios_disponibles = servicio.objects.exclude(id_servicio__in=servicios_asociados_list)
+            else:
+                servicios_disponibles = servicio.objects.all()
+                
+            servicios_list = [
+                {'id': s.id_servicio, 'nombre': s.nombre_servicio}
+                for s in servicios_disponibles
+            ]
+
+        return JsonResponse({'success': True, 'productos': productos_list, 'servicios': servicios_list})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+from django.views.decorators.http import require_POST
+
+# API para guardar producto o servicio en una sucursal
+@require_POST
+def guardar_producto_servicio_sucursal(request):
+    try:
+        # Obtener datos del formulario
+        sucursal_id = request.POST.get('sucursal_id')
+        producto_id = request.POST.get('producto_id')
+        servicio_id = request.POST.get('servicio_id')
+        stock = request.POST.get('stock', 0)
+        precio = request.POST.get('precio', 0)
+        estatus_producto_sucursal = request.POST.get('estatus_producto_sucursal', 'Activo')
+        estatus_servicio_sucursal = request.POST.get('estatus_servicio_sucursal', 'Activo')
+        condicion_producto_sucursal = request.POST.get('condicion_producto_sucursal', 'Nuevo')
+        
+        # Validar datos básicos
+        if not sucursal_id:
+            return JsonResponse({'success': False, 'message': 'ID de sucursal requerido'})
+        
+        # Validar que se haya seleccionado un producto o un servicio, pero no ambos
+        if (not producto_id and not servicio_id) or (producto_id and servicio_id):
+            return JsonResponse({'success': False, 'message': 'Debe seleccionar un producto o un servicio, pero no ambos'})
+            
+        # Si es un producto, validar precio
+        if producto_id and not precio:
+            return JsonResponse({'success': False, 'message': 'Precio requerido para productos'})
+        
+        # Obtener la sucursal
+        try:
+            sucursal_obj = sucursal.objects.get(id_sucursal=sucursal_id)
+        except sucursal.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'La sucursal no existe'})
+        
+        # Guardar producto en sucursal
+        if producto_id:
+            try:
+                producto_obj = producto.objects.get(id_producto=producto_id)
+                
+                # Verificar si ya existe este producto en esta sucursal
+                if producto_sucursal.objects.filter(id_sucursal_fk=sucursal_obj, id_producto_fk=producto_obj).exists():
+                    return JsonResponse({'success': False, 'message': 'Este producto ya está asociado a esta sucursal'})
+                
+                # Crear la relación producto-sucursal con el estatus y condición seleccionados
+                producto_sucursal.objects.create(
+                    stock_producto_sucursal=stock,
+                    precio_producto_sucursal=precio,
+                    estatus_producto_sucursal=estatus_producto_sucursal,
+                    condicion_producto_sucursal=condicion_producto_sucursal,
+                    id_sucursal_fk=sucursal_obj,
+                    id_producto_fk=producto_obj
+                )
+                
+                return JsonResponse({'success': True, 'message': 'Producto agregado a la sucursal correctamente'})
+            except producto.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'El producto no existe'})
+        
+        # Guardar servicio en sucursal
+        if servicio_id:
+            try:
+                servicio_obj = servicio.objects.get(id_servicio=servicio_id)
+                
+                # Verificar si ya existe este servicio en esta sucursal
+                if servicio_sucursal.objects.filter(id_sucursal_fk=sucursal_obj, id_servicio_fk=servicio_obj).exists():
+                    return JsonResponse({'success': False, 'message': 'Este servicio ya está asociado a esta sucursal'})
+                
+                # Crear la relación servicio-sucursal con el estatus seleccionado
+                servicio_sucursal.objects.create(
+                    precio_servicio_sucursal=precio,
+                    id_sucursal_fk=sucursal_obj,
+                    id_servicio_fk=servicio_obj,
+                    estatus_servicio_sucursal=estatus_servicio_sucursal
+                )
+                
+                return JsonResponse({'success': True, 'message': 'Servicio agregado a la sucursal correctamente'})
+            except servicio.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'El servicio no existe'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+# Vista para cambiar el logo de la empresa
+
+@require_POST
+def cambiar_logo_empresa(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    try:
+        empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
+    except empresa.DoesNotExist:
+        return redirect('/ecommerce/registrar_empresa/')
+    logo = request.FILES.get('logo')
+    if not logo:
+        return redirect('/ecommerce/perfil_empresa/')
+    empresa_obj.logo_empresa = logo
+    empresa_obj.save()
+    return redirect('/ecommerce/perfil_empresa/')
+
+# Vista para eliminar servicio
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
+def eliminar_servicio(request):
+    if request.method == 'POST':
+        try:
+            id_servicio = request.POST.get('id_servicio')
+            if not id_servicio:
+                return JsonResponse({'success': False, 'message': 'ID de servicio no proporcionado'})
+            servicio_obj = servicio.objects.get(id_servicio=id_servicio)
+            nombre_servicio = servicio_obj.nombre_servicio
+            servicio_obj.delete()
+            return JsonResponse({'success': True, 'message': f'Servicio "{nombre_servicio}" eliminado exitosamente'})
+        except servicio.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Servicio no encontrado'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error al eliminar el servicio: {str(e)}'})
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+# Vista para editar servicio
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
+def editar_servicio(request):
+    if request.method == 'POST':
+        try:
+            id_servicio = request.POST.get('id_servicio')
+            if not id_servicio:
+                return JsonResponse({'success': False, 'message': 'ID de servicio no proporcionado'})
+            servicio_obj = servicio.objects.get(id_servicio=id_servicio)
+            servicio_obj.nombre_servicio = request.POST.get('nombre_servicio', servicio_obj.nombre_servicio)
+            servicio_obj.descripcion_servicio = request.POST.get('descripcion_servicio', servicio_obj.descripcion_servicio)
+            # El campo estatus_servicio ya no existe en el modelo servicio
+            id_categoria = request.POST.get('categoria_servicio')
+            if id_categoria:
+                from .models import categoria_servicio
+                try:
+                    categoria_obj = categoria_servicio.objects.get(id_categoria_serv=id_categoria)
+                    servicio_obj.id_categoria_servicios_fk = categoria_obj
+                except categoria_servicio.DoesNotExist:
+                    pass
+            # Manejar múltiples imágenes si se proporcionan
+            imagenes_servicio = request.FILES.getlist('imagenes_servicio')
+            if imagenes_servicio:
+                # Contar imágenes existentes
+                imagenes_existentes = imagen_servicio.objects.filter(id_servicio_fk=servicio_obj).count()
+                
+                # Validar número máximo de imágenes (existentes + nuevas)
+                if imagenes_existentes + len(imagenes_servicio) > 5:
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Máximo 5 imágenes permitidas. Actualmente tienes {imagenes_existentes} imágenes. Puedes agregar máximo {5 - imagenes_existentes} más.'
+                    })
+                
+                # Agregar nuevas imágenes sin eliminar las existentes
+                for imagen in imagenes_servicio:
+                    imagen_servicio.objects.create(
+                        id_servicio_fk=servicio_obj,
+                        ruta_imagen=imagen
+                    )
+            servicio_obj.save()
+            return JsonResponse({'success': True, 'message': 'Servicio actualizado exitosamente'})
+        except servicio.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Servicio no encontrado'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error al actualizar el servicio: {str(e)}'})
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+from django.views.decorators.http import require_GET
+
+# API para filtrar servicios por nombre (AJAX)
+@require_GET
+def api_filtrar_servicios(request):
+    try:
+        nombre = request.GET.get('nombre', '').strip().lower()
+        estatus = request.GET.get('estatus', '').strip().lower()
+        servicios_query = servicio.objects.all()
+        if nombre:
+            servicios_query = servicios_query.filter(nombre_servicio__icontains=nombre)
+        
+        # Ya no filtramos por estatus_servicio en el modelo servicio
+        # El estatus ahora se maneja exclusivamente en servicio_sucursal
+        
+        servicios_list = []
+        for idx, serv in enumerate(servicios_query, start=1):
+            # Obtener la primera imagen del servicio desde la nueva tabla
+            primera_imagen = imagen_servicio.objects.filter(id_servicio_fk=serv).first()
+            imagen_url = primera_imagen.ruta_imagen.url if primera_imagen and primera_imagen.ruta_imagen else ''
+                
+            servicios_list.append({
+                'id_servicio': serv.id_servicio,
+                'nombre_servicio': serv.nombre_servicio,
+                'descripcion_servicio': serv.descripcion_servicio or '',
+                'imagen_servicio': imagen_url,
+                'categoria_servicio': serv.id_categoria_servicios_fk.nombre_categoria_serv if serv.id_categoria_servicios_fk else '',
+                'serial': idx
+            })
+        return JsonResponse({'success': True, 'servicios': servicios_list})
+    except Exception as e:
+        logger.error(f"Error al filtrar servicios: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error al filtrar servicios: {str(e)}'})
 
 from django.views.decorators.http import require_GET
 
@@ -10,19 +259,22 @@ def api_filtrar_productos(request):
         productos_query = producto.objects.all()
         if nombre:
             productos_query = productos_query.filter(nombre_producto__icontains=nombre)
-        if estatus and estatus in ['activo', 'inactivo']:
-            productos_query = productos_query.filter(estatus_producto=estatus)
+        # Ya no se filtra por estatus_producto porque el campo se ha movido a producto_sucursal
         productos_list = []
         for idx, prod in enumerate(productos_query, start=1):
+            # Obtener la primera imagen del producto desde la nueva tabla
+            primera_imagen = imagen_producto.objects.filter(id_producto_fk=prod).first()
+            imagen_url = primera_imagen.ruta_imagen.url if primera_imagen and primera_imagen.ruta_imagen else ''
+            
             productos_list.append({
                 'id_producto': prod.id_producto,
                 'nombre_producto': prod.nombre_producto,
                 'descripcion_producto': prod.descripcion_producto or '',
                 'marca_producto': prod.marca_producto or '',
                 'modelo_producto': prod.modelo_producto or '',
-                'imagen_producto': prod.imagen_producto.url if prod.imagen_producto else '',
+                'imagen_producto': imagen_url,
                 'caracteristicas_generales': prod.caracteristicas_generales or '',
-                'estatus_producto': prod.estatus_producto,
+                # Ya no se incluye estatus_producto porque el campo se ha movido a producto_sucursal
                 'categoria_producto': prod.id_categoria_prod_fk.nombre_categoria_prod if prod.id_categoria_prod_fk else '',
                 'serial': idx
             })
@@ -455,11 +707,14 @@ def registrar_empresa(request):
     if request.method == 'POST':
         # Verificar autenticación solo para el POST
         if not current_user:
-            return JsonResponse({
-                'success': False,
-                'message': 'Debe iniciar sesión para registrar una empresa'
-            })
-            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe iniciar sesión para registrar una empresa'
+                })
+            else:
+                return redirect('/ecommerce/iniciar_sesion/')
+
         try:
             logger.info(f"Datos recibidos: {request.POST}")
             nombre_empresa = request.POST.get('nombre_empresa')
@@ -471,34 +726,71 @@ def registrar_empresa(request):
             direccion_empresa = request.POST.get('direccion_empresa')
             latitud = request.POST.get('latitud')
             longitud = request.POST.get('longitud')
-            
+
             # Validar que todos los campos estén completos
             if not nombre_empresa or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa or not latitud or not longitud:
                 logger.warning("Campos obligatorios faltantes en registro de empresa")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Todos los campos son obligatorios. Por favor complete todos los campos.'
-                })
-            
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Todos los campos son obligatorios. Por favor complete todos los campos.'
+                    })
+                else:
+                    return render(request, 'ecommerce_app/registrar_empresa.html', {
+                        'user_info': None,
+                        'is_authenticated': False,
+                        'has_company': False,
+                        'error_message': 'Todos los campos son obligatorios. Por favor complete todos los campos.'
+                    })
+
             # Validar que las coordenadas sean números válidos
             try:
                 lat = float(latitud)
                 lng = float(longitud)
             except ValueError:
                 logger.warning("Coordenadas inválidas")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Las coordenadas deben ser números válidos.'
-                })
-            
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Las coordenadas deben ser números válidos.'
+                    })
+                else:
+                    return render(request, 'ecommerce_app/registrar_empresa.html', {
+                        'user_info': None,
+                        'is_authenticated': False,
+                        'has_company': False,
+                        'error_message': 'Las coordenadas deben ser números válidos.'
+                    })
+
             # Validar longitud mínima de descripción
             if len(descripcion_empresa) < 10:
                 logger.warning("Descripción demasiado corta")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'La descripción debe tener al menos 10 caracteres.'
-                })
-            
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'La descripción debe tener al menos 10 caracteres.'
+                    })
+                else:
+                    return render(request, 'ecommerce_app/registrar_empresa.html', {
+                        'user_info': None,
+                        'is_authenticated': False,
+                        'has_company': False,
+                        'error_message': 'La descripción debe tener al menos 10 caracteres.'
+                    })
+
+            # NO DUPLICAR EMPRESA: Verificar si ya existe una empresa para este usuario
+            existing_empresa = empresa.objects.filter(id_usuario_fk=current_user).first()
+            if existing_empresa:
+                logger.warning(f"El usuario {current_user.correo_usuario} ya tiene una empresa registrada. No se creará otra.")
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Empresa ya registrada previamente',
+                        'redirect_url': '/ecommerce/sucursal/'
+                    })
+                else:
+                    return redirect('/ecommerce/sucursal/')
+
             # Logging para verificar los datos
             logger.info(f"Dirección recibida: {direccion_empresa}")
             logger.info(f"Tipo de dirección: {type(direccion_empresa)}")
@@ -518,18 +810,29 @@ def registrar_empresa(request):
             nueva_empresa.save()
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
             logger.info(f"Dirección guardada: {nueva_empresa.direccion_empresa}")
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Empresa registrada exitosamente',
-                'redirect_url': '/ecommerce/sucursal/'
-            })
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Empresa registrada exitosamente',
+                    'redirect_url': '/ecommerce/sucursal/'
+                })
+            else:
+                return redirect('/ecommerce/sucursal/')
         except Exception as e:
             logger.error(f"Error al guardar la empresa: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': str(e)
-            })
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': str(e)
+                })
+            else:
+                return render(request, 'ecommerce_app/registrar_empresa.html', {
+                    'user_info': None,
+                    'is_authenticated': False,
+                    'has_company': False,
+                    'error_message': str(e)
+                })
     
     # Si es GET, mostrar el formulario
     # Obtener información del usuario si está autenticado
@@ -550,11 +853,11 @@ def registrar_empresa(request):
             is_authenticated = True
             
             # Verificar si el usuario ya tiene una empresa registrada
-            try:
-                existing_company = empresa.objects.get(id_usuario_fk=current_user)
+            existing_company = empresa.objects.filter(id_usuario_fk=current_user).first()
+            if existing_company:
                 has_company = True
                 logger.info(f"Usuario {current_user.correo_usuario} ya tiene empresa registrada: {existing_company.nombre_empresa}")
-            except empresa.DoesNotExist:
+            else:
                 has_company = False
                 logger.info(f"Usuario {current_user.correo_usuario} no tiene empresa registrada")
     
@@ -589,13 +892,12 @@ def sucursalfuncion(request):
                 'is_authenticated': True
             }
     # Obtener la empresa del usuario actual
-    try:
-        empresa_obj = empresa.objects.get(id_usuario_fk=current_user)
-        # Obtener todas las sucursales de la empresa del usuario
-        sqlsucursal = sucursal.objects.filter(id_empresa_fk=empresa_obj)
-    except empresa.DoesNotExist:
+    empresa_obj = empresa.objects.filter(id_usuario_fk=current_user).first()
+    if not empresa_obj:
         # Si el usuario no tiene empresa, redirigir a registrar empresa
         return redirect('/ecommerce/registrar_empresa/')
+    # Obtener todas las sucursales de la empresa del usuario
+    sqlsucursal = sucursal.objects.filter(id_empresa_fk=empresa_obj)
    
     if request.method == 'POST':
         try:
@@ -792,9 +1094,9 @@ def producto_funcion(request):
             descripcion_producto = request.POST.get('descripcion_producto', '').strip()
             marca_producto = request.POST.get('marca_producto', '').strip()
             modelo_producto = request.POST.get('modelo_producto', '').strip()
-            imagen_producto = request.FILES.get('imagen_producto')
+            # Obtener múltiples imágenes (hasta 5)
+            imagenes_producto = request.FILES.getlist('imagenes_producto')
             caracteristicas_generales = request.POST.get('caracteristicas_generales', '').strip()
-            estatus_producto = request.POST.get('estatus_producto', '').strip()
             categoria_id = request.POST.get('categoria_producto', '').strip()
 
             # Validaciones backend
@@ -806,24 +1108,39 @@ def producto_funcion(request):
                 return JsonResponse({'success': False, 'message': 'Las características generales son obligatorias.', 'field': 'caracteristicas'})
             if not categoria_id:
                 return JsonResponse({'success': False, 'message': 'Debe seleccionar una categoría.', 'field': 'categoria'})
-            if not estatus_producto:
-                return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.', 'field': 'estatus'})
+            # Validar que se haya seleccionado al menos una imagen
+            if not imagenes_producto:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar al menos una imagen para el producto.', 'field': 'imagenes_producto'})
+            
+            # Validar que no se excedan las 5 imágenes
+            if len(imagenes_producto) > 5:
+                return JsonResponse({'success': False, 'message': 'No puede subir más de 5 imágenes por producto.', 'field': 'imagenes_producto'})
 
             categoria_producto_consul = categoria_producto.objects.get(id_categoria_prod=categoria_id)
 
+            # Crear el producto sin imagen
             nuevo_producto = producto(
                 nombre_producto=nombre_producto,
                 descripcion_producto=descripcion_producto,
                 marca_producto=marca_producto,
                 modelo_producto=modelo_producto,
-                imagen_producto=imagen_producto,    
                 caracteristicas_generales=caracteristicas_generales,
-                estatus_producto=estatus_producto,
                 id_empresa_fk=empresa_obj,
                 id_categoria_prod_fk=categoria_producto_consul
             )
             nuevo_producto.save()
             logger.info(f"Producto guardado exitosamente: {nuevo_producto.nombre_producto}")
+            
+            # Guardar las imágenes en la tabla imagen_producto
+            from .models import imagen_producto
+            for imagen in imagenes_producto:
+                imagen_producto.objects.create(
+                    ruta_imagen=imagen,
+                    id_producto_fk=nuevo_producto
+                )
+            logger.info(f"Se guardaron {len(imagenes_producto)} imágenes para el producto {nuevo_producto.nombre_producto}")
+            
+            # Ya no guardamos el estatus en la sesión porque el campo se ha eliminado del formulario
             
             return JsonResponse({
                 'success': True,
@@ -860,37 +1177,55 @@ def servicio_funcion(request):
     except empresa.DoesNotExist:
         # Si el usuario no tiene empresa, redirigir a registrar empresa
         return redirect('/ecommerce/registrar_empresa/')
+
     if request.method == 'POST':
         try:
             logger.info(f"Datos recibidos: {request.POST}")
             nombre_servicio = request.POST.get('nombre_servicio', '').strip()
             descripcion_servicio = request.POST.get('descripcion_servicio', '').strip()
-            estatus_servicio = request.POST.get('estatus_servicio', '').strip()
             categoria_id = request.POST.get('categoria_servicio', '').strip()
-            imagen_servicio = request.FILES.get('imagen_servicio')
+            # Obtener múltiples imágenes (hasta 5)
+            imagenes_servicio = request.FILES.getlist('imagenes_servicio')
 
             # Validaciones backend
             if not nombre_servicio:
                 return JsonResponse({'success': False, 'message': 'El nombre del servicio es obligatorio.', 'field': 'nombre_servicio'})
+            if servicio.objects.filter(nombre_servicio__iexact=nombre_servicio, id_empresa_fk=empresa_obj).exists():
+                return JsonResponse({'success': False, 'message': 'Ya existe un servicio con ese nombre.', 'field': 'nombre_servicio'})
             if not descripcion_servicio:
                 return JsonResponse({'success': False, 'message': 'La descripción del servicio es obligatoria.', 'field': 'descripcion_servicio'})
             if not categoria_id:
                 return JsonResponse({'success': False, 'message': 'Debe seleccionar una categoría.', 'field': 'categoria_servicio'})
-            if not estatus_servicio:
-                return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.', 'field': 'estatus_servicio'})
+            # Validar que se haya seleccionado al menos una imagen
+            if not imagenes_servicio:
+                return JsonResponse({'success': False, 'message': 'Debe seleccionar al menos una imagen para el servicio.', 'field': 'imagenes_servicio'})
+            
+            # Validar que no se excedan las 5 imágenes
+            if len(imagenes_servicio) > 5:
+                return JsonResponse({'success': False, 'message': 'No puede subir más de 5 imágenes por servicio.', 'field': 'imagenes_servicio'})
 
             categoria_servicio_consul = categoria_servicio.objects.get(id_categoria_serv=categoria_id)
 
+            # Crear el servicio sin imagen
             nuevo_servicio = servicio(
                 nombre_servicio=nombre_servicio,
                 descripcion_servicio=descripcion_servicio,
-                estatus_servicio=estatus_servicio,
-                imagen_servicio=imagen_servicio,
                 id_empresa_fk=empresa_obj,
                 id_categoria_servicios_fk=categoria_servicio_consul
             )
             nuevo_servicio.save()   
             logger.info(f"Servicio guardado exitosamente: {nuevo_servicio.nombre_servicio}")
+            
+            # Guardar las imágenes en la tabla imagen_servicio
+            from .models import imagen_servicio
+            for imagen in imagenes_servicio:
+                imagen_servicio.objects.create(
+                    ruta_imagen=imagen,
+                    id_servicio_fk=nuevo_servicio
+                )
+            logger.info(f"Se guardaron {len(imagenes_servicio)} imágenes para el servicio {nuevo_servicio.nombre_servicio}")
+            
+            # Ya no guardamos el estatus en la sesión porque el campo se ha eliminado del formulario
             
             return JsonResponse({
                 'success': True,
@@ -1315,22 +1650,42 @@ def eliminar_categoria_servicio_funcion(request):
     return JsonResponse({'success': False, 'message': 'Método no permitido'})
 
 def producto_config_funcion(request):
-    producto_sucursal_all= producto.objects.all()
-    categoria_producto_all= categoria_producto.objects.all()
-
+    # Obtenemos los productos con sus relaciones a sucursales
+    productos_all = producto.objects.all()
+    # También obtenemos las relaciones producto_sucursal para tener acceso al estatus
+    producto_sucursal_all = producto_sucursal.objects.select_related('id_producto_fk').all()
+    categoria_producto_all = categoria_producto.objects.all()
+    
+    # Agregar la primera imagen de cada producto
+    productos_con_imagenes = []
+    for prod in productos_all:
+        primera_imagen = imagen_producto.objects.filter(id_producto_fk=prod).first()
+        prod.primera_imagen = primera_imagen
+        productos_con_imagenes.append(prod)
     
     return render(request, 'ecommerce_app/producto_config.html', {
-        'producto_sucursal_all': producto_sucursal_all,
+        'producto_sucursal_all': productos_con_imagenes,  # Mantenemos el mismo nombre de variable para no cambiar la plantilla
+        'producto_sucursal_relaciones': producto_sucursal_all,  # Añadimos las relaciones
         'categoria_producto_all': categoria_producto_all
     })
 
 
 
 def servicio_config_funcion(request):
-    servicio_all= servicio.objects.all()
-
+    servicios_all = servicio.objects.all()
+    categoria_servicio_all = categoria_servicio.objects.all()
     
-    return render(request, 'ecommerce_app/servicio_config.html', {'servicio_all':servicio_all})
+    # Agregar la primera imagen de cada servicio
+    servicios_con_imagenes = []
+    for serv in servicios_all:
+        primera_imagen = imagen_servicio.objects.filter(id_servicio_fk=serv).first()
+        serv.primera_imagen = primera_imagen
+        servicios_con_imagenes.append(serv)
+    
+    return render(request, 'ecommerce_app/servicio_config.html', {
+        'servicio_all': servicios_con_imagenes,
+        'categoria_servicio_all': categoria_servicio_all
+    })
 
 
 
@@ -1354,7 +1709,7 @@ def editar_producto(request):
             producto_obj.marca_producto = request.POST.get('marca_producto')
             producto_obj.modelo_producto = request.POST.get('modelo_producto')
             producto_obj.caracteristicas_generales = request.POST.get('caracteristicas_generales')
-            producto_obj.estatus_producto = request.POST.get('estatus_producto')
+            # El campo estatus_producto ya no existe en el modelo producto
             
             # Actualizar categoría si se proporciona
             categoria_id = request.POST.get('categoria_producto')
@@ -1368,10 +1723,25 @@ def editar_producto(request):
                         'message': 'Categoría no encontrada'
                     })
             
-            # Actualizar imagen si se proporciona
-            imagen_producto = request.FILES.get('imagen_producto')
-            if imagen_producto:
-                producto_obj.imagen_producto = imagen_producto
+            # Manejar múltiples imágenes si se proporcionan
+            imagenes_producto = request.FILES.getlist('imagenes_producto')
+            if imagenes_producto:
+                # Contar imágenes existentes
+                imagenes_existentes = imagen_producto.objects.filter(id_producto_fk=producto_obj).count()
+                
+                # Validar número máximo de imágenes (existentes + nuevas)
+                if imagenes_existentes + len(imagenes_producto) > 5:
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Máximo 5 imágenes permitidas. Actualmente tienes {imagenes_existentes} imágenes. Puedes agregar máximo {5 - imagenes_existentes} más.'
+                    })
+                
+                # Agregar nuevas imágenes sin eliminar las existentes
+                for imagen in imagenes_producto:
+                    imagen_producto.objects.create(
+                        id_producto_fk=producto_obj,
+                        ruta_imagen=imagen
+                    )
             
             producto_obj.save()
             logger.info(f"Producto actualizado exitosamente: {producto_obj.nombre_producto}")
@@ -1518,4 +1888,374 @@ def get_user_info(request):
     return JsonResponse({
         'success': False,
         'message': 'Método no permitido'
+    })
+
+
+def perfil_empresa(request):
+    # Validar usuario autenticado y obtener empresa asociada
+    user_info = None
+    empresa_obj = None
+    
+    if not is_user_authenticated(request):
+        # Si no está autenticado, redirigir a iniciar sesión
+        return redirect('/ecommerce/iniciar_sesion')
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    empresa_obj = None
+    empresa_nombre = None
+    try:
+        empresa_obj = empresa.objects.filter(id_usuario_fk=current_user).first()
+        if empresa_obj:
+            empresa_nombre = empresa_obj.nombre_empresa
+    except Exception as e:
+        empresa_obj = None
+        empresa_nombre = None
+    user_info = {
+        'id': current_user.id_usuario,
+        'nombre': current_user.nombre_usuario,
+        'email': current_user.correo_usuario,
+        'tipo': current_user.tipo_usuario,
+        'is_authenticated': True,
+        'empresa_nombre': empresa_nombre
+    }
+    return render(request, 'ecommerce_app/perfil_empresa.html', {
+        'user_info': user_info,
+        'empresa': empresa_obj
+    })
+
+
+def busquedad(request):
+    query = request.GET.get('query', '')
+    resultados_productos = []
+    resultados_servicios = []
+    
+    if query:
+        # Buscar en productos_sucursal con estado activo
+        productos_sucursal_list = producto_sucursal.objects.filter(
+            id_producto_fk__nombre_producto__icontains=query,
+            estatus_producto_sucursal='Activo'  # Ahora el estatus está en producto_sucursal
+        ).select_related('id_producto_fk', 'id_sucursal_fk')
+        
+        # Buscar en servicios_sucursal con estado activo
+        servicios_sucursal_list = servicio_sucursal.objects.filter(
+            id_servicio_fk__nombre_servicio__icontains=query,
+            estatus_servicio_sucursal='Activo'  # Ahora el estatus está en servicio_sucursal
+        ).select_related('id_servicio_fk', 'id_sucursal_fk')
+        
+        # Formatear resultados de productos
+        for ps in productos_sucursal_list:
+            # Obtener la primera imagen del producto desde la nueva tabla
+            primera_imagen = imagen_producto.objects.filter(id_producto_fk=ps.id_producto_fk).first()
+            imagen_url = primera_imagen.ruta_imagen.url if primera_imagen and primera_imagen.ruta_imagen else None
+            
+            resultados_productos.append({
+                'id': ps.id_producto_sucursal,
+                'nombre': ps.id_producto_fk.nombre_producto,
+                'descripcion': ps.id_producto_fk.descripcion_producto,
+                'precio': ps.precio_producto_sucursal,
+                'stock': ps.stock_producto_sucursal,
+                'condicion': ps.condicion_producto_sucursal,
+                'imagen': imagen_url,
+                'sucursal': ps.id_sucursal_fk.nombre_sucursal,
+                'tipo': 'producto'
+            })
+        
+        # Formatear resultados de servicios
+        for ss in servicios_sucursal_list:
+            # Obtener la primera imagen del servicio desde la nueva tabla
+            primera_imagen = imagen_servicio.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
+            imagen_url = primera_imagen.ruta_imagen.url if primera_imagen and primera_imagen.ruta_imagen else None
+            
+            resultados_servicios.append({
+                'id': ss.id_servicio_sucursal,
+                'nombre': ss.id_servicio_fk.nombre_servicio,
+                'descripcion': ss.id_servicio_fk.descripcion_servicio,
+                'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
+                'imagen': imagen_url,
+                'sucursal': ss.id_sucursal_fk.nombre_sucursal,
+                'tipo': 'servicio'
+            })
+    
+    # Combinar resultados
+    resultados_combinados = resultados_productos + resultados_servicios
+    
+    return render(request, 'ecommerce_app/busquedad.html', {
+        'query': query,
+        'resultados': resultados_combinados,
+        'total_resultados': len(resultados_combinados)
+    })
+
+
+# API para obtener todas las imágenes de un producto
+@require_GET
+def api_obtener_imagenes_producto(request):
+    try:
+        id_producto = request.GET.get('id_producto')
+        if not id_producto:
+            return JsonResponse({'success': False, 'message': 'ID de producto requerido'})
+        
+        imagenes = imagen_producto.objects.filter(id_producto_fk=id_producto)
+        imagenes_list = []
+        for img in imagenes:
+            imagenes_list.append({
+                'id_imagen': img.id_imagen,
+                'url': img.ruta_imagen.url if img.ruta_imagen else '',
+                'fecha_creacion': img.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
+        return JsonResponse({
+            'success': True, 
+            'imagenes': imagenes_list,
+            'total': len(imagenes_list)
+        })
+    except Exception as e:
+        logger.error(f"Error al obtener imágenes del producto: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+
+# API para obtener todas las imágenes de un servicio
+@require_GET
+def api_obtener_imagenes_servicio(request):
+    try:
+        id_servicio = request.GET.get('id_servicio')
+        if not id_servicio:
+            return JsonResponse({'success': False, 'message': 'ID de servicio requerido'})
+        
+        imagenes = imagen_servicio.objects.filter(id_servicio_fk=id_servicio)
+        imagenes_list = []
+        for img in imagenes:
+            imagenes_list.append({
+                'id_imagen': img.id_imagen,
+                'url': img.ruta_imagen.url if img.ruta_imagen else '',
+                'fecha_creacion': img.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
+        return JsonResponse({
+            'success': True, 
+            'imagenes': imagenes_list,
+            'total': len(imagenes_list)
+        })
+    except Exception as e:
+        logger.error(f"Error al obtener imágenes del servicio: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+
+# API para eliminar una imagen específica de producto
+@require_POST
+def api_eliminar_imagen_producto(request):
+    try:
+        id_imagen = request.POST.get('id_imagen')
+        if not id_imagen:
+            return JsonResponse({'success': False, 'message': 'ID de imagen requerido'})
+        
+        imagen_obj = imagen_producto.objects.get(id_imagen=id_imagen)
+        
+        # Verificar que el producto tenga al menos 2 imágenes antes de eliminar
+        total_imagenes = imagen_producto.objects.filter(id_producto_fk=imagen_obj.id_producto_fk).count()
+        if total_imagenes <= 1:
+            return JsonResponse({
+                'success': False, 
+                'message': 'No se puede eliminar la imagen. El producto debe tener al menos una imagen.'
+            })
+        
+        # Eliminar el archivo físico si existe
+        if imagen_obj.ruta_imagen:
+            try:
+                imagen_obj.ruta_imagen.delete(save=False)
+            except:
+                pass  # Si no se puede eliminar el archivo, continuar
+        
+        imagen_obj.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Imagen eliminada correctamente'
+        })
+        
+    except imagen_producto.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Imagen no encontrada'})
+    except Exception as e:
+        logger.error(f"Error al eliminar imagen del producto: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+
+# API para eliminar una imagen específica de servicio
+@require_POST
+def api_eliminar_imagen_servicio(request):
+    try:
+        id_imagen = request.POST.get('id_imagen')
+        if not id_imagen:
+            return JsonResponse({'success': False, 'message': 'ID de imagen requerido'})
+        
+        imagen_obj = imagen_servicio.objects.get(id_imagen=id_imagen)
+        
+        # Verificar que el servicio tenga al menos 2 imágenes antes de eliminar
+        total_imagenes = imagen_servicio.objects.filter(id_servicio_fk=imagen_obj.id_servicio_fk).count()
+        if total_imagenes <= 1:
+            return JsonResponse({
+                'success': False, 
+                'message': 'No se puede eliminar la imagen. El servicio debe tener al menos una imagen.'
+            })
+        
+        # Eliminar el archivo físico si existe
+        if imagen_obj.ruta_imagen:
+            try:
+                imagen_obj.ruta_imagen.delete(save=False)
+            except:
+                pass  # Si no se puede eliminar el archivo, continuar
+        
+        imagen_obj.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Imagen eliminada correctamente'
+        })
+        
+    except imagen_servicio.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Imagen no encontrada'})
+    except Exception as e:
+        logger.error(f"Error al eliminar imagen del servicio: {str(e)}")
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+
+
+
+
+def localizacion(request):
+    from math import radians, cos, sin, asin, sqrt
+    
+    def haversine(lon1, lat1, lon2, lat2):
+        """
+        Calcular la distancia entre dos puntos en la Tierra usando la fórmula de Haversine
+        """
+        # Convertir grados decimales a radianes
+        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+        
+        # Fórmula de Haversine
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        c = 2 * asin(sqrt(a))
+        r = 6371  # Radio de la Tierra en kilómetros
+        return c * r
+    
+    query = request.GET.get('query', '')
+    user_lat = request.GET.get('lat')
+    user_lng = request.GET.get('lng')
+    
+    resultados_cercanos = []
+    
+    if query:
+        # Buscar productos y servicios como en la vista de búsqueda
+        productos_sucursal_list = producto_sucursal.objects.filter(
+            id_producto_fk__nombre_producto__icontains=query,
+            estatus_producto_sucursal='Activo'
+        ).select_related('id_producto_fk', 'id_sucursal_fk')
+        
+        servicios_sucursal_list = servicio_sucursal.objects.filter(
+            id_servicio_fk__nombre_servicio__icontains=query,
+            estatus_servicio_sucursal='Activo'
+        ).select_related('id_servicio_fk', 'id_sucursal_fk')
+        
+        # Combinar resultados con información de ubicación
+        todos_resultados = []
+        
+        # Procesar productos
+        for ps in productos_sucursal_list:
+            if ps.id_sucursal_fk.latitud_sucursal and ps.id_sucursal_fk.longitud_sucursal:
+                primera_imagen = imagen_producto.objects.filter(id_producto_fk=ps.id_producto_fk).first()
+                imagen_url = primera_imagen.ruta_imagen.url if primera_imagen and primera_imagen.ruta_imagen else None
+                
+                resultado = {
+                    'id': ps.id_producto_sucursal,
+                    'nombre': ps.id_producto_fk.nombre_producto,
+                    'descripcion': ps.id_producto_fk.descripcion_producto,
+                    'precio': ps.precio_producto_sucursal,
+                    'imagen': imagen_url,
+                    'sucursal': ps.id_sucursal_fk.nombre_sucursal,
+                    'direccion': ps.id_sucursal_fk.direccion_sucursal,
+                    'lat': float(ps.id_sucursal_fk.latitud_sucursal),
+                    'lng': float(ps.id_sucursal_fk.longitud_sucursal),
+                    'tipo': 'producto',
+                    'distancia': 0
+                }
+                
+                # Calcular distancia si se proporcionan coordenadas del usuario
+                if user_lat and user_lng:
+                    try:
+                        user_lat_float = float(user_lat)
+                        user_lng_float = float(user_lng)
+                        resultado['distancia'] = haversine(
+                            user_lng_float, user_lat_float,
+                            resultado['lng'], resultado['lat']
+                        )
+                    except (ValueError, TypeError):
+                        resultado['distancia'] = float('inf')
+                
+                todos_resultados.append(resultado)
+        
+        # Procesar servicios
+        for ss in servicios_sucursal_list:
+            if ss.id_sucursal_fk.latitud_sucursal and ss.id_sucursal_fk.longitud_sucursal:
+                primera_imagen = imagen_servicio.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
+                imagen_url = primera_imagen.ruta_imagen.url if primera_imagen and primera_imagen.ruta_imagen else None
+                
+                resultado = {
+                    'id': ss.id_servicio_sucursal,
+                    'nombre': ss.id_servicio_fk.nombre_servicio,
+                    'descripcion': ss.id_servicio_fk.descripcion_servicio,
+                    'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
+                    'imagen': imagen_url,
+                    'sucursal': ss.id_sucursal_fk.nombre_sucursal,
+                    'direccion': ss.id_sucursal_fk.direccion_sucursal,
+                    'lat': float(ss.id_sucursal_fk.latitud_sucursal),
+                    'lng': float(ss.id_sucursal_fk.longitud_sucursal),
+                    'tipo': 'servicio',
+                    'distancia': 0
+                }
+                
+                # Calcular distancia si se proporcionan coordenadas del usuario
+                if user_lat and user_lng:
+                    try:
+                        user_lat_float = float(user_lat)
+                        user_lng_float = float(user_lng)
+                        resultado['distancia'] = haversine(
+                            user_lng_float, user_lat_float,
+                            resultado['lng'], resultado['lat']
+                        )
+                    except (ValueError, TypeError):
+                        resultado['distancia'] = float('inf')
+                
+                todos_resultados.append(resultado)
+        
+        # Filtrar resultados dentro de 4km y ordenar por distancia
+        if user_lat and user_lng:
+            # Filtrar solo resultados dentro de 4km
+            todos_resultados = [r for r in todos_resultados if r['distancia'] <= 4.0]
+            todos_resultados.sort(key=lambda x: x['distancia'])
+        
+        resultados_cercanos = todos_resultados[:10]  # Aumentar a 10 resultados máximo
+    
+    # Preparar datos para JavaScript (formato JSON)
+    import json
+    resultados_json = []
+    for resultado in resultados_cercanos:
+        resultado_data = {
+            'nombre': resultado['nombre'],
+            'descripcion': resultado.get('descripcion', ''),
+            'direccion': resultado.get('direccion', ''),
+            'precio': str(resultado.get('precio', '')),
+            'lat': resultado.get('lat'),
+            'lng': resultado.get('lng'),
+            'distancia': resultado['distancia']
+        }
+        resultados_json.append(resultado_data)
+    
+    return render(request, 'ecommerce_app/localizacion.html', {
+        'query': query,
+        'resultados': resultados_cercanos,
+        'resultados_json': json.dumps(resultados_json),
+        'user_lat': user_lat,
+        'user_lng': user_lng
     })

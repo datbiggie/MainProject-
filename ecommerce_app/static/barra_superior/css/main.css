@@ -1,3 +1,18 @@
+/* Efecto hover para el icono de home igual que perfil, pero sin cambiar el color */
+.top-bar-right .list-unstyled li:first-child a:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+}
+/* Fuerza el icono de home a ser negro siempre, incluso en hover */
+.top-bar-right .list-unstyled li:first-child a svg {
+    color: #000 !important;
+    filter: none !important;
+}
+
+.top-bar-right .list-unstyled li:first-child a:hover svg {
+    color: #000 !important;
+    filter: none !important;
+}
 /* ===== ESTILOS PARA LA BARRA SUPERIOR BIENVENIDO ===== */
 
 /* Barra superior principal */
@@ -85,21 +100,7 @@
     transition: all 0.3s ease;
 }
 
-/* Icono de Inicio - Verde elegante */
-.top-bar-right .list-unstyled li:first-child a svg {
-    color: #2ecc71 !important;
-    filter: drop-shadow(0 1px 2px rgba(46, 204, 113, 0.3));
-}
 
-.top-bar-right .list-unstyled li:first-child a:hover {
-    transform: translateY(-2px) scale(1.1);
-    box-shadow: 0 8px 20px rgba(46, 204, 113, 0.3);
-}
-
-.top-bar-right .list-unstyled li:first-child a:hover svg {
-    color: #27ae60 !important;
-    filter: drop-shadow(0 2px 4px rgba(46, 204, 113, 0.5));
-}
 
 /* Icono de Perfil - Azul elegante */
 .top-bar-right .list-unstyled li:nth-child(2) a svg {

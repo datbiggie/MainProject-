@@ -148,7 +148,7 @@
           <li class="nav-item">
             <a href="#" class="nav-link d-flex align-items-center gap-3">
               <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#business"></use></svg>
-              <span>Empresas Registradas</span>
+              <span>Empresa Registrada</span>
             </a>
           </li>
           <li class="nav-item">
@@ -202,9 +202,9 @@
                 <!-- Eliminado el select de categorías -->
               </div>
               <div class="col-11 col-md-11">
-                <form id="search-form" class="text-center" action="index.html" method="post">
+                <form id="search-form" class="text-center" action="/ecommerce/busquedad/" method="get">
                   <div class="d-flex align-items-center" style="gap: 0.5rem;">
-                    <input type="text" class="form-control border-0 rounded-pill ps-2" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar" style="font-size:1.1rem; min-width:340px; max-width:100%; height:40px; color:#000;">
+                    <input type="text" name="query" class="form-control border-0 rounded-pill ps-2" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar" style="font-size:1.1rem; min-width:340px; max-width:100%; height:40px; color:#000;">
                     <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" type="submit" style="height:40px; width:40px; padding:0; background-color: #0d6efd;">
                       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M21.71 20.29L18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 7-7a7 7 0 0 1-7 7Z"/></svg>
                     </button>
@@ -260,4 +260,50 @@
       </div>
     </header>
      
-    
+     <!-- Modal para información de sesión -->
+    <div class="modal fade" id="sesionModal" tabindex="-1" aria-labelledby="sesionModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="sesionModalLabel">Información de Sesión</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            {% if user_info %}
+              <div class="alert alert-success">
+                <h6 class="alert-heading">¡Bienvenido!</h6>
+                <p class="mb-1"><strong>Nombre:</strong> {{ user_info.nombre }}</p>
+                <p class="mb-1"><strong>Email:</strong> {{ user_info.email }}</p>
+                {% if user_info.empresa_nombre %}
+                  <p class="mb-0"><strong>Empresa Registrada:</strong> 
+                    <span class="badge bg-success">{{ user_info.empresa_nombre }}</span>
+                  </p>
+                {% else %}
+                  <p class="mb-0"><strong>Empresa asociada:</strong> <span class="text-muted">Sin empresa</span></p>
+                  {% endif %}
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'cerrar_sesion' %}" class="btn btn-danger">
+                  <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+                  Cerrar Sesión
+                </a>
+              </div>
+            {% else %}
+              <div class="alert alert-warning">
+                <h6 class="alert-heading">No has iniciado sesión</h6>
+                <p class="mb-0">Para acceder a todas las funcionalidades, por favor inicia sesión.</p>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary">
+                  <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+                  Iniciar Sesión
+                </a>
+              </div>
+            {% endif %}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>

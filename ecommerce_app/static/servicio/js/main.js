@@ -55,6 +55,32 @@ $(document).ready(function() {
                     confirmButtonText: 'Aceptar',
                     confirmButtonColor: '#3b82f6'
                 });
+
+    // Función para crear previsualización de imagen
+    function createImagePreview(input, previewId) {
+        const file = input.files[0];
+        const preview = document.getElementById(previewId);
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px;">`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.innerHTML = '';
+        }
+    }
+
+    // Event listeners para las 5 imágenes de servicio
+    for (let i = 1; i <= 5; i++) {
+        const imageInput = document.getElementById(`imagen_servicio_${i}`);
+        if (imageInput) {
+            imageInput.addEventListener('change', function() {
+                createImagePreview(this, `preview_servicio_${i}`);
+            });
+        }
+    }
             };
             
             reader.readAsDataURL(file);
@@ -81,6 +107,17 @@ $(document).ready(function() {
 
     let isSubmitting = false;
 
+    // Función para verificar si al menos una imagen está seleccionada
+    function hasAtLeastOneImage() {
+        for (let i = 1; i <= 5; i++) {
+            const imageInput = document.getElementById(`imagen_servicio_${i}`);
+            if (imageInput && imageInput.files.length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     form.on('submit', function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -90,14 +127,44 @@ $(document).ready(function() {
             return false;
         }
 
+        // Validar que al menos una imagen esté seleccionada
+        if (!hasAtLeastOneImage()) {
+            Swal.fire({
+                title: 'Error',
+                text: 'Debes seleccionar al menos una imagen para el servicio',
+                icon: 'error',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
         const submitButton = form.find('input[type="submit"]');
         submitButton.prop('disabled', true);
         isSubmitting = true;
 
+        // Crear FormData personalizado para enviar las imágenes con el nombre correcto
+        const formData = new FormData(this);
+        
+        // Remover los campos de imagen individuales
+        formData.delete('imagen_servicio_1');
+        formData.delete('imagen_servicio_2');
+        formData.delete('imagen_servicio_3');
+        formData.delete('imagen_servicio_4');
+        formData.delete('imagen_servicio_5');
+        
+        // Agregar todas las imágenes seleccionadas con el nombre 'imagenes_servicio'
+        for (let i = 1; i <= 5; i++) {
+            const imageInput = document.getElementById(`imagen_servicio_${i}`);
+            if (imageInput && imageInput.files.length > 0) {
+                formData.append('imagenes_servicio', imageInput.files[0]);
+            }
+        }
+
         $.ajax({
             url: form.attr('action'),
             type: 'POST',
-            data: new FormData(this),
+            data: formData,
             processData: false,
             contentType: false,
             success: function(response) {
@@ -112,14 +179,13 @@ $(document).ready(function() {
                     }).then((result) => {
                         if (result.isConfirmed) {
                             form[0].reset();
-                            const container = document.querySelector('.file-upload-container');
-                            container.classList.remove('has-image');
-                            document.getElementById('imagePreview').style.display = 'none';
                             
-                            // Mostrar el placeholder nuevamente
-                            const placeholder = container.querySelector('.file-upload-placeholder');
-                            if (placeholder) {
-                                placeholder.style.display = 'flex';
+                            // Limpiar todas las previsualizaciones de imágenes
+                            for (let i = 1; i <= 5; i++) {
+                                const preview = document.getElementById(`preview_servicio_${i}`);
+                                if (preview) {
+                                    preview.innerHTML = '';
+                                }
                             }
                             
                             setTimeout(function() {
@@ -161,7 +227,7 @@ $(document).ready(function() {
     });
 });
 
-document.addEventListener('DOMContentLoaded', function() {
+    // Manejar parámetros URL para mostrar mensajes
     const urlParams = new URLSearchParams(window.location.search);
     
     // Mensaje de éxito al crear servicio
@@ -195,7 +261,6 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'Aceptar'
         });
     }
-});
 
 // Función para previsualizar la imagen
 function previewImage(input) {

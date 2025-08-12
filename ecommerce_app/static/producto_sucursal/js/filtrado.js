@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <img class=\"shape2\" src=\"/static/producto_sucursal/images/features/shape2.svg\" alt=\"#\" style=\"max-width: 32px;\">
                                 <span class=\"serial\" style=\"font-size: 0.95rem;\">${producto.serial}</span>
                                 <div style=\"display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;\">
-                                    ${producto.imagen_producto ? `<img src=\"${producto.imagen_producto}\" alt=\"Imagen del producto\" class=\"img-producto-hover\" style=\"width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;\">` : `<i class=\"lni lni-microphone\" style=\"font-size: 2rem; color: #b0b0b0;\"></i>`}
+                                    ${producto.imagen_url ? `<img src=\"${producto.imagen_url}\" alt=\"Imagen del producto\" class=\"img-producto-hover\" style=\"width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;\">` : `<i class=\"lni lni-microphone\" style=\"font-size: 2rem; color: #b0b0b0;\"></i>`}
                                 </div>
                                 <h3 style=\"font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;\">${producto.nombre_producto}</h3>
                                 <div class=\"feature-buttons\" style=\"display: flex; justify-content: center; gap: 0.3rem;\">
@@ -59,10 +59,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                             data-marca=\"${producto.marca_producto || ''}\"
                                             data-modelo=\"${producto.modelo_producto || ''}\"
                                             data-categoria=\"${producto.categoria_producto || ''}\"
-                                            data-estatus=\"${producto.estatus_producto || ''}\"
                                             data-descripcion=\"${producto.descripcion_producto || ''}\"
                                             data-caracteristicas=\"${producto.caracteristicas_generales || ''}\"
-                                            data-imagen=\"${producto.imagen_producto || ''}\">
+                                            data-imagen=\"${producto.imagen_url || ''}\">
                                         <i class=\"lni lni-pencil\"></i> Editar
                                     </button>
                                     <button class=\"btn btn-delete\" data-id=\"${producto.id_producto}\" data-nombre=\"${producto.nombre_producto}\">

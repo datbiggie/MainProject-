@@ -19,6 +19,7 @@ urlpatterns = [
     path('producto_config/', producto_config_funcion, name='producto_config_funcion'),
     path('editar_producto/', editar_producto, name='editar_producto'),
     path('eliminar_producto/', eliminar_producto, name='eliminar_producto'),
+    path('eliminar_servicio/', eliminar_servicio, name='eliminar_servicio'),
     path('categoria_servicio/', categoria_servicio_funcion, name='categoria_servicio'),
     path('categ_servicio_config/', categ_servicio_config_funcion, name='categ_servicio_config_funcion'),
     path('servicio/', servicio_funcion, name='servicio_funcion'),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('eliminar_categoria_producto/', eliminar_categoria_producto, name='eliminar_categoria_producto'),
     path('editar_categoria_producto/', editar_categoria_producto, name='editar_categoria_producto'),
     path('editar_categoria_servicio/', editar_categoria_servicio, name='editar_categoria_servicio'),
+    path('editar_servicio/', editar_servicio, name='editar_servicio'),
     path('cerrar_sesion/', cerrar_sesion, name='cerrar_sesion'),
     path('logout_ajax/', logout_ajax, name='logout_ajax'),
     path('get-user-info/', get_user_info, name='get_user_info'),
@@ -34,5 +36,20 @@ urlpatterns = [
     path('api/categorias_producto/', views.api_categorias_producto, name='api_categorias_producto'),
     path('api/categorias_servicio/', views.api_categorias_servicio, name='api_categorias_servicio'),
     path('api/filtrar_categorias_producto/', views.api_filtrar_categorias_producto, name='api_filtrar_categorias_producto'),
+    path('api/filtrar_servicios/', views.api_filtrar_servicios, name='api_filtrar_servicios'),
     path('api/filtrar_productos/', views.api_filtrar_productos, name='api_filtrar_productos'),
+    path('api/obtener_imagenes_producto/', views.api_obtener_imagenes_producto, name='api_obtener_imagenes_producto'),
+    path('api/obtener_imagenes_servicio/', views.api_obtener_imagenes_servicio, name='api_obtener_imagenes_servicio'),
+    path('api/eliminar_imagen_producto/', views.api_eliminar_imagen_producto, name='api_eliminar_imagen_producto'),
+    path('api/eliminar_imagen_servicio/', views.api_eliminar_imagen_servicio, name='api_eliminar_imagen_servicio'),
+    path('perfil_empresa/', views.perfil_empresa, name='perfil_empresa'),
+    path('cambiar_logo_empresa/', views.cambiar_logo_empresa, name='cambiar_logo_empresa'),
+
+    # API para productos y servicios no asociados a una sucursal
+    path('api/productos_servicios_disponibles/', views.api_productos_servicios_disponibles, name='api_productos_servicios_disponibles'),
+    # API para guardar producto o servicio en una sucursal
+    path('api/guardar_producto_servicio_sucursal/', views.guardar_producto_servicio_sucursal, name='guardar_producto_servicio_sucursal'),
+    path('busquedad/', views.busquedad, name='busquedad'),
+    path('localizacion/', views.localizacion, name='localizacion'),
+
 ]

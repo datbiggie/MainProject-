@@ -431,97 +431,58 @@ $(document).ready(function() {
         }
     });
 
-    // Manejar el envío del formulario
-    $('form').on('submit', function(e) {
-        e.preventDefault();
-        
-        // Validar campos obligatorios antes de enviar
-        const nombre_empresa = $('#firstname').val().trim();
-        const descripcion_empresa = $('#descripcion_empresa').val().trim();
-        const pais_empresa = $('#country').val();
-        const estado_empresa = $('#state').val();
-        const tipo_empresa = $('#tipo_empresa').val();
-        const direccion_empresa = $('#direccion_empresa').val().trim();
-        const latitud = $('#latitud').val();
-        const longitud = $('#longitud').val();
-        
-        // Validar checkbox de términos y condiciones
-        const checkbox = $('#supportCheckbox').is(':checked');
-        
-        // Validar campos vacíos
-        if (!nombre_empresa || !descripcion_empresa || !pais_empresa || !estado_empresa || !tipo_empresa || !direccion_empresa || !latitud || !longitud) {
-            Swal.fire({
-                title: 'Campos obligatorios',
-                text: 'Todos los campos son obligatorios. Por favor complete todos los campos.',
-                icon: 'warning',
-                confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
-            });
-            return false;
-        }
-        
-        // Validar checkbox de términos y condiciones
-        if (!checkbox) {
-            Swal.fire({
-                title: 'Términos y condiciones',
-                text: 'Debe aceptar los términos y condiciones para continuar.',
-                icon: 'warning',
-                confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
-            });
-            $('#supportCheckbox').focus();
-            return false;
-        }
-        
-        // Crear un objeto FormData para manejar archivos
-        const formData = new FormData(this);
-        
-        $.ajax({
-            url: $(this).attr('action'),
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire({
-                        title: '¡Empresa Registrada!',
-                        text: response.message,
-                        icon: 'success',
-                        confirmButtonText: 'Continuar a Sucursales',
-                        confirmButtonColor: '#3b82f6'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Redirigir a la página de sucursales
-                            if (response.redirect_url) {
-                                window.location.href = response.redirect_url;
-                            } else {
-                                // Fallback si no hay redirect_url
-                                window.location.href = '/ecommerce/sucursal/';
-                            }
-                        }
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Error',
-                        text: response.message,
-                        icon: 'error',
-                        confirmButtonText: 'Aceptar',
-                        confirmButtonColor: '#3b82f6'
-                    });
-                }
-            },
-            error: function() {
+    // Manejar el envío SOLO del formulario de registro de empresa, no el de login
+    var empresaForm = $("#step2 form");
+    if (empresaForm.length) {
+        empresaForm.on('submit', function(e) {
+            // Solo validar si el formulario está visible (step2 activo)
+            if (!$('#step2').hasClass('active')) {
+                return true;
+            }
+            e.preventDefault();
+
+            // Validar campos obligatorios antes de enviar
+            const nombre_empresa = $('#firstname').val().trim();
+            const descripcion_empresa = $('#descripcion_empresa').val().trim();
+            const pais_empresa = $('#country').val();
+            const estado_empresa = $('#state').val();
+            const tipo_empresa = $('#tipo_empresa').val();
+            const direccion_empresa = $('#direccion_empresa').val().trim();
+            const latitud = $('#latitud').val();
+            const longitud = $('#longitud').val();
+
+            // Validar checkbox de términos y condiciones
+            const checkbox = $('#supportCheckbox').is(':checked');
+
+            // Validar campos vacíos
+            if (!nombre_empresa || !descripcion_empresa || !pais_empresa || !estado_empresa || !tipo_empresa || !direccion_empresa || !latitud || !longitud) {
                 Swal.fire({
-                    title: 'Error',
-                    text: 'Ha ocurrido un error al procesar la solicitud',
-                    icon: 'error',
+                    title: 'Campos obligatorios',
+                    text: 'Todos los campos son obligatorios. Por favor complete todos los campos.',
+                    icon: 'warning',
                     confirmButtonText: 'Aceptar',
                     confirmButtonColor: '#3b82f6'
                 });
+                return false;
             }
+
+            // Validar checkbox de términos y condiciones
+            if (!checkbox) {
+                Swal.fire({
+                    title: 'Términos y condiciones',
+                    text: 'Debe aceptar los términos y condiciones para continuar.',
+                    icon: 'warning',
+                    confirmButtonText: 'Aceptar',
+                    confirmButtonColor: '#3b82f6'
+                });
+                $('#supportCheckbox').focus();
+                return false;
+            }
+
+            // Si pasa validación, enviar el formulario normalmente (dejar que el backend maneje los errores)
+            this.submit();
         });
-    });
+    }
 });
 
 // Función para cargar Google Maps de forma robusta

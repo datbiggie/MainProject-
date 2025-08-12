@@ -52,31 +52,44 @@
                     {% endfor %}
                   </select>
                 </div>
-                <div class="col-md-6 form-group mb-5">
-                  <label for="estatus" class="col-form-label">Estatus *</label>
-                  <select class="form-control" name="estatus_servicio" id="estatus_servicio">
-                    <option value="">Seleccione un estatus</option>
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                  </select>
-                </div>
+                <!-- El campo estatus_servicio se ha eliminado completamente ya que ahora está en servicio_sucursal -->
+                <!-- Este campo se manejará automáticamente al agregar el servicio a una sucursal -->
+
               </div>
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
-                  <label for="imagen_servicio" class="col-form-label">Imagen del Servicio</label>
-                  <div class="file-upload-wrapper" style="max-width: 200px;">
-                    <div class="file-upload-container">
-                      <input type="file" name="imagen_servicio" id="imagen_servicio" class="form-control file-input" accept="image/*">
-                      <div class="file-upload-placeholder">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M17 8L12 3L7 8" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M12 3V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>Seleccionar imagen</span>
+                  <label class="col-form-label">Imágenes del Servicio (máximo 5) <span style="color:red">*</span></label>
+                  <p class="text-muted small mb-3">Selecciona al menos una imagen para tu servicio</p>
+                  
+                  <!-- 5 inputs individuales para imágenes -->
+                  <div class="image-inputs-container">
+                    <div class="row">
+                      <div class="col-md-6 col-lg-4 mb-3">
+                        <label for="imagen_servicio_1" class="form-label">Imagen 1</label>
+                        <input type="file" name="imagen_servicio_1" id="imagen_servicio_1" class="form-control" accept="image/*">
+                        <div id="preview_servicio_1" class="image-preview mt-2"></div>
                       </div>
-                      <div class="image-preview" id="imagePreview"></div>
+                      <div class="col-md-6 col-lg-4 mb-3">
+                        <label for="imagen_servicio_2" class="form-label">Imagen 2</label>
+                        <input type="file" name="imagen_servicio_2" id="imagen_servicio_2" class="form-control" accept="image/*">
+                        <div id="preview_servicio_2" class="image-preview mt-2"></div>
+                      </div>
+                      <div class="col-md-6 col-lg-4 mb-3">
+                        <label for="imagen_servicio_3" class="form-label">Imagen 3</label>
+                        <input type="file" name="imagen_servicio_3" id="imagen_servicio_3" class="form-control" accept="image/*">
+                        <div id="preview_servicio_3" class="image-preview mt-2"></div>
+                      </div>
+                      <div class="col-md-6 col-lg-4 mb-3">
+                        <label for="imagen_servicio_4" class="form-label">Imagen 4</label>
+                        <input type="file" name="imagen_servicio_4" id="imagen_servicio_4" class="form-control" accept="image/*">
+                        <div id="preview_servicio_4" class="image-preview mt-2"></div>
+                      </div>
+                      <div class="col-md-6 col-lg-4 mb-3">
+                        <label for="imagen_servicio_5" class="form-label">Imagen 5</label>
+                        <input type="file" name="imagen_servicio_5" id="imagen_servicio_5" class="form-control" accept="image/*">
+                        <div id="preview_servicio_5" class="image-preview mt-2"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -88,6 +101,7 @@
                   <span class="submitting"></span>
                 </div>
               </div>
+              <!-- Validación de imagen obligatoria -->
             </form>
 
             <div id="form-message-warning mt-4"></div> 
@@ -111,6 +125,136 @@
   <script src="{% static 'servicio/js/bootstrap.min.js' %}"></script>
   <script src="{% static 'servicio/js/jquery.validate.min.js' %}"></script>
   <script src="{% static 'servicio/js/main.js' %}"></script>
+  <script src="{% static 'servicio/js/validacion_servicio.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Función para crear previsualización de imagen
+      function createImagePreview(file, previewContainer) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewContainer.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.style.width = '100%';
+          img.style.maxWidth = '150px';
+          img.style.height = '100px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '8px';
+          img.style.border = '2px solid #ddd';
+          img.style.marginTop = '10px';
+          previewContainer.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      }
+      
+      // Configurar event listeners para cada input de imagen
+      for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById(`imagen_servicio_${i}`);
+        const preview = document.getElementById(`preview_servicio_${i}`);
+        
+        if (input && preview) {
+          input.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+              createImagePreview(file, preview);
+            } else {
+              preview.innerHTML = '';
+            }
+          });
+        }
+      }
+      
+      // Función para verificar si al menos una imagen está seleccionada
+      function hasAtLeastOneImage() {
+        for (let i = 1; i <= 5; i++) {
+          const input = document.getElementById(`imagen_servicio_${i}`);
+          if (input && input.files.length > 0) {
+            return true;
+          }
+        }
+        return false;
+      }
+    
+    // Validación personalizada para imágenes
+    $.validator.addMethod("atLeastOneImage", function(value, element) {
+      return hasAtLeastOneImage();
+    }, "Debes seleccionar al menos una imagen.");
+    
+    // Configuración de validación
+    $("#servicioForm").validate({
+      rules: {
+        nombre_servicio: {
+          required: true,
+          minlength: 2
+        },
+        descripcion_servicio: {
+          required: true,
+          minlength: 10
+        },
+        categoria_servicio: {
+          required: true
+        },
+        imagen_servicio_1: {
+          atLeastOneImage: true
+        }
+      },
+      messages: {
+        nombre_servicio: {
+          required: "Por favor ingresa el nombre del servicio",
+          minlength: "El nombre debe tener al menos 2 caracteres"
+        },
+        descripcion_servicio: {
+          required: "Por favor ingresa la descripción del servicio",
+          minlength: "La descripción debe tener al menos 10 caracteres"
+        },
+        categoria_servicio: {
+          required: "Por favor selecciona una categoría"
+        },
+        imagen_servicio_1: {
+          atLeastOneImage: "Por favor selecciona al menos una imagen"
+        }
+      },
+      errorElement: 'div',
+      errorClass: 'invalid-feedback',
+      validClass: 'is-valid',
+      errorPlacement: function(error, element) {
+        error.addClass('invalid-feedback');
+        element.closest('.form-group').append(error);
+      },
+      highlight: function(element, errorClass, validClass) {
+        $(element).addClass('is-invalid').removeClass('is-valid');
+      },
+      unhighlight: function(element, errorClass, validClass) {
+        $(element).removeClass('is-invalid').addClass('is-valid');
+      }
+    });
+    
+    // Manejo del envío del formulario
+    var form = document.getElementById('servicioForm');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      var nombre = document.getElementById('nombre_servicio').value.trim();
+      var descripcion = document.getElementById('descripcion_servicio').value.trim();
+      var categoria = document.getElementById('categoria_servicio').value;
+      var imagenInput = document.getElementById('imagenes_servicio');
+      let mensaje = '';
+      if (!nombre) mensaje = 'El nombre del servicio es obligatorio.';
+      else if (!categoria) mensaje = 'Debes seleccionar una categoría.';
+      else if (!imagenInput.files || imagenInput.files.length === 0) mensaje = 'Debes seleccionar al menos una imagen para el servicio.';
+      else if (imagenInput.files.length > 5) mensaje = 'Máximo 5 imágenes permitidas.';
+      if (mensaje) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Validación',
+          text: mensaje,
+          icon: 'warning',
+          confirmButtonColor: '#d33',
+        });
+        return false;
+      }
+    });
+  });
+  </script>
 
   </body>
 </html>

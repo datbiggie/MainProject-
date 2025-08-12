@@ -185,7 +185,6 @@
 						{% else %}
 							<button type="button" class="btn btn-success ms-2" disabled title="Debe agregar al menos una sucursal"><i class="material-icons">check_circle</i> <span>Continuar</span></button>
 						{% endif %}
-</body>
 <script>
 document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
 	e.preventDefault();
@@ -199,7 +198,6 @@ document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
 	});
 });
 </script>
-</html>
 						<a href="#addEmployeeModal" class="btn btn-primary" data-bs-toggle="modal"><i class="material-icons">&#xE147;</i> <span>Agregar Sucursal</span></a>
 						<form id="formEliminarTodas" method="POST" action="{% url 'eliminar_todas_sucursales' %}" style="display:inline;">
 							{% csrf_token %}
@@ -223,6 +221,7 @@ document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
 						<th>Dirección</th>
 						<th>Telefono</th>
 						<th>Estado</th>
+						<th style="min-width:90px;">Acciones</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -230,17 +229,31 @@ document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
 					<tr>
 						<td>
 							<span class="custom-checkbox">
-								<input type="checkbox" id="checkbox1" name="options[]" value="1">
-								<label for="checkbox1"></label>
+								<input type="checkbox" id="checkbox{{ forloop.counter }}" name="options[]" value="{{ sucursal.id_sucursal }}">
+								<label for="checkbox{{ forloop.counter }}"></label>
 							</span>
 						</td>
 						<td>{{ sucursal.nombre_sucursal }}</td>
 						<td>{{ sucursal.direccion_sucursal }}</td>
 						<td>{{ sucursal.telefono_sucursal }}</td>
 						<td>{{ sucursal.estado_sucursal }}</td>
-						<td>
-							<a href="#editEmployeeModal" class="edit" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" data-latitud="{{ sucursal.latitud_sucursal }}" data-longitud="{{ sucursal.longitud_sucursal }}"><i class="material-icons" data-bs-toggle="tooltip" title="Edit">&#xE254;</i></a>
-							<a href="#deleteEmployeeModal" class="delete" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}"><i class="material-icons" data-bs-toggle="tooltip" title="Delete">&#xE872;</i></a>
+						<td style="white-space: nowrap;">
+							<a href="#editEmployeeModal" class="edit" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" data-latitud="{{ sucursal.latitud_sucursal }}" data-longitud="{{ sucursal.longitud_sucursal }}" title="Editar" style="margin-right:2px;">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#1976d2" style="vertical-align:middle;width:20px;height:20px;">
+									<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+								</svg>
+							</a>
+							<a href="#deleteEmployeeModal" class="delete" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Eliminar" style="margin-right:2px;">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#d32f2f" style="vertical-align:middle;width:20px;height:20px;">
+									<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+								</svg>
+							</a>
+							<a href="#productosSucursalModal" class="productos-sucursal" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Productos asociados" style="margin-right:2px;">
+								<svg width="20" height="20" style="vertical-align:middle;color:#388e3c;"><use xlink:href="#box"></use></svg>
+							</a>
+							<a href="#serviciosSucursalModal" class="servicios-sucursal" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Servicios asociados">
+								<svg width="20" height="20" style="vertical-align:middle;color:#9c27b0;"><use xlink:href="#box"></use></svg>
+							</a>
 						</td>
 					</tr>
 					{% endfor %}
@@ -590,7 +603,100 @@ document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
 	  </div>
 	</div>
 
+<!-- Modal Productos Sucursal -->
+			<div id="productosSucursalModal" class="modal fade">
+				<div class="modal-dialog modal-lg">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h4 class="modal-title">Agregar producto a la sucursal</h4>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<form id="formAgregarProductoSucursal">
+								{% csrf_token %}
+								<input type="hidden" id="inputSucursalIdProducto" name="sucursal_id" value="">
+								<div class="mb-3">
+									<label for="selectProducto" class="form-label">Producto</label>
+									<select class="form-select" id="selectProducto" name="producto_id">
+										<option value="">Seleccione un producto</option>
+									</select>
+								</div>
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label for="inputStock" class="form-label">Stock</label>
+										<input type="number" class="form-control" id="inputStock" name="stock" min="0" placeholder="Ingrese stock">
+									</div>
+									<div class="col-md-6">
+										<label for="inputPrecio" class="form-label">Precio</label>
+										<input type="number" class="form-control" id="inputPrecio" name="precio" min="0" step="0.01" placeholder="Ingrese precio">
+									</div>
+								</div>
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label for="selectEstatusProducto" class="form-label">Estatus del Producto</label>
+										<select class="form-select" id="selectEstatusProducto" name="estatus_producto_sucursal">
+											<option value="Activo" selected>Activo</option>
+											<option value="Inactivo">Inactivo</option>
+										</select>
+									</div>
+									<div class="col-md-6">
+										<label for="selectCondicionProducto" class="form-label">Condición del Producto</label>
+										<select class="form-select" id="selectCondicionProducto" name="condicion_producto_sucursal">
+											<option value="Nuevo" selected>Nuevo</option>
+											<option value="Usado">Usado</option>
+										</select>
+									</div>
+								</div>
+							</form>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+							<button type="submit" class="btn btn-primary" form="formAgregarProductoSucursal">Guardar</button>
+						</div>
+					</div>
+				</div>
+			</div>
 
+			<!-- Modal Servicios Sucursal -->
+			<div id="serviciosSucursalModal" class="modal fade">
+				<div class="modal-dialog modal-lg">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h4 class="modal-title">Agregar servicio a la sucursal</h4>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<form id="formAgregarServicioSucursal">
+								{% csrf_token %}
+								<input type="hidden" id="inputSucursalIdServicio" name="sucursal_id" value="">
+								<div class="mb-3">
+									<label for="selectServicio" class="form-label">Servicio</label>
+									<select class="form-select" id="selectServicio" name="servicio_id">
+										<option value="">Seleccione un servicio</option>
+									</select>
+								</div>
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label for="inputPrecioServicio" class="form-label">Precio</label>
+										<input type="number" class="form-control" id="inputPrecioServicio" name="precio" min="0" step="0.01" placeholder="Ingrese precio">
+									</div>
+									<div class="col-md-6">
+										<label for="selectEstatusServicio" class="form-label">Estatus del Servicio</label>
+										<select class="form-select" id="selectEstatusServicio" name="estatus_servicio_sucursal">
+											<option value="Activo" selected>Activo</option>
+											<option value="Inactivo">Inactivo</option>
+										</select>
+									</div>
+								</div>
+							</form>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+							<button type="submit" class="btn btn-primary" form="formAgregarServicioSucursal">Guardar</button>
+						</div>
+					</div>
+				</div>
+			</div>
 
 
 

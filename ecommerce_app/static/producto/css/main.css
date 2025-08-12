@@ -1,3 +1,25 @@
+/* Botón Ver Productos igual a Ver Categorías */
+.btn-ver-categorias {
+  background-color: #3ecf8e !important;
+  border-color: #3ecf8e !important;
+  color: #fff !important;
+  font-size: 15px;
+  letter-spacing: .2rem;
+  text-transform: uppercase;
+  transition: background 0.2s, border 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  min-width: 150px;
+  padding: 0 24px;
+  font-weight: 500;
+  text-align: center;
+}
+.btn-ver-categorias:hover, .btn-ver-categorias:focus {
+  background-color: #2ea86d !important;
+  border-color: #2ea86d !important;
+}
 /* Estilos para el upload de imágenes */
 .file-upload-wrapper {
     position: relative;

@@ -108,9 +108,9 @@ class producto(models.Model):
     descripcion_producto = models.TextField(blank=True, null=True)
     marca_producto = models.CharField(max_length=100, blank=True, null=True)
     modelo_producto = models.CharField(max_length=100, blank=True, null=True)
-    imagen_producto = models.ImageField(upload_to='imagenes_productos/', blank=True, null=True)
+    # El campo imagen_producto se ha movido a la tabla imagen_producto
     caracteristicas_generales = models.TextField(blank=True, null=True)
-    estatus_producto = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
+    # El campo estatus_producto se ha movido a producto_sucursal como estatus_producto_sucursal
     fecha_creacion_producto = models.DateTimeField(auto_now_add=True)
     id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='productos')
     id_categoria_prod_fk = models.ForeignKey('categoria_producto', on_delete=models.SET_NULL, null=True, related_name='productos')
@@ -130,8 +130,8 @@ class servicio(models.Model):
     id_servicio = models.AutoField(primary_key=True)
     nombre_servicio = models.CharField(max_length=150)
     descripcion_servicio = models.TextField(blank=True, null=True)
-    imagen_servicio = models.ImageField(upload_to='imagenes_servicios/', blank=True, null=True)
-    estatus_servicio = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
+    # El campo imagen_servicio se ha movido a la tabla imagen_servicio
+    # El campo estatus_servicio se ha movido a servicio_sucursal como estatus_servicio_sucursal
     fecha_creacion_servicio = models.DateTimeField(auto_now_add=True)
     id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='servicios')
     id_categoria_servicios_fk = models.ForeignKey('categoria_servicio', on_delete=models.SET_NULL, null=True, related_name='servicios')
@@ -141,11 +141,62 @@ class servicio(models.Model):
     
     
 class producto_sucursal(models.Model):
+    ESTATUS_CHOICES = [
+        ('Activo', 'Activo'),
+        ('Inactivo', 'Inactivo'),
+    ]
+    
+    CONDICION_CHOICES = [
+        ('Nuevo', 'Nuevo'),
+        ('Usado', 'Usado'),
+    ]
+    
     id_producto_sucursal = models.AutoField(primary_key=True)
     stock_producto_sucursal = models.PositiveIntegerField(default=0)
     precio_producto_sucursal = models.DecimalField(max_digits=10, decimal_places=2)
+    condicion_producto_sucursal = models.CharField(max_length=10, choices=CONDICION_CHOICES, default='Nuevo')
+    estatus_producto_sucursal = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     id_sucursal_fk = models.ForeignKey('sucursal', on_delete=models.CASCADE, related_name='productos_sucursal')
     id_producto_fk = models.ForeignKey('producto', on_delete=models.CASCADE, related_name='sucursales_producto')
 
     def __str__(self):
         return f"{self.id_producto_fk.nombre_producto} en {self.id_sucursal_fk.nombre_sucursal}"
+
+
+# Modelo para asociar servicios a sucursales
+class servicio_sucursal(models.Model):
+    ESTADO_CHOICES = [
+        ('Activo', 'Activo'),
+        ('Inactivo', 'Inactivo'),
+    ]
+
+    id_servicio_sucursal = models.AutoField(primary_key=True)
+    precio_servicio_sucursal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
+    estatus_servicio_sucursal = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo')
+    id_sucursal_fk = models.ForeignKey('sucursal', on_delete=models.CASCADE, related_name='servicios_sucursal')
+    id_servicio_fk = models.ForeignKey('servicio', on_delete=models.CASCADE, related_name='sucursales_servicio')
+
+    def __str__(self):
+        return f"{self.id_servicio_fk.nombre_servicio} en {self.id_sucursal_fk.nombre_sucursal}"
+
+
+# Modelo para manejar múltiples imágenes de productos
+class imagen_producto(models.Model):
+    id_imagen = models.AutoField(primary_key=True)
+    ruta_imagen = models.ImageField(upload_to='imagenes_productos/')
+    id_producto_fk = models.ForeignKey('producto', on_delete=models.CASCADE, related_name='imagenes')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Imagen {self.id_imagen} - {self.id_producto_fk.nombre_producto}"
+
+
+# Modelo para manejar múltiples imágenes de servicios
+class imagen_servicio(models.Model):
+    id_imagen = models.AutoField(primary_key=True)
+    ruta_imagen = models.ImageField(upload_to='imagenes_servicios/')
+    id_servicio_fk = models.ForeignKey('servicio', on_delete=models.CASCADE, related_name='imagenes')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Imagen {self.id_imagen} - {self.id_servicio_fk.nombre_servicio}"

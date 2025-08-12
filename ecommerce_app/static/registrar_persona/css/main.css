@@ -78,9 +78,9 @@ body {
 .formbold-form-wrapper {
   margin: 0 auto;
   max-width: 600px;
-  width: 100%;
-  background: white;
-  padding: 40px;
+  .top-bar-right .list-unstyled li:first-child a svg {
+    /* color: #1769aa; */
+  }
   border-radius: 15px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   position: relative;

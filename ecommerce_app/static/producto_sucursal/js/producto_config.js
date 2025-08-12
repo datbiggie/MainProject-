@@ -28,7 +28,8 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
                     Swal.showLoading();
                 }
             });
-            // Enviar solicitud de eliminación (URL hardcodeada)
+            
+            // Enviar solicitud de eliminación
             fetch('/ecommerce/eliminar_producto/', {
                 method: 'POST',
                 body: formData,
@@ -39,7 +40,6 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Éxito
                     Swal.fire({
                         icon: 'success',
                         title: '¡Producto Eliminado!',
@@ -47,11 +47,9 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
                         confirmButtonColor: '#3085d6',
                         confirmButtonText: 'Aceptar'
                     }).then((result) => {
-                        // Recargar página para mostrar cambios
                         window.location.reload();
                     });
                 } else {
-                    // Error
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
@@ -69,6 +67,119 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
                     text: 'Error al eliminar el producto. Por favor, inténtalo de nuevo.',
                     confirmButtonColor: '#d33',
                     confirmButtonText: 'Aceptar'
+                });
+            });
+        }
+    });
+}
+
+// Función para cargar imágenes existentes del producto
+function cargarImagenesExistentes(idProducto) {
+    const container = document.getElementById('current_images_container');
+    if (!container) return;
+    
+    // Mostrar loading
+    container.innerHTML = '<div class="col-12"><p>Cargando imágenes...</p></div>';
+    
+    fetch(`/ecommerce/api/obtener_imagenes_producto/?id_producto=${idProducto}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarImagenesExistentes(data.imagenes);
+            } else {
+                container.innerHTML = '<div class="col-12"><p class="text-muted">No se pudieron cargar las imágenes.</p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar imágenes:', error);
+            container.innerHTML = '<div class="col-12"><p class="text-danger">Error al cargar las imágenes.</p></div>';
+        });
+}
+
+// Función para mostrar las imágenes existentes
+function mostrarImagenesExistentes(imagenes) {
+    const container = document.getElementById('current_images_container');
+    if (!container) return;
+    
+    if (imagenes.length === 0) {
+        container.innerHTML = '<div class="col-12"><p class="text-muted">No hay imágenes registradas para este producto.</p></div>';
+        return;
+    }
+    
+    let html = '';
+    imagenes.forEach(imagen => {
+        html += `
+            <div class="col-md-4 col-sm-6 col-6 mb-2" id="imagen_${imagen.id_imagen}">
+                <div class="card" style="border-radius: 8px; overflow: hidden;">
+                    <img src="${imagen.url}" class="card-img-top" style="height: 80px; object-fit: cover;" alt="Imagen del producto">
+                    <div class="card-body p-1">
+                        <button type="button" class="btn btn-danger btn-sm w-100" style="font-size: 11px; padding: 4px 8px;" onclick="eliminarImagen(${imagen.id_imagen}, 'producto')">
+                            <i class="fas fa-trash" style="font-size: 10px;"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Función para eliminar una imagen específica
+function eliminarImagen(idImagen, tipo) {
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'Esta acción no se puede deshacer',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('id_imagen', idImagen);
+            
+            const endpoint = tipo === 'producto' ? '/ecommerce/api/eliminar_imagen_producto/' : '/ecommerce/api/eliminar_imagen_servicio/';
+            
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remover la imagen del DOM
+                    const imagenElement = document.getElementById(`imagen_${idImagen}`);
+                    if (imagenElement) {
+                        imagenElement.remove();
+                    }
+                    
+                    Swal.fire({
+                        title: 'Eliminada',
+                        text: data.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message,
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Error al eliminar la imagen',
+                    icon: 'error'
                 });
             });
         }
@@ -164,25 +275,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('❌ No se pudo obtener el select de categoría o la categoría está vacía');
                 }
                 
-                document.getElementById('edit_estatus').value = estatus || '';
                 document.getElementById('edit_descripcion').value = descripcion || '';
                 document.getElementById('edit_caracteristicas').value = caracteristicas || '';
                 
-                // Mostrar la imagen actual si existe
-                const imagePreview = document.getElementById('edit_imagePreview');
+                // Cargar imágenes existentes del producto
+                cargarImagenesExistentes(id);
                 
-                if (imagen && imagen !== '') {
-                    // Mostrar la imagen actual en el preview del input
-                    if (imagePreview) {
-                        imagePreview.innerHTML = `
-                            <img src="${imagen}" alt="Imagen actual" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #ddd; margin-top: 10px;">
-                        `;
-                    }
-                } else {
-                    // Limpiar ambos elementos si no hay imagen
-                    if (imagePreview) {
-                        imagePreview.innerHTML = '';
-                    }
+                // Limpiar preview de nuevas imágenes
+                const imagePreview = document.getElementById('edit_imagePreview');
+                if (imagePreview) {
+                    imagePreview.innerHTML = '';
                 }
                 
                 console.log('Datos cargados exitosamente en el modal');
@@ -322,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('edit_estatus').value = '';
                 document.getElementById('edit_descripcion').value = '';
                 document.getElementById('edit_caracteristicas').value = '';
-                document.getElementById('edit_imagen_producto').value = '';
+                document.getElementById('edit_imagenes_producto').value = '';
                 
                 // Limpiar previsualizaciones
                 const imagePreview = document.getElementById('edit_imagePreview');
@@ -334,4 +436,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-}); 
+});

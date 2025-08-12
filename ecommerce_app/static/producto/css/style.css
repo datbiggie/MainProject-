@@ -80,7 +80,7 @@ a {
   letter-spacing: .2rem;
   text-transform: uppercase; }
   .btn.btn-primary {
-    background: #35477d;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: #fff;
     padding: 15px 20px; }
   .btn:hover {
