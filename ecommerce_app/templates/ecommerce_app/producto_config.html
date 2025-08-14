@@ -31,52 +31,26 @@
    
     
     <!-- Start Features Area -->
-    <div class="container" style="max-width: 1200px; margin-top: 2rem;">
+    <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
         <div class="card shadow-lg productos-bg-main border-0" style="border-radius: 1.2rem; padding: 2.2rem 1.5rem 2.2rem 1.5rem; box-shadow: 0 6px 32px rgba(44,62,80,0.10);">
             <h3 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Gestión de Productos</h3>
             <div class="search-section mb-4 w-100 d-flex justify-content-center" style="max-width: 700px; margin-left:auto; margin-right:auto;">
               <div class="card shadow-sm productos-bg-search" style="border-radius: 1rem; max-width: 1100px; margin: 0 auto;">
                 <div class="card-body py-3 px-4">
                   <div class="row g-2 align-items-center flex-wrap justify-content-center" style="max-width:100%; margin:0 auto;">
-                    <div class="col-lg-6 col-md-6 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
+                    <div class="col-lg-8 col-md-8 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
                       <input type="text" id="busqueda-producto" class="form-control productos-input" placeholder="Buscar producto por nombre..." style="min-width:320px; max-width: 520px; width:100%;">
                     </div>
-                    <div class="col-lg-6 col-md-6 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
-                      <button class="btn btn-outline-primary btn-sm filtro-estado-producto" data-estado="todos" style="border-radius:1.2rem; min-width:90px;">Todos</button>
-                      <button class="btn btn-outline-success btn-sm filtro-estado-producto" data-estado="activo" style="border-radius:1.2rem; min-width:90px;">Activos</button>
-                      <button class="btn btn-outline-secondary btn-sm filtro-estado-producto" data-estado="inactivo" style="border-radius:1.2rem; min-width:90px;">Inactivos</button>
-                    </div>
-                  </div>
-                  <div class="row mt-3">
-                    <div class="col-12 d-flex justify-content-start">
-                      <a href="{% url 'producto_funcion' %}" class="btn btn-sm ms-1 d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
+                    <div class="col-lg-4 col-md-4 col-12 d-flex align-items-center justify-content-center mb-2 mb-lg-0">
+                      <a href="{% url 'producto_funcion' %}" class="btn btn-sm d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
                         <i class="lni lni-plus me-1"></i> Agregar Producto
                       </a>
-<style>
-.btn-agregar-categoria {
-  background: #4a90e2 !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 1.2rem !important;
-  font-size: 0.98rem !important;
-  padding: 0.45rem 1.2rem !important;
-  font-weight: 500 !important;
-  min-width: 180px;
-  display: inline-flex;
-  align-items: center;
-  transition: background 0.18s;
-}
-.btn-agregar-categoria:hover {
-  background: #357ab8 !important;
-  color: #fff !important;
-}
-</style>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="row" id="contenedor-productos">
+<div class="row" id="contenedor-productos">
                 {% for producto_all in producto_sucursal_all %}
                 <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
                     <!-- Start Single Feature -->
@@ -85,34 +59,64 @@
                         <img class="shape2" src="{% static 'producto_sucursal/images/features/shape2.svg' %}" alt="#" style="max-width: 32px;">
                         <span class="serial" style="font-size: 0.95rem;">{{ forloop.counter }}</span>
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
-                            {% if producto_all.primera_imagen and producto_all.primera_imagen.ruta_imagen %}
-                                <img src="{{ producto_all.primera_imagen.ruta_imagen.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                            {% if producto_all.primera_imagen %}
+                                {% if user_info.tipo == 'empresa' %}
+                                    <img src="{{ producto_all.primera_imagen.ruta_imagen_producto_empresa.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                {% else %}
+                                    <img src="{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                {% endif %}
                             {% else %}
-                                <i class="lni lni-microphone" style="font-size: 2rem; color: #b0b0b0;"></i>
+                                <i class="lni lni-package" style="font-size: 2rem; color: #b0b0b0;"></i>
                             {% endif %}
                         </div>
-                        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ producto_all.nombre_producto }}</h3>
-                        <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                            <button href="#EditProductModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
-                                    data-id="{{ producto_all.id_producto }}"
-                                    data-nombre="{{ producto_all.nombre_producto }}"
-                                    data-marca="{{ producto_all.marca_producto|default:'' }}"
-                                    data-modelo="{{ producto_all.modelo_producto|default:'' }}"
-                                    data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod|default:'' }}"
-                                    data-descripcion="{{ producto_all.descripcion_producto|default:'' }}"
-                                    data-caracteristicas="{{ producto_all.caracteristicas_generales|default:'' }}"
-                                    data-imagen="{% if producto_all.primera_imagen and producto_all.primera_imagen.ruta_imagen %}{{ producto_all.primera_imagen.ruta_imagen.url }}{% endif %}">
-                                <i class="lni lni-pencil"></i> Editar
-                            </button>
-                            <button class="btn btn-delete" data-id="{{ producto_all.id_producto }}" data-nombre="{{ producto_all.nombre_producto }}">
-                                <i class="lni lni-trash"></i> Eliminar
-                            </button>
-                        </div>
+                        {% if user_info.tipo == 'empresa' %}
+                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ producto_all.nombre_producto_empresa }}</h3>
+                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
+                                <button href="#EditProductModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                                        data-id="{{ producto_all.id_producto_empresa }}"
+                                        data-nombre="{{ producto_all.nombre_producto_empresa }}"
+                                        data-marca="{{ producto_all.marca_producto_empresa|default:'' }}"
+                                        data-modelo="{{ producto_all.modelo_producto_empresa|default:'' }}"
+                                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_empresa|default:'' }}"
+                                        data-descripcion="{{ producto_all.descripcion_producto_empresa|default:'' }}"
+                                        data-caracteristicas="{{ producto_all.caracteristicas_generales_empresa|default:'' }}"
+                                        data-imagen="{% if producto_all.primera_imagen %}{{ producto_all.primera_imagen.ruta_imagen_producto_empresa.url }}{% endif %}">
+                                    <i class="lni lni-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-delete" data-id="{{ producto_all.id_producto_empresa }}" data-nombre="{{ producto_all.nombre_producto_empresa }}">
+                                    <i class="lni lni-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        {% else %}
+                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ producto_all.nombre_producto_usuario }}</h3>
+                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
+                                <button href="#EditProductModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                                        data-id="{{ producto_all.id_producto_usuario }}"
+                                        data-nombre="{{ producto_all.nombre_producto_usuario }}"
+                                        data-marca="{{ producto_all.marca_producto_usuario|default:'' }}"
+                                        data-modelo="{{ producto_all.modelo_producto_usuario|default:'' }}"
+                                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
+                                        data-descripcion="{{ producto_all.descripcion_producto_usuario|default:'' }}"
+                                        data-caracteristicas="{{ producto_all.caracteristicas_generales_usuario|default:'' }}"
+                                        data-imagen="{% if producto_all.primera_imagen %}{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}{% endif %}">
+                                    <i class="lni lni-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-delete" data-id="{{ producto_all.id_producto_usuario }}" data-nombre="{{ producto_all.nombre_producto_usuario }}">
+                                    <i class="lni lni-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        {% endif %}
                     </div>
                     <!-- End Single Feature -->
                 </div>
                 {% endfor %}
             </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
         </div>
     <!-- /End Features Area -->
 
@@ -122,7 +126,11 @@
             <div class="modal-content">
                 <form method="POST" action="{% url 'editar_producto' %}" id="editProductoForm" enctype="multipart/form-data" onsubmit="return false;">
                     {% csrf_token %}
-                    <input type="hidden" name="id_producto" id="edit_id_producto">
+                    {% if user_info.tipo == 'empresa' %}
+                        <input type="hidden" name="id_producto_empresa" id="edit_id_producto_empresa">
+                    {% else %}
+                        <input type="hidden" name="id_producto_usuario" id="edit_id_producto_usuario">
+                    {% endif %}
                     <div class="modal-header">
                         <h4 class="modal-title">Editar Producto</h4>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -132,28 +140,48 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Nombre del Producto</label>
-                                    <input type="text" class="form-control enhanced-input" name="nombre_producto" id="edit_nombre" required>
+                                    {% if user_info.tipo == 'empresa' %}
+                                        <input type="text" class="form-control enhanced-input" name="nombre_producto_empresa" id="edit_nombre" required>
+                                    {% else %}
+                                        <input type="text" class="form-control enhanced-input" name="nombre_producto_usuario" id="edit_nombre" required>
+                                    {% endif %}
                                 </div>
                                 <div class="form-group">
                                     <label>Marca</label>
-                                    <input type="text" class="form-control enhanced-input" name="marca_producto" id="edit_marca">
+                                    {% if user_info.tipo == 'empresa' %}
+                                        <input type="text" class="form-control enhanced-input" name="marca_producto_empresa" id="edit_marca">
+                                    {% else %}
+                                        <input type="text" class="form-control enhanced-input" name="marca_producto_usuario" id="edit_marca">
+                                    {% endif %}
                                 </div>
                                 <div class="form-group">
                                     <label>Modelo</label>
-                                    <input type="text" class="form-control enhanced-input" name="modelo_producto" id="edit_modelo">
+                                    {% if user_info.tipo == 'empresa' %}
+                                        <input type="text" class="form-control enhanced-input" name="modelo_producto_empresa" id="edit_modelo">
+                                    {% else %}
+                                        <input type="text" class="form-control enhanced-input" name="modelo_producto_usuario" id="edit_modelo">
+                                    {% endif %}
                                 </div>
                                 <div class="form-group">
                                     <label>Categoría</label>
                                     <select class="form-control enhanced-input" name="categoria_producto" id="edit_categoria" required>
                                         <option value="">Seleccione una categoría</option>
                                         {% for categoria in categoria_producto_all  %}
-                                            <option value="{{ categoria.id_categoria_prod }}">{{ categoria.nombre_categoria_prod }}</option>
+                                            {% if user_info.tipo == 'empresa' %}
+                                                <option value="{{ categoria.id_categoria_prod_empresa }}">{{ categoria.nombre_categoria_prod_empresa }}</option>
+                                            {% else %}
+                                                <option value="{{ categoria.id_categoria_prod_usuario }}">{{ categoria.nombre_categoria_prod_usuario }}</option>
+                                            {% endif %}
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Descripción</label>
-                                    <textarea class="form-control enhanced-input" name="descripcion_producto" id="edit_descripcion" style="height: 80px;"></textarea>
+                                    {% if user_info.tipo == 'empresa' %}
+                                        <textarea class="form-control enhanced-input" name="descripcion_producto_empresa" id="edit_descripcion" style="height: 80px;"></textarea>
+                                    {% else %}
+                                        <textarea class="form-control enhanced-input" name="descripcion_producto_usuario" id="edit_descripcion" style="height: 80px;"></textarea>
+                                    {% endif %}
                                 </div>
                                 <div class="form-group">
                                     <label>Características Generales</label>
@@ -164,7 +192,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Imágenes Actuales del Producto</label>
-                                    <div id="current_images_container" class="row mb-3">
+                                    <div id="current_images_container" class="row mb-3" data-user-type="{{ user_info.tipo }}">
                                         <!-- Las imágenes actuales se cargarán aquí dinámicamente -->
                                     </div>
                                 </div>

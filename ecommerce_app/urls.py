@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/categorias_producto/', views.api_categorias_producto, name='api_categorias_producto'),
     path('api/categorias_servicio/', views.api_categorias_servicio, name='api_categorias_servicio'),
     path('api/filtrar_categorias_producto/', views.api_filtrar_categorias_producto, name='api_filtrar_categorias_producto'),
+    path('api/filtrar_categorias_servicio/', views.api_filtrar_categorias_servicio, name='api_filtrar_categorias_servicio'),
     path('api/filtrar_servicios/', views.api_filtrar_servicios, name='api_filtrar_servicios'),
     path('api/filtrar_productos/', views.api_filtrar_productos, name='api_filtrar_productos'),
     path('api/obtener_imagenes_producto/', views.api_obtener_imagenes_producto, name='api_obtener_imagenes_producto'),

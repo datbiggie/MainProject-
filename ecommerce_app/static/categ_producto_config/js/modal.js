@@ -21,12 +21,19 @@ function abrirModalEditar(idCategoria, nombreCategoria, descripcionCategoria, es
     console.log('=== SELECT DE ESTATUS ===');
     console.log('Elemento encontrado:', estatusSelect);
     console.log('Opciones disponibles:', Array.from(estatusSelect.options).map(opt => `"${opt.value}"`));
-    console.log('Valor a establecer:', `"${estatusCategoria}"`);
+    console.log('Valor original recibido:', `"${estatusCategoria}"`);
     
-    estatusSelect.value = estatusCategoria;
+    // Normalizar estatus: primera letra mayúscula, resto minúscula
+    let estatusNormalizado = '';
+    if (estatusCategoria) {
+        estatusNormalizado = estatusCategoria.charAt(0).toUpperCase() + estatusCategoria.slice(1).toLowerCase();
+    }
+    console.log('Valor normalizado:', `"${estatusNormalizado}"`);
+    
+    estatusSelect.value = estatusNormalizado;
     
     console.log('Valor después de establecer:', `"${estatusSelect.value}"`);
-    console.log('¿Coincide con el valor esperado?', estatusSelect.value === estatusCategoria);
+    console.log('¿Coincide con el valor esperado?', estatusSelect.value === estatusNormalizado);
     
     // Abrir el modal
     const modal = new bootstrap.Modal(document.getElementById('editCategoriaModal'));
@@ -128,4 +135,4 @@ document.addEventListener('DOMContentLoaded', function() {
             limpiarModal();
         });
     }
-}); 
+});

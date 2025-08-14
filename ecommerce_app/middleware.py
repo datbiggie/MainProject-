@@ -27,9 +27,18 @@ class JsonResponseMiddleware(MiddlewareMixin):
         """
         Manejar excepciones no capturadas y devolver una respuesta JSON
         """
+        import traceback
+        from django.conf import settings
+        
+        # Registrar el error completo con traceback
         logger.error(f"Excepción no capturada: {str(exception)}")
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        
+        # En modo DEBUG, mostrar el error específico
+        error_detail = str(exception) if settings.DEBUG else None
+        
         return JsonResponse({
             'success': False,
-            'message': 'Error interno del servidor',
-            'error': str(exception) if request.META.get('HTTP_ACCEPT', '').startswith('application/json') else None
-        }, status=500, content_type='application/json') 
+            'message': f'Error interno del servidor: {str(exception)}' if settings.DEBUG else 'Error interno del servidor',
+            'error': error_detail
+        }, status=500, content_type='application/json')

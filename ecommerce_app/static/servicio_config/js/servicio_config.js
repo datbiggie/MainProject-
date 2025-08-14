@@ -23,17 +23,17 @@ function filtrarProductos() {
                             <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
                                 ${servicio.imagen_url ? `<img src="${servicio.imagen_url}" alt="Imagen del servicio" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">` : `<i class="lni lni-microphone" style="font-size: 2rem; color: #b0b0b0;"></i>`}
                             </div>
-                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">${servicio.nombre_servicio}</h3>
+                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">${servicio.nombre_servicio_empresa}</h3>
                             <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
                                 <button href="#EditProductModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
-                                        data-id="${servicio.id_servicio}"
-                                        data-nombre="${servicio.nombre_servicio}"
+                                        data-id="${servicio.id_servicio_empresa}"
+                                        data-nombre="${servicio.nombre_servicio_empresa}"
                                         data-categoria="${servicio.categoria_servicio || ''}"
-                                        data-descripcion="${servicio.descripcion_servicio || ''}"
+                                        data-descripcion="${servicio.descripcion_servicio_empresa || ''}"
                                         data-imagen="${servicio.imagen_url || ''}">
                                     <i class="lni lni-pencil"></i> Editar
                                 </button>
-                                <button class="btn btn-delete" data-id="${servicio.id_servicio}" data-nombre="${servicio.nombre_servicio}">
+                                <button class="btn btn-delete" data-id="${servicio.id_servicio_empresa}" data-nombre="${servicio.nombre_servicio_empresa}">
                                     <i class="lni lni-trash"></i> Eliminar
                                 </button>
                             </div>

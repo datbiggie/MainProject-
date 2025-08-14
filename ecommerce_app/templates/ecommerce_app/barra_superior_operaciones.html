@@ -232,8 +232,8 @@
                         <h6 class="alert-heading">¡Bienvenido!</h6>
                         <p class="mb-1"><strong>Nombre:</strong> {{ user_info.nombre }}</p>
                         <p class="mb-1"><strong>Email:</strong> {{ user_info.email }}</p>
-                        <p class="mb-0"><strong>Empresa:</strong> 
-                            <span class="badge bg-primary">{{ user_info. }}</span>
+                        <p class="mb-0"><strong>Rol:</strong> 
+                            <span class="badge bg-primary">{{ user_info.tipo|default:'Sin empresa' }}</span>
                         </p>
                     </div>
                     <div class="d-grid gap-2">

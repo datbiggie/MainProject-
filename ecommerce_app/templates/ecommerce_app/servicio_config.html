@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="{% static 'servicio_config/css/main.css' %}" />
     
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+   
     
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
@@ -28,7 +28,7 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     
     <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
     
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
@@ -42,52 +42,30 @@
    
     
     <!-- Start Features Area -->
-    <div class="container" style="max-width: 1200px; margin-top: 2rem;">
+    <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
         <div class="card shadow-lg productos-bg-main border-0" style="border-radius: 1.2rem; padding: 2.2rem 1.5rem 2.2rem 1.5rem; box-shadow: 0 6px 32px rgba(44,62,80,0.10);">
             <h3 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Gestión de Servicio</h3>
             <div class="search-section mb-4 w-100 d-flex justify-content-center" style="max-width: 700px; margin-left:auto; margin-right:auto;">
               <div class="card shadow-sm productos-bg-search" style="border-radius: 1rem; max-width: 1100px; margin: 0 auto;">
                 <div class="card-body py-3 px-4">
                   <div class="row g-2 align-items-center flex-wrap justify-content-center" style="max-width:100%; margin:0 auto;">
-                    <div class="col-lg-6 col-md-6 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
-                      <input type="text" id="busqueda-producto" class="form-control productos-input" placeholder="Buscar producto por nombre..." style="min-width:320px; max-width: 520px; width:100%;">
+                    <div class="col-lg-8 col-md-8 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
+                      <input type="text" id="busqueda-producto" class="form-control productos-input" placeholder="Buscar servicio por nombre..." style="min-width:320px; max-width: 520px; width:100%;">
                     </div>
-                    <div class="col-lg-6 col-md-6 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
-                      <button class="btn btn-outline-primary btn-sm filtro-estado-producto" data-estado="todos" style="border-radius:1.2rem; min-width:90px;">Todos</button>
-                      <button class="btn btn-outline-success btn-sm filtro-estado-producto" data-estado="activo" style="border-radius:1.2rem; min-width:90px;">Activos</button>
-                      <button class="btn btn-outline-secondary btn-sm filtro-estado-producto" data-estado="inactivo" style="border-radius:1.2rem; min-width:90px;">Inactivos</button>
-                    </div>
-                  </div>
-                  <div class="row mt-3">
-                    <div class="col-12 d-flex justify-content-start">
-                      <a href="{% url 'servicio_funcion' %}" class="btn btn-sm ms-1 d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
+                    <div class="col-lg-4 col-md-4 col-12 d-flex align-items-center justify-content-center mb-2 mb-lg-0">
+                      <a href="{% url 'servicio_funcion' %}" class="btn btn-sm d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
                         <i class="lni lni-plus me-1"></i> Agregar Servicio
                       </a>
-<style>
-.btn-agregar-categoria {
-  background: #4a90e2 !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 1.2rem !important;
-  font-size: 0.98rem !important;
-  padding: 0.45rem 1.2rem !important;
-  font-weight: 500 !important;
-  min-width: 180px;
-  display: inline-flex;
-  align-items: center;
-  transition: background 0.18s;
-}
-.btn-agregar-categoria:hover {
-  background: #357ab8 !important;
-  color: #fff !important;
-}
-</style>
                     </div>
                   </div>
+
+
+                    </div>
+                    
+                  </div>
+                  
                 </div>
-              </div>
-            </div>
-            <div class="row" id="contenedor-productos">
+                 <div class="row" id="contenedor-productos">
                 {% for servicio in servicio_all %}
                 <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
                     <!-- Start Single Feature -->
@@ -97,30 +75,57 @@
                         <span class="serial" style="font-size: 0.95rem;">{{ forloop.counter }}</span>
                         <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
                             {% if servicio.primera_imagen %}
-                                <img src="{{ servicio.primera_imagen.ruta_imagen.url }}" alt="Imagen del servicio" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                {% if user_info.tipo == 'empresa' %}
+                                    <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}" alt="Imagen del servicio" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                {% else %}
+                                    <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_usuario.url }}" alt="Imagen del servicio" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                {% endif %}
                             {% else %}
-                                <i class="lni lni-microphone" style="font-size: 2rem; color: #b0b0b0;"></i>
+                                <i class="lni lni-cog" style="font-size: 2rem; color: #b0b0b0;"></i>
                             {% endif %}
                         </div>
-                        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ servicio.nombre_servicio }}</h3>
-                        <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                            <button href="#EditServiceModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
-                                    data-id="{{ servicio.id_servicio }}"
-                                    data-nombre="{{ servicio.nombre_servicio }}"
-                                    data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv|default:'' }}"
-                                    data-descripcion="{{ servicio.descripcion_servicio|default:'' }}"
-                                    data-imagen="{% if servicio.primera_imagen %}{{ servicio.primera_imagen.ruta_imagen.url }}{% endif %}">
-                                <i class="lni lni-pencil"></i> Editar
-                            </button>
-                            <button class="btn btn-delete" data-id="{{ servicio.id_servicio }}" data-nombre="{{ servicio.nombre_servicio }}">
-                                <i class="lni lni-trash"></i> Eliminar
-                            </button>
-                        </div>
+                        {% if user_info.tipo == 'empresa' %}
+                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ servicio.nombre_servicio_empresa }}</h3>
+                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
+                                <button href="#EditServiceModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
+                                        data-id="{{ servicio.id_servicio_empresa }}"
+                                        data-nombre="{{ servicio.nombre_servicio_empresa }}"
+                                        data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa|default:'' }}"
+                                        data-descripcion="{{ servicio.descripcion_servicio_empresa|default:'' }}"
+                                        data-imagen="{% if servicio.primera_imagen %}{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}{% endif %}"
+                                        data-user-type="{{ user_info.tipo }}">
+                                    <i class="lni lni-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-delete" data-id="{{ servicio.id_servicio_empresa }}" data-nombre="{{ servicio.nombre_servicio_empresa }}" data-user-type="{{ user_info.tipo }}">
+                                    <i class="lni lni-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        {% else %}
+                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ servicio.nombre_servicio_usuario }}</h3>
+                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
+                                <button href="#EditServiceModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
+                                        data-id="{{ servicio.id_servicio_usuario }}"
+                                        data-nombre="{{ servicio.nombre_servicio_usuario }}"
+                                        data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario|default:'' }}"
+                                        data-descripcion="{{ servicio.descripcion_servicio_usuario|default:'' }}"
+                                        data-imagen="{% if servicio.primera_imagen %}{{ servicio.primera_imagen.ruta_imagen_servicio_usuario.url }}{% endif %}"
+                                        data-user-type="{{ user_info.tipo }}">
+                                    <i class="lni lni-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-delete" data-id="{{ servicio.id_servicio_usuario }}" data-nombre="{{ servicio.nombre_servicio_usuario }}" data-user-type="{{ user_info.tipo }}">
+                                    <i class="lni lni-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        {% endif %}
                     </div>
                     <!-- End Single Feature -->
                 </div>
                 {% endfor %}
             </div>
+              </div>
+              
+            </div>
+           
         </div>
     <!-- /End Features Area -->
 
@@ -130,7 +135,11 @@
             <div class="modal-content">
                 <form method="POST" action="#" id="editServiceForm" enctype="multipart/form-data" onsubmit="return false;">
                     {% csrf_token %}
-                    <input type="hidden" name="id_servicio" id="edit_id_servicio">
+                    {% if user_info.tipo == 'empresa' %}
+                        <input type="hidden" name="id_servicio_empresa" id="edit_id_servicio_empresa">
+                    {% else %}
+                        <input type="hidden" name="id_servicio_usuario" id="edit_id_servicio_usuario">
+                    {% endif %}
                     <div class="modal-header">
                         <h4 class="modal-title">Editar Servicio</h4>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -140,26 +149,38 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Nombre del Servicio</label>
-                                    <input type="text" class="form-control enhanced-input" name="nombre_servicio" id="edit_nombre_servicio" required>
+                                    {% if user_info.tipo == 'empresa' %}
+                                        <input type="text" class="form-control enhanced-input" name="nombre_servicio_empresa" id="edit_nombre_servicio" required>
+                                    {% else %}
+                                        <input type="text" class="form-control enhanced-input" name="nombre_servicio_usuario" id="edit_nombre_servicio" required>
+                                    {% endif %}
                                 </div>
                                 <div class="form-group">
                                     <label>Categoría</label>
                                     <select class="form-control enhanced-input" name="categoria_servicio" id="edit_categoria_servicio" required>
                                         <option value="">Seleccione una categoría</option>
-                                        {% for categoria in categoria_servicio_all  %}
-                                            <option value="{{ categoria.id_categoria_serv }}">{{ categoria.nombre_categoria_serv }}</option>
+                                        {% for categoria in categoria_servicio_all %}
+                                            {% if user_info.tipo == 'empresa' %}
+                                                <option value="{{ categoria.id_categoria_serv_empresa }}">{{ categoria.nombre_categoria_serv_empresa }}</option>
+                                            {% else %}
+                                                <option value="{{ categoria.id_categoria_serv_usuario }}">{{ categoria.nombre_categoria_serv_usuario }}</option>
+                                            {% endif %}
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Descripción</label>
-                                    <textarea class="form-control enhanced-input" name="descripcion_servicio" id="edit_descripcion_servicio" style="height: 80px;"></textarea>
+                                    {% if user_info.tipo == 'empresa' %}
+                                        <textarea class="form-control enhanced-input" name="descripcion_servicio_empresa" id="edit_descripcion_servicio" style="height: 80px;"></textarea>
+                                    {% else %}
+                                        <textarea class="form-control enhanced-input" name="descripcion_servicio_usuario" id="edit_descripcion_servicio" style="height: 80px;"></textarea>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Imágenes Actuales del Servicio</label>
-                                    <div id="current_images_container_servicio" class="row mb-3">
+                                    <div id="current_images_container_servicio" class="row mb-3" data-user-type="{{ user_info.tipo }}">
                                         <!-- Las imágenes actuales se cargarán aquí dinámicamente -->
                                     </div>
                                 </div>

@@ -30,25 +30,25 @@
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
                   <label for="nombre" class="col-form-label">Nombre del Producto *</label>
-                  <input type="text" class="form-control" name="nombre_producto" id="nombre" placeholder="Ingrese el nombre del producto" style="max-width: 300px;">
+                  <input type="text" class="form-control" name="nombre_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="nombre" placeholder="Ingrese el nombre del producto" style="max-width: 300px;">
                 </div>
               </div>
 
               <div class="row">
                 <div class="col-md-6 form-group mb-5">
                   <label for="marca" class="col-form-label">Marca </label>
-                  <input type="text" class="form-control" name="marca_producto" id="marca" placeholder="Ingrese la marca del producto">
+                  <input type="text" class="form-control" name="marca_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="marca" placeholder="Ingrese la marca del producto">
                 </div>
                 <div class="col-md-6 form-group mb-5">
                   <label for="modelo" class="col-form-label">Modelo</label>
-                  <input type="text" class="form-control" name="modelo_producto" id="modelo" placeholder="Ingrese el modelo del producto">
+                  <input type="text" class="form-control" name="modelo_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="modelo" placeholder="Ingrese el modelo del producto">
                 </div>
               </div>
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
                   <label for="descripcion" class="col-form-label">Descripción </label>
-                  <textarea class="form-control" name="descripcion_producto" id="descripcion" cols="30" rows="3" placeholder="Ingrese la descripción del producto" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
+                  <textarea class="form-control" name="descripcion_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="descripcion" cols="30" rows="3" placeholder="Ingrese la descripción del producto" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
                 </div>
               </div>
 
@@ -64,8 +64,12 @@
                   <label for="categoria" class="col-form-label">Categoría *</label>
                   <select class="form-control" name="categoria_producto" id="categoria">
                     <option value="">Seleccione una categoría</option>
-                    {% for categoria in categoria_producto_all  %}
-                      <option value="{{ categoria.id_categoria_prod }}">{{ categoria.nombre_categoria_prod }}</option>
+                    {% for categoria in categoria_producto_all %}
+                      {% if user_info.tipo == 'empresa' %}
+                        <option value="{{ categoria.id_categoria_prod_empresa }}">{{ categoria.nombre_categoria_prod_empresa }}</option>
+                      {% else %}
+                        <option value="{{ categoria.id_categoria_prod_usuario }}">{{ categoria.nombre_categoria_prod_usuario }}</option>
+                      {% endif %}
                     {% endfor %}
                     
                   </select>

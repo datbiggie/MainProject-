@@ -11,9 +11,27 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
+            // Detectar el tipo de usuario desde el contenedor principal
+            const userTypeElement = document.querySelector('[data-user-type]');
+            const userType = userTypeElement?.getAttribute('data-user-type') || 'empresa';
+            
+            console.log('=== DEBUG ELIMINACIÓN PRODUCTO ===');
+            console.log('ID Producto:', idProducto);
+            console.log('Nombre Producto:', nombreProducto);
+            console.log('Tipo de usuario detectado:', userType);
+            
             // Crear FormData para enviar los datos
             const formData = new FormData();
-            formData.append('id_producto', idProducto);
+            
+            // Enviar el parámetro correcto según el tipo de usuario
+            if (userType.toLowerCase() === 'persona') {
+                formData.append('id_producto_usuario', idProducto);
+                console.log('Enviando como id_producto_usuario:', idProducto);
+            } else {
+                formData.append('id_producto_empresa', idProducto);
+                console.log('Enviando como id_producto_empresa:', idProducto);
+            }
+            
             // Obtener el token CSRF del primer input oculto del DOM
             const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
             if (csrfInput) {
@@ -74,18 +92,35 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
 }
 
 // Función para cargar imágenes existentes del producto
-function cargarImagenesExistentes(idProducto) {
+function cargarImagenesExistentes(idProducto, userType = 'empresa') {
     const container = document.getElementById('current_images_container');
     if (!container) return;
+    
+    // Debug: Verificar parámetros recibidos
+    console.log('🔍 cargarImagenesExistentes - idProducto:', idProducto, 'userType:', userType);
     
     // Mostrar loading
     container.innerHTML = '<div class="col-12"><p>Cargando imágenes...</p></div>';
     
-    fetch(`/ecommerce/api/obtener_imagenes_producto/?id_producto=${idProducto}`)
+    // Determinar el parámetro correcto según el tipo de usuario
+    let urlParam;
+    if (userType === 'persona') {
+        urlParam = `id_producto_usuario=${idProducto}`;
+        console.log('🔍 Usando parámetro para persona:', urlParam);
+    } else if (userType === 'empresa') {
+        urlParam = `id_producto_empresa=${idProducto}`;
+        console.log('🔍 Usando parámetro para empresa:', urlParam);
+    } else {
+        // Fallback para compatibilidad
+        urlParam = `id_producto_empresa=${idProducto}`;
+        console.log('🔍 Usando parámetro para empresa (fallback):', urlParam);
+    }
+    
+    fetch(`/ecommerce/api/obtener_imagenes_producto/?${urlParam}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                mostrarImagenesExistentes(data.imagenes);
+                mostrarImagenesExistentes(data.imagenes, userType);
             } else {
                 container.innerHTML = '<div class="col-12"><p class="text-muted">No se pudieron cargar las imágenes.</p></div>';
             }
@@ -97,7 +132,7 @@ function cargarImagenesExistentes(idProducto) {
 }
 
 // Función para mostrar las imágenes existentes
-function mostrarImagenesExistentes(imagenes) {
+function mostrarImagenesExistentes(imagenes, userType = 'empresa') {
     const container = document.getElementById('current_images_container');
     if (!container) return;
     
@@ -108,12 +143,22 @@ function mostrarImagenesExistentes(imagenes) {
     
     let html = '';
     imagenes.forEach(imagen => {
+        // Determinar el ID de imagen según el tipo de usuario
+        let imagenId, imagenIdField;
+        if (userType.toLowerCase() === 'persona') {
+            imagenId = imagen.id_imagen_producto_usuario;
+            imagenIdField = 'id_imagen_producto_usuario';
+        } else {
+            imagenId = imagen.id_imagen_producto_empresa;
+            imagenIdField = 'id_imagen_producto_empresa';
+        }
+        
         html += `
-            <div class="col-md-4 col-sm-6 col-6 mb-2" id="imagen_${imagen.id_imagen}">
+            <div class="col-md-4 col-sm-6 col-6 mb-2" id="imagen_${imagenId}">
                 <div class="card" style="border-radius: 8px; overflow: hidden;">
                     <img src="${imagen.url}" class="card-img-top" style="height: 80px; object-fit: cover;" alt="Imagen del producto">
                     <div class="card-body p-1">
-                        <button type="button" class="btn btn-danger btn-sm w-100" style="font-size: 11px; padding: 4px 8px;" onclick="eliminarImagen(${imagen.id_imagen}, 'producto')">
+                        <button type="button" class="btn btn-danger btn-sm w-100" style="font-size: 11px; padding: 4px 8px;" onclick="eliminarImagen(${imagenId}, 'producto', '${userType}')">
                             <i class="fas fa-trash" style="font-size: 10px;"></i> Eliminar
                         </button>
                     </div>
@@ -126,7 +171,7 @@ function mostrarImagenesExistentes(imagenes) {
 }
 
 // Función para eliminar una imagen específica
-function eliminarImagen(idImagen, tipo) {
+function eliminarImagen(idImagen, tipo, userType = 'empresa') {
     Swal.fire({
         title: '¿Estás seguro?',
         text: 'Esta acción no se puede deshacer',
@@ -139,7 +184,16 @@ function eliminarImagen(idImagen, tipo) {
     }).then((result) => {
         if (result.isConfirmed) {
             const formData = new FormData();
-            formData.append('id_imagen', idImagen);
+            
+            // Determinar el nombre del parámetro según el tipo y usuario
+            let paramName;
+            if (tipo === 'producto') {
+                paramName = (userType.toLowerCase() === 'persona') ? 'id_imagen_producto_usuario' : 'id_imagen_producto_empresa';
+            } else {
+                paramName = (userType.toLowerCase() === 'persona') ? 'id_imagen_servicio_usuario' : 'id_imagen_servicio_empresa';
+            }
+            
+            formData.append(paramName, idImagen);
             
             const endpoint = tipo === 'producto' ? '/ecommerce/api/eliminar_imagen_producto/' : '/ecommerce/api/eliminar_imagen_servicio/';
             
@@ -157,6 +211,12 @@ function eliminarImagen(idImagen, tipo) {
                     const imagenElement = document.getElementById(`imagen_${idImagen}`);
                     if (imagenElement) {
                         imagenElement.remove();
+                        
+                        // Verificar si no quedan más imágenes y mostrar mensaje
+                        const container = document.getElementById('current_images_container');
+                        if (container && container.children.length === 0) {
+                            container.innerHTML = '<div class="col-12"><p class="text-muted">No hay imágenes registradas para este producto.</p></div>';
+                        }
                     }
                     
                     Swal.fire({
@@ -208,10 +268,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener para el botón de editar
     document.addEventListener('click', function(e) {
         console.log('Click detectado en:', e.target);
+        console.log('Clases del elemento clickeado:', e.target.className);
+        console.log('Elemento padre más cercano:', e.target.parentElement);
         
         if (e.target.closest('.btn-edit')) {
-            console.log('Botón de editar encontrado');
+            console.log('✅ Botón de editar encontrado');
             const button = e.target.closest('.btn-edit');
+            console.log('Botón encontrado:', button);
+            console.log('Atributos del botón:', button.attributes);
             
             // Obtener los datos del producto desde los atributos data-
             const id = button.getAttribute('data-id');
@@ -240,13 +304,71 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Cargar los datos en los campos del modal
             try {
-                document.getElementById('edit_id_producto').value = id || '';
-                document.getElementById('edit_nombre').value = nombre || '';
-                document.getElementById('edit_marca').value = marca || '';
-                document.getElementById('edit_modelo').value = modelo || '';
+                // Determinar el tipo de usuario desde el current_images_container
+                const userTypeElement = document.getElementById('current_images_container');
+                const userType = userTypeElement?.getAttribute('data-user-type') || 'empresa';
+                
+                // Debug del tipo de usuario detectado
+                console.log("🔍 userType DETECTADO:", userType);
+                
+                
+                console.log('=== DEBUG TIPO DE USUARIO ===');
+                console.log('Elemento con data-user-type:', userTypeElement);
+                console.log('Valor raw de data-user-type:', userTypeElement?.getAttribute('data-user-type'));
+                console.log('Tipo de usuario detectado:', userType);
+                console.log('Comparación con empresa:', userType === 'empresa');
+                console.log('Comparación con persona:', userType === 'persona');
+                
+                // Asignar ID según el tipo de usuario
+                if (userType === 'empresa') {
+                    const idField = document.getElementById('edit_id_producto_empresa');
+                    console.log('Campo ID empresa encontrado:', idField);
+                    if (idField) {
+                        idField.value = id || '';
+                        console.log('✅ ID de producto empresa asignado:', id);
+                    } else {
+                        console.log('❌ Campo edit_id_producto_empresa no encontrado');
+                    }
+                } else if (userType === 'persona') {
+                    const idField = document.getElementById('edit_id_producto_usuario');
+                    console.log('Campo ID usuario encontrado:', idField);
+                    if (idField) {
+                        idField.value = id || '';
+                        console.log('✅ ID de producto usuario asignado:', id);
+                    } else {
+                        console.log('❌ Campo edit_id_producto_usuario no encontrado');
+                    }
+                }
+                
+                // Asignar valores a los campos del modal
+                const nombreField = document.getElementById('edit_nombre');
+                const marcaField = document.getElementById('edit_marca');
+                const modeloField = document.getElementById('edit_modelo');
+                
+                if (nombreField) {
+                    nombreField.value = nombre || '';
+                    console.log('✅ Nombre asignado:', nombre);
+                } else {
+                    console.log('❌ Campo edit_nombre no encontrado');
+                }
+                
+                if (marcaField) {
+                    marcaField.value = marca || '';
+                    console.log('✅ Marca asignada:', marca);
+                } else {
+                    console.log('❌ Campo edit_marca no encontrado');
+                }
+                
+                if (modeloField) {
+                    modeloField.value = modelo || '';
+                    console.log('✅ Modelo asignado:', modelo);
+                } else {
+                    console.log('❌ Campo edit_modelo no encontrado');
+                }
                 
                 // Asignar categoría
                 const categoriaSelect = document.getElementById('edit_categoria');
+                console.log('Select de categoría encontrado:', categoriaSelect);
                 if (categoriaSelect && categoria) {
                     console.log('=== DEBUG CATEGORÍA ===');
                     console.log('Categoría obtenida del botón:', categoria);
@@ -275,11 +397,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('❌ No se pudo obtener el select de categoría o la categoría está vacía');
                 }
                 
-                document.getElementById('edit_descripcion').value = descripcion || '';
-                document.getElementById('edit_caracteristicas').value = caracteristicas || '';
+                // Asignar descripción y características
+                const descripcionField = document.getElementById('edit_descripcion');
+                const caracteristicasField = document.getElementById('edit_caracteristicas');
+                
+                if (descripcionField) {
+                    descripcionField.value = descripcion || '';
+                    console.log('✅ Descripción asignada:', descripcion);
+                } else {
+                    console.log('❌ Campo edit_descripcion no encontrado');
+                }
+                
+                if (caracteristicasField) {
+                    caracteristicasField.value = caracteristicas || '';
+                    console.log('✅ Características asignadas:', caracteristicas);
+                } else {
+                    console.log('❌ Campo edit_caracteristicas no encontrado');
+                }
                 
                 // Cargar imágenes existentes del producto
-                cargarImagenesExistentes(id);
+                cargarImagenesExistentes(id, userType);
                 
                 // Limpiar preview de nuevas imágenes
                 const imagePreview = document.getElementById('edit_imagePreview');
@@ -314,6 +451,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Crear FormData para enviar archivos
                 const formData = new FormData(this);
+                
+                // Debug: Mostrar todos los datos que se van a enviar
+                console.log('=== DEBUG DATOS DEL FORMULARIO ===');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value}`);
+                }
                 
                 // Mostrar indicador de carga
                 const submitButton = this.querySelector('button[type="submit"]');
@@ -351,10 +494,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 confirmButtonColor: '#3085d6',
                                 confirmButtonText: 'Aceptar'
                             }).then((result) => {
-                                // Cerrar modal
-                                const modal = bootstrap.Modal.getInstance(document.getElementById('EditProductModal'));
+                                // Cerrar modal correctamente
+                                const modalElement = document.getElementById('EditProductModal');
+                                const modal = bootstrap.Modal.getInstance(modalElement);
                                 if (modal) {
                                     modal.hide();
+                                } else {
+                                    // Si no hay instancia, crear una y cerrarla
+                                    const newModal = new bootstrap.Modal(modalElement);
+                                    newModal.hide();
                                 }
                                 
                                 // Recargar página para mostrar cambios
@@ -410,18 +558,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100); // Pequeño delay para asegurar que el DOM esté listo
     
-    // Limpiar el modal cuando se cierre
+    // Configurar el modal para evitar problemas de aria-hidden
     const modal = document.getElementById('EditProductModal');
     if (modal) {
+        // Configurar opciones del modal para mejor accesibilidad
+        modal.addEventListener('show.bs.modal', function() {
+            // Remover aria-hidden cuando el modal se muestra
+            this.removeAttribute('aria-hidden');
+        });
+        
+        modal.addEventListener('shown.bs.modal', function() {
+            // Asegurar que el modal no tenga aria-hidden cuando está visible
+            this.removeAttribute('aria-hidden');
+        });
+        
+        modal.addEventListener('hide.bs.modal', function() {
+            // Manejar el cierre del modal correctamente
+            const focusedElement = document.activeElement;
+            if (focusedElement && this.contains(focusedElement)) {
+                focusedElement.blur();
+            }
+        });
+        
         modal.addEventListener('hidden.bs.modal', function() {
             try {
                 // Limpiar todos los campos
-                document.getElementById('edit_id_producto').value = '';
-                document.getElementById('edit_nombre').value = '';
-                document.getElementById('edit_marca').value = '';
+                // Limpiar campos según el tipo de usuario
+            const empresaIdField = document.getElementById('edit_id_producto_empresa');
+            const usuarioIdField = document.getElementById('edit_id_producto_usuario');
+            if (empresaIdField) empresaIdField.value = '';
+            if (usuarioIdField) usuarioIdField.value = '';
+            
+            document.getElementById('edit_nombre').value = '';
+            document.getElementById('edit_marca').value = '';
                 document.getElementById('edit_modelo').value = '';
                 document.getElementById('edit_categoria').value = '';
-                document.getElementById('edit_estatus').value = '';
                 document.getElementById('edit_descripcion').value = '';
                 document.getElementById('edit_caracteristicas').value = '';
                 document.getElementById('edit_imagenes_producto').value = '';

@@ -32,7 +32,7 @@
         <symbol xmlns="http://www.w3.org/2000/svg" id="faq" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41c0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></symbol>
     </defs>
 </svg>
-<body data-current-step="{% if is_authenticated %}2{% else %}1{% endif %}" data-has-company="{% if has_company %}true{% else %}false{% endif %}">
+<body>
 {% if has_company %}
 <script>
   window.location.href = "{% url 'sucursalfuncion' %}";
@@ -111,67 +111,8 @@
     </div>
 </div>
 
-<!-- Indicador de pasos -->
-<div class="step-indicator">
-    <div class="step active" id="step1-indicator">
-        <div class="step-number">1</div>
-        <div class="step-text">Iniciar Sesión</div>
-    </div>
-    <div class="step-connector" id="connector1"></div>
-    <div class="step" id="step2-indicator">
-        <div class="step-number">2</div>
-        <div class="step-text">Registro Empresa</div>
-    </div>
-</div>
-
-<!-- Paso 1: Formulario de Inicio de Sesión -->
-  <div class="formbold-form-wrapper form-step active login-form-container" id="step1">
-    <form id="loginForm">
-      {% csrf_token %}
-      <div class="formbold-form-title">
-        <h2 class="" style="text-align: center;">Iniciar Sesión</h2>
-        <p style="text-align: center; color: #666; margin-top: 10px;">Ingresa tus credenciales para continuar con el registro de empresa</p>
-      </div>
-
-      <div class="formbold-mb-3">
-        <label for="login_email" class="formbold-form-label">Email</label>
-        <input
-          type="email"
-          name="login_email"
-          id="login_email"
-          class="formbold-form-input"
-          placeholder="Ingresa tu email"
-          required
-        />
-      </div>
-
-      <div class="formbold-mb-3">
-        <label for="login_password" class="formbold-form-label">Contraseña</label>
-        <input
-          type="password"
-          name="login_password"
-          id="login_password"
-          class="formbold-form-input"
-          placeholder="Ingresa tu contraseña"
-          required
-        />
-      </div>
-
-      <div class="container-login100-form-btn" style="justify-content: center;">
-        <button class="login100-form-btn" type="submit" style="width: auto; min-width: 150px;">
-          Iniciar Sesión
-        </button>
-      </div>
-      
-     
-    </form>
-  </div>
-</div>
-
-
-
-<!-- Paso 2: Formulario de Registro de Empresa -->
-  <div class="formbold-form-wrapper form-step" id="step2">
+<!-- Formulario de Registro de Empresa -->
+  <div class="formbold-form-wrapper form-step active" id="step2">
     
    <!-- <img src="your-image-url-here.jpg">-->
 
@@ -196,12 +137,36 @@
           />
         </div>
         <div>
-          <label for="email" class="formbold-form-label"> Email Empresa </label>
+          <label for="correo_empresa" class="formbold-form-label"> Email Empresa </label>
           <input
             type="email"
-            name="email"
-            id="email"
+            name="correo_empresa"
+            id="correo_empresa"
             class="formbold-form-input"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="formbold-input-flex">
+        <div>
+          <label for="password_empresa" class="formbold-form-label"> Contraseña Empresa </label>
+          <input
+            type="password"
+            name="password_empresa"
+            id="password_empresa"
+            class="formbold-form-input"
+            required
+          />
+        </div>
+        <div>
+          <label for="confirm_password" class="formbold-form-label"> Confirmar Contraseña </label>
+          <input
+            type="password"
+            name="confirm_password"
+            id="confirm_password"
+            class="formbold-form-input"
+            required
           />
         </div>
       </div>
@@ -397,9 +362,6 @@
       </div>
 
       <div class="container-login100-form-btn">
-        <button type="button" class="btn-back" onclick="goBackToStep1()">
-          ← Terminar Sesión
-        </button>
         <button class="login100-form-btn" type="submit">
           Registrarse
         </button>
@@ -465,251 +427,31 @@
           });
         });
       }
-      // --- Login ---
-      var loginForm = document.getElementById('loginForm');
-      if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-          const email = document.getElementById('login_email').value;
-          const password = document.getElementById('login_password').value;
-          if (!email || !password) {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'Por favor completa todos los campos'
-            });
-            return;
+      // Validación de confirmación de contraseña
+      const passwordField = document.getElementById('password_empresa');
+      const confirmPasswordField = document.getElementById('confirm_password');
+      
+      if (passwordField && confirmPasswordField) {
+        confirmPasswordField.addEventListener('blur', function() {
+          if (passwordField.value !== confirmPasswordField.value) {
+            confirmPasswordField.setCustomValidity('Las contraseñas no coinciden');
+          } else {
+            confirmPasswordField.setCustomValidity('');
           }
-          Swal.fire({
-            title: 'Verificando credenciales...',
-            allowOutsideClick: false,
-            didOpen: () => {
-              Swal.showLoading();
-            }
-          });
-          const formData = new FormData();
-          formData.append('login_email', email);
-          formData.append('login_password', password);
-          const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-          if (csrfToken) {
-            formData.append('csrfmiddlewaretoken', csrfToken);
+        });
+        
+        passwordField.addEventListener('input', function() {
+          if (confirmPasswordField.value && passwordField.value !== confirmPasswordField.value) {
+            confirmPasswordField.setCustomValidity('Las contraseñas no coinciden');
+          } else {
+            confirmPasswordField.setCustomValidity('');
           }
-          const loginUrl = '{% url "login_ajax" %}';
-          fetch(loginUrl, {
-            method: 'POST',
-            body: formData,
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
-            }
-          })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.text().then(text => {
-              try {
-                return JSON.parse(text);
-              } catch (e) {
-                throw new Error('Invalid JSON response from server');
-              }
-            });
-          })
-          .then(data => {
-            if (data.success) {
-              if (data.has_company && data.redirect_url) {
-                Swal.fire({
-                  icon: 'success',
-                  title: '¡Bienvenido!',
-                  text: `Hola ${data.user_name}, ya tienes una empresa registrada. Te redirigimos a sucursal.`,
-                  timer: 2000,
-                  showConfirmButton: false
-                }).then(() => {
-                  window.location.href = data.redirect_url;
-                });
-              } else {
-                Swal.fire({
-                  icon: 'success',
-                  title: '¡Bienvenido!',
-                  text: `Hola ${data.user_name}, inicio de sesión exitoso`,
-                  timer: 1200,
-                  showConfirmButton: false
-                }).then(() => {
-                  // Avanzar a paso 2 (registro empresa) sin recargar la página
-                  if (typeof goToStep2 === 'function') {
-                    goToStep2();
-                  } else {
-                    window.location.reload(); // fallback
-                  }
-                });
-              }
-            } else {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error de autenticación',
-                text: data.message
-              });
-            }
-          })
-          .catch(error => {
-            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error de conexión',
-                text: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
-              });
-            } else if (error.message.includes('Invalid JSON response')) {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error del servidor',
-                text: 'El servidor devolvió una respuesta inválida. Intenta nuevamente.'
-              });
-            } else {
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: `Error: ${error.message}`
-              });
-            }
-          });
         });
       }
     });
     
-    // Función para ir al paso 2
-    function goToStep2() {
-        document.getElementById('step1').classList.remove('active');
-        document.getElementById('step2').classList.add('active');
-        
-        document.getElementById('step1-indicator').classList.remove('active');
-        document.getElementById('step1-indicator').classList.add('completed');
-        document.getElementById('step2-indicator').classList.add('active');
-        document.getElementById('connector1').classList.add('active');
-        
-        currentStep = 2;
-        
-        // Inicializar el mapa cuando se muestre el paso 2
-        initializeApp();
-    }
-    
-    // Función para terminar sesión
-    function goBackToStep1() {
-        Swal.fire({
-            title: '¿Terminar sesión?',
-            text: '¿Estás seguro de que quieres cerrar la sesión?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, terminar sesión',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Hacer petición AJAX para terminar sesión
-                fetch('{% url "logout_ajax" %}', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Sesión terminada',
-                            text: 'Has cerrado sesión exitosamente',
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            // Redirigir al index
-                            window.location.href = '{% url "index" %}';
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudo terminar la sesión'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de conexión',
-                        text: 'No se pudo conectar con el servidor'
-                    });
-                });
-            }
-        });
-    }
-    
-    // Función para mostrar formulario de registro (opcional)
-    function showRegistrationForm() {
-        Swal.fire({
-            title: 'Registro de Usuario',
-            text: 'Esta funcionalidad te llevará al formulario de registro de usuario',
-            icon: 'info',
-            confirmButtonText: 'Entendido'
-        });
-    }
-    
-    // function updateUserModal(userName, userType) {
-    //     // Esta función está comentada porque no existe el modal #userModal en el HTML
-    // }
-    
-
-    
-    // Función para terminar sesión desde el modal
-    function logoutUser() {
-        Swal.fire({
-            title: '¿Terminar sesión?',
-            text: '¿Estás seguro de que quieres cerrar la sesión?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, terminar sesión',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Cerrar el modal primero
-                const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
-                modal.hide();
-                
-                // Hacer petición AJAX para terminar sesión
-                fetch('{% url "logout_ajax" %}', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Sesión terminada',
-                            text: 'Has cerrado sesión exitosamente',
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            // Redirigir al index
-                            window.location.href = '{% url "index" %}';
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudo terminar la sesión'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de conexión',
-                        text: 'No se pudo conectar con el servidor'
-                    });
-                });
-            }
-        });
-    }
+    // Inicializar el mapa al cargar la página
+    initializeApp();
     
     // Función para cargar Google Maps de forma más robusta - COMENTADA PARA EVITAR CONFLICTO
     /*
@@ -754,53 +496,12 @@
         }
     }
     
-    // Función para inicializar la página según el estado de autenticación
-    function initializePage() {
-        // Verificar si el usuario ya tiene una empresa
-        const hasCompany = document.body.getAttribute('data-has-company') === 'true';
-        if (hasCompany) {
-            // Si el usuario ya tiene una empresa, mostrar mensaje y redirigir
-            Swal.fire({
-                icon: 'warning',
-                title: 'Empresa ya registrada',
-                text: 'Ya tienes una empresa registrada. Serás redirigido a la página de sucursales.',
-                timer: 3000,
-                showConfirmButton: false
-            }).then(() => {
-                window.location.href = '{% url "sucursalfuncion" %}';
-            });
-            return;
-        }
-        
-        if (currentStep === 2) {
-            // Si el usuario ya está autenticado, mostrar directamente el paso 2
-            document.getElementById('step1').classList.remove('active');
-            document.getElementById('step2').classList.add('active');
-            
-            document.getElementById('step1-indicator').classList.remove('active');
-            document.getElementById('step1-indicator').classList.add('completed');
-            document.getElementById('step2-indicator').classList.add('active');
-            document.getElementById('connector1').classList.add('active');
-            
-            // Inicializar el mapa
-            initializeApp();
-        } else {
-            // Si no está autenticado, mostrar el paso 1 (login)
-            document.getElementById('step1').classList.add('active');
-            document.getElementById('step2').classList.remove('active');
-            
-            document.getElementById('step1-indicator').classList.add('active');
-            document.getElementById('step2-indicator').classList.remove('active');
-            document.getElementById('connector1').classList.remove('active');
-        }
-    }
-    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            initializePage();
+            initializeApp();
         });
     } else {
-        initializePage();
+        initializeApp();
     }
 </script>
 
