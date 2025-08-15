@@ -99,17 +99,25 @@
         {% for item in resultados %}
           <div class="ml-horizontal-card mb-3">
             {% if item.imagen %}
-              <img src="{{ item.imagen }}" class="ml-horizontal-card-img" alt="{{ item.nombre }}">
+              <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none" onclick="console.log('Click en imagen: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
+                <img src="{{ item.imagen }}" class="ml-horizontal-card-img" alt="{{ item.nombre }}" style="cursor: pointer;">
+              </a>
             {% else %}
-              <div class="ml-horizontal-card-img d-flex align-items-center justify-content-center bg-light">
-                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image text-secondary" viewBox="0 0 16 16">
-                  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-                  <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
-                </svg>
-              </div>
+              <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none" onclick="console.log('Click en imagen placeholder: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
+                <div class="ml-horizontal-card-img d-flex align-items-center justify-content-center bg-light" style="cursor: pointer;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image text-secondary" viewBox="0 0 16 16">
+                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                  </svg>
+                </div>
+              </a>
             {% endif %}
             <div class="ml-horizontal-card-body">
-              <div class="ml-horizontal-card-title">{{ item.nombre }}</div>
+              <div class="ml-horizontal-card-title">
+                <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none text-dark" onclick="console.log('Click en título: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
+                  {{ item.nombre }}
+                </a>
+              </div>
               <div class="text-muted mb-2">{{ item.descripcion|truncatechars:100 }}</div>
               <div class="d-flex justify-content-between align-items-center">
                 <div class="ml-horizontal-card-price">
@@ -362,6 +370,17 @@
     <script src="{% static 'index/js/rating-system.js' %}"></script>
     
     <script>
+    // Debug: Mostrar información de los items en la consola
+    console.log('Items disponibles en la búsqueda:');
+    {% for item in resultados %}
+    console.log('Item {{ forloop.counter }}:', {
+        id: '{{ item.id }}',
+        tipo: '{{ item.tipo }}',
+        origen: '{{ item.origen }}',
+        nombre: '{{ item.nombre }}'
+    });
+    {% endfor %}
+    
     function generarLocalizacion() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {

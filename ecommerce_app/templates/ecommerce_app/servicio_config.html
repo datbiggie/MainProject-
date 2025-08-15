@@ -108,6 +108,8 @@
                                         data-nombre="{{ servicio.nombre_servicio_usuario }}"
                                         data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario|default:'' }}"
                                         data-descripcion="{{ servicio.descripcion_servicio_usuario|default:'' }}"
+                                        data-precio="{{ servicio.precio_servicio_usuario|default:'0' }}"
+                                        data-estatus="{{ servicio.estatus_servicio_usuario|default:'Activo' }}"
                                         data-imagen="{% if servicio.primera_imagen %}{{ servicio.primera_imagen.ruta_imagen_servicio_usuario.url }}{% endif %}"
                                         data-user-type="{{ user_info.tipo }}">
                                     <i class="lni lni-pencil"></i> Editar
@@ -176,6 +178,21 @@
                                         <textarea class="form-control enhanced-input" name="descripcion_servicio_usuario" id="edit_descripcion_servicio" style="height: 80px;"></textarea>
                                     {% endif %}
                                 </div>
+                                
+                                <!-- Campos adicionales solo para usuarios con rol 'persona' -->
+                                {% if user_info.tipo == 'persona' %}
+                                <div class="form-group">
+                                    <label>Precio</label>
+                                    <input type="number" class="form-control enhanced-input" name="precio_servicio_usuario" id="edit_precio_servicio" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Estatus</label>
+                                    <select class="form-control enhanced-input" name="estatus_servicio_usuario" id="edit_estatus_servicio">
+                                        <option value="Activo">Activo</option>
+                                        <option value="Inactivo">Inactivo</option>
+                                    </select>
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">

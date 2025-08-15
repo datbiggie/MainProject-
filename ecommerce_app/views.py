@@ -6,6 +6,17 @@ from .models import producto_empresa, servicio_empresa, producto_sucursal, servi
 @require_GET
 def api_productos_servicios_disponibles(request):
     try:
+        # Obtener usuario actual
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Solo las empresas pueden acceder a esta función
+        if account_type != 'empresa':
+            return JsonResponse({'success': False, 'message': 'Acceso no autorizado'})
+        
         id_sucursal = request.GET.get('id_sucursal') or request.GET.get('sucursal_id')
         tipo = request.GET.get('tipo', 'todos')  # Nuevo parámetro para filtrar por tipo (productos, servicios o todos)
         
@@ -21,10 +32,11 @@ def api_productos_servicios_disponibles(request):
             productos_asociados_qs = producto_sucursal.objects.filter(id_sucursal_fk=id_sucursal).values_list('id_producto_fk', flat=True)
             productos_asociados_list = list(productos_asociados_qs)
             
+            # Filtrar productos solo de la empresa actual
             if productos_asociados_list:
-                productos_disponibles = producto_empresa.objects.exclude(id_producto__in=productos_asociados_list)
+                productos_disponibles = producto_empresa.objects.filter(id_empresa_fk=current_user).exclude(id_producto_empresa__in=productos_asociados_list)
             else:
-                productos_disponibles = producto_empresa.objects.all()
+                productos_disponibles = producto_empresa.objects.filter(id_empresa_fk=current_user)
                 
             productos_list = [
                 {'id': p.id_producto_empresa, 'nombre': p.nombre_producto_empresa}
@@ -36,10 +48,11 @@ def api_productos_servicios_disponibles(request):
             servicios_asociados_qs = servicio_sucursal.objects.filter(id_sucursal_fk=id_sucursal).values_list('id_servicio_fk', flat=True)
             servicios_asociados_list = list(servicios_asociados_qs)
             
+            # Filtrar servicios solo de la empresa actual
             if servicios_asociados_list:
-                servicios_disponibles = servicio_empresa.objects.exclude(id_servicio_empresa__in=servicios_asociados_list)
+                servicios_disponibles = servicio_empresa.objects.filter(id_empresa_fk=current_user).exclude(id_servicio_empresa__in=servicios_asociados_list)
             else:
-                servicios_disponibles = servicio_empresa.objects.all()
+                servicios_disponibles = servicio_empresa.objects.filter(id_empresa_fk=current_user)
                 
             servicios_list = [
                 {'id': s.id_servicio_empresa, 'nombre': s.nombre_servicio_empresa}
@@ -279,6 +292,18 @@ def editar_servicio(request):
                     servicio_obj.nombre_servicio_usuario = request.POST.get('nombre_servicio_usuario') or request.POST.get('nombre_servicio', servicio_obj.nombre_servicio_usuario)
                     servicio_obj.descripcion_servicio_usuario = request.POST.get('descripcion_servicio_usuario') or request.POST.get('descripcion_servicio', servicio_obj.descripcion_servicio_usuario)
                     
+                    # Actualizar campos adicionales para usuarios
+                    precio_servicio = request.POST.get('precio_servicio_usuario')
+                    if precio_servicio is not None:
+                        try:
+                            servicio_obj.precio_servicio_usuario = float(precio_servicio)
+                        except (ValueError, TypeError):
+                            servicio_obj.precio_servicio_usuario = 0.0
+                    
+                    estatus_servicio = request.POST.get('estatus_servicio_usuario')
+                    if estatus_servicio:
+                        servicio_obj.estatus_servicio_usuario = estatus_servicio
+                    
                     # Actualizar categoría si se proporciona
                     id_categoria = request.POST.get('categoria_servicio')
                     if id_categoria:
@@ -377,6 +402,8 @@ def api_filtrar_servicios(request):
                     'imagen_url': imagen_url,
                     'categoria_servicio': serv.id_categoria_servicios_fk.nombre_categoria_serv_usuario if serv.id_categoria_servicios_fk else '',
                     'caracteristicas_generales_usuario': '',
+                    'precio_servicio_usuario': serv.precio_servicio_usuario or 0,
+                    'estatus_servicio_usuario': serv.estatus_servicio_usuario or 'Activo',
                     'serial': idx
                 })
         
@@ -1383,6 +1410,12 @@ def producto_funcion(request):
             else:
                 categoria_producto_consul = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
                 
+                # Obtener los campos adicionales para usuario
+                stock_producto = request.POST.get('stock_producto_usuario', 0)
+                precio_producto = request.POST.get('precio_producto_usuario', 0)
+                condicion_producto = request.POST.get('condicion_producto_usuario', 'Nuevo')
+                estatus_producto = request.POST.get('estatus_producto_usuario', 'Activo')
+                
                 # Crear el producto para usuario
                 nuevo_producto = producto_usuario(
                     nombre_producto_usuario=nombre_producto,
@@ -1390,6 +1423,10 @@ def producto_funcion(request):
                     marca_producto_usuario=marca_producto,
                     modelo_producto_usuario=modelo_producto,
                     caracteristicas_generales_usuario=caracteristicas_generales,
+                    stock_producto_usuario=stock_producto,
+                    precio_producto_usuario=precio_producto,
+                    condicion_producto_usuario=condicion_producto,
+                    estatus_producto_usuario=estatus_producto,
                     id_usuario_fk=current_user,
                     id_categoria_prod_fk=categoria_producto_consul
                 )
@@ -1507,14 +1544,27 @@ def servicio_funcion(request):
                 logger.info(f"Se guardaron {len(imagenes_servicio)} imágenes para el servicio de empresa {nuevo_servicio.nombre_servicio_empresa}")
             else:
                 categoria_servicio_consul = categoria_servicio_usuario.objects.get(id_categoria_serv_usuario=categoria_id)
+                
+                # Obtener campos adicionales para usuarios con rol 'persona'
+                precio_servicio = request.POST.get('precio_servicio_usuario', '0')
+                estatus_servicio = request.POST.get('estatus_servicio_usuario', 'Activo')
+                
+                # Convertir precio a float con manejo de errores
+                try:
+                    precio_float = float(precio_servicio) if precio_servicio else 0.0
+                except (ValueError, TypeError):
+                    precio_float = 0.0
+                
                 nuevo_servicio = servicio_usuario(
                     nombre_servicio_usuario=nombre_servicio,
                     descripcion_servicio_usuario=descripcion_servicio,
+                    precio_servicio_usuario=precio_float,
+                    estatus_servicio_usuario=estatus_servicio,
                     id_usuario_fk=current_user,
                     id_categoria_servicios_fk=categoria_servicio_consul
                 )
                 nuevo_servicio.save()   
-                logger.info(f"Servicio de usuario guardado exitosamente: {nuevo_servicio.nombre_servicio_usuario}")
+                logger.info(f"Servicio de usuario guardado exitosamente: {nuevo_servicio.nombre_servicio_usuario} con precio: {precio_float} y estatus: {estatus_servicio}")
                 
                 # Guardar las imágenes en la tabla imagen_servicio_usuario
                 for imagen in imagenes_servicio:
@@ -2495,6 +2545,12 @@ def editar_producto(request):
                     producto_obj.modelo_producto_usuario = request.POST.get('modelo_producto_usuario')
                     producto_obj.caracteristicas_generales_usuario = request.POST.get('caracteristicas_generales')
                     
+                    # Actualizar campos adicionales para usuarios
+                    producto_obj.stock_producto_usuario = request.POST.get('stock_producto_usuario', 0)
+                    producto_obj.precio_producto_usuario = request.POST.get('precio_producto_usuario', 0)
+                    producto_obj.condicion_producto_usuario = request.POST.get('condicion_producto_usuario', 'Nuevo')
+                    producto_obj.estatus_producto_usuario = request.POST.get('estatus_producto_usuario', 'Activo')
+                    
                     # Actualizar categoría si se proporciona
                     categoria_id = request.POST.get('categoria_producto')
                     if categoria_id:
@@ -2833,19 +2889,31 @@ def busquedad(request):
     resultados_servicios = []
     
     if query:
-        # Buscar en productos_sucursal con estado activo
+        # Buscar en productos_sucursal con estado activo (productos de empresa)
         productos_sucursal_list = producto_sucursal.objects.filter(
-            id_producto_fk__nombre_producto__icontains=query,
-            estatus_producto_sucursal='Activo'  # Ahora el estatus está en producto_sucursal
+            id_producto_fk__nombre_producto_empresa__icontains=query,
+            estatus_producto_sucursal='Activo'
         ).select_related('id_producto_fk', 'id_sucursal_fk')
         
-        # Buscar en servicios_sucursal con estado activo
+        # Buscar en productos de usuario con estado activo
+        productos_usuario_list = producto_usuario.objects.filter(
+            nombre_producto_usuario__icontains=query,
+            estatus_producto_usuario='Activo'
+        )
+        
+        # Buscar en servicios_sucursal con estado activo (servicios de empresa)
         servicios_sucursal_list = servicio_sucursal.objects.filter(
-            id_servicio_fk__nombre_servicio__icontains=query,
-            estatus_servicio_sucursal='Activo'  # Ahora el estatus está en servicio_sucursal
+            id_servicio_fk__nombre_servicio_empresa__icontains=query,
+            estatus_servicio_sucursal='Activo'
         ).select_related('id_servicio_fk', 'id_sucursal_fk')
         
-        # Formatear resultados de productos
+        # Buscar en servicios de usuario con estado activo
+        servicios_usuario_list = servicio_usuario.objects.filter(
+            nombre_servicio_usuario__icontains=query,
+            estatus_servicio_usuario='Activo'
+        )
+        
+        # Formatear resultados de productos de empresa
         for ps in productos_sucursal_list:
             # Obtener la primera imagen del producto desde la nueva tabla
             primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=ps.id_producto_fk).first()
@@ -2853,17 +2921,37 @@ def busquedad(request):
             
             resultados_productos.append({
                 'id': ps.id_producto_sucursal,
-                'nombre': ps.id_producto_fk.nombre_producto,
-                'descripcion': ps.id_producto_fk.descripcion_producto,
+                'nombre': ps.id_producto_fk.nombre_producto_empresa,
+                'descripcion': ps.id_producto_fk.descripcion_producto_empresa,
                 'precio': ps.precio_producto_sucursal,
                 'stock': ps.stock_producto_sucursal,
                 'condicion': ps.condicion_producto_sucursal,
                 'imagen': imagen_url,
                 'sucursal': ps.id_sucursal_fk.nombre_sucursal,
-                'tipo': 'producto'
+                'tipo': 'producto',
+                'origen': 'empresa'
             })
         
-        # Formatear resultados de servicios
+        # Formatear resultados de productos de usuario
+        for pu in productos_usuario_list:
+            # Obtener la primera imagen del producto de usuario
+            primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=pu).first()
+            imagen_url = primera_imagen.ruta_imagen_producto_usuario.url if primera_imagen and primera_imagen.ruta_imagen_producto_usuario else None
+            
+            resultados_productos.append({
+                'id': pu.id_producto_usuario,
+                'nombre': pu.nombre_producto_usuario,
+                'descripcion': pu.descripcion_producto_usuario,
+                'precio': pu.precio_producto_usuario,
+                'stock': pu.stock_producto_usuario,
+                'condicion': pu.condicion_producto_usuario,
+                'imagen': imagen_url,
+                'sucursal': f"Usuario: {pu.id_usuario_fk.nombre_usuario}",
+                'tipo': 'producto',
+                'origen': 'usuario'
+            })
+        
+        # Formatear resultados de servicios de empresa
         for ss in servicios_sucursal_list:
             # Obtener la primera imagen del servicio desde la nueva tabla
             primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
@@ -2876,7 +2964,25 @@ def busquedad(request):
                 'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
                 'imagen': imagen_url,
                 'sucursal': ss.id_sucursal_fk.nombre_sucursal,
-                'tipo': 'servicio'
+                'tipo': 'servicio',
+                'origen': 'empresa'
+            })
+        
+        # Formatear resultados de servicios de usuario
+        for su in servicios_usuario_list:
+            # Obtener la primera imagen del servicio de usuario
+            primera_imagen = imagen_servicio_usuario.objects.filter(id_servicio_fk=su).first()
+            imagen_url = primera_imagen.ruta_imagen_servicio_usuario.url if primera_imagen and primera_imagen.ruta_imagen_servicio_usuario else None
+            
+            resultados_servicios.append({
+                'id': su.id_servicio_usuario,
+                'nombre': su.nombre_servicio_usuario,
+                'descripcion': su.descripcion_servicio_usuario,
+                'precio': su.precio_servicio_usuario if su.precio_servicio_usuario else 'Consultar',
+                'imagen': imagen_url,
+                'sucursal': f"Usuario: {su.id_usuario_fk.nombre_usuario}",
+                'tipo': 'servicio',
+                'origen': 'usuario'
             })
     
     # Combinar resultados
@@ -3225,3 +3331,240 @@ def localizacion(request):
         'user_lat': user_lat,
         'user_lng': user_lng
     })
+
+
+def carrito(request):
+    return render(request, 'ecommerce_app/carrito.html')
+
+def vista_items(request):
+    try:
+        item_id = request.GET.get('id')
+        item_tipo = request.GET.get('tipo')
+        item_origen = request.GET.get('origen', 'empresa')  # Por defecto empresa para compatibilidad
+        
+        print(f"DEBUG: vista_items - id: {item_id}, tipo: {item_tipo}, origen: {item_origen}")
+        
+        if not item_id or not item_tipo:
+            print(f"DEBUG: Parámetros faltantes - id: {item_id}, tipo: {item_tipo}")
+            return redirect('/ecommerce/index/')
+        
+        item_data = None
+        imagenes = []
+        
+        if item_tipo == 'producto':
+            if item_origen == 'empresa':
+                # Buscar por producto_sucursal primero (desde búsqueda)
+                try:
+                    print(f"DEBUG: Buscando producto_sucursal con id: {item_id}")
+                    producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=item_id)
+                    producto = producto_sucursal_obj.id_producto_fk
+                    print(f"DEBUG: Producto encontrado: {producto.nombre_producto_empresa}")
+                    
+                    # Obtener imágenes del producto
+                    imagenes_producto = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                    imagenes = [img.ruta_imagen_producto_empresa.url for img in imagenes_producto if img.ruta_imagen_producto_empresa]
+                    
+                    sucursal_info = {
+                        'nombre': producto_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                        'direccion': producto_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                        'precio': producto_sucursal_obj.precio_producto_sucursal,
+                        'stock': producto_sucursal_obj.stock_producto_sucursal,
+                        'condicion': producto_sucursal_obj.condicion_producto_sucursal,
+                        'estatus': producto_sucursal_obj.estatus_producto_sucursal
+                    }
+                    
+                    item_data = {
+                        'id': producto.id_producto_empresa,
+                        'nombre': producto.nombre_producto_empresa,
+                        'descripcion': producto.descripcion_producto_empresa,
+                        'marca': producto.marca_producto_empresa,
+                        'modelo': producto.modelo_producto_empresa,
+                        'caracteristicas': producto.caracteristicas_generales_empresa,
+                        'tipo': 'producto',
+                        'empresa': producto.id_empresa_fk.nombre_empresa,
+                        'sucursal': sucursal_info
+                    }
+                except producto_sucursal.DoesNotExist:
+                    print(f"DEBUG: No se encontró producto_sucursal con id: {item_id}, buscando en producto_empresa")
+                    # Si no se encuentra por producto_sucursal, buscar directamente por producto_empresa
+                    try:
+                        producto = producto_empresa.objects.get(id_producto_empresa=item_id)
+                        print(f"DEBUG: Producto encontrado directamente: {producto.nombre_producto_empresa}")
+                        # Obtener imágenes del producto
+                        imagenes_producto = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                        imagenes = [img.ruta_imagen_producto_empresa.url for img in imagenes_producto if img.ruta_imagen_producto_empresa]
+                        
+                        # Obtener información de la sucursal si está asociado
+                        producto_sucursal_obj = producto_sucursal.objects.filter(id_producto_fk=producto).first()
+                        sucursal_info = None
+                        if producto_sucursal_obj:
+                            sucursal_info = {
+                                'nombre': producto_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                                'direccion': producto_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                                'precio': producto_sucursal_obj.precio_producto_sucursal,
+                                'stock': producto_sucursal_obj.stock_producto_sucursal,
+                                'condicion': producto_sucursal_obj.condicion_producto_sucursal,
+                                'estatus': producto_sucursal_obj.estatus_producto_sucursal
+                            }
+                        
+                        item_data = {
+                            'id': producto.id_producto_empresa,
+                            'nombre': producto.nombre_producto_empresa,
+                            'descripcion': producto.descripcion_producto_empresa,
+                            'marca': producto.marca_producto_empresa,
+                            'modelo': producto.modelo_producto_empresa,
+                            'caracteristicas': producto.caracteristicas_generales_empresa,
+                            'tipo': 'producto',
+                            'empresa': producto.id_empresa_fk.nombre_empresa,
+                            'sucursal': sucursal_info
+                        }
+                    except producto_empresa.DoesNotExist:
+                        print(f"DEBUG: No se encontró producto_empresa con id: {item_id}")
+                        return redirect('/ecommerce/index/')
+            else:  # item_origen == 'usuario'
+                try:
+                    print(f"DEBUG: Buscando producto_usuario con id: {item_id}")
+                    producto = producto_usuario.objects.get(id_producto_usuario=item_id)
+                    print(f"DEBUG: Producto de usuario encontrado: {producto.nombre_producto_usuario}")
+                    # Obtener imágenes del producto de usuario
+                    imagenes_producto = imagen_producto_usuario.objects.filter(id_producto_fk=producto)
+                    imagenes = [img.ruta_imagen_producto_usuario.url for img in imagenes_producto if img.ruta_imagen_producto_usuario]
+                    
+                    # Para productos de usuario, la información está directamente en el producto
+                    sucursal_info = {
+                        'nombre': f"Usuario: {producto.id_usuario_fk.nombre_usuario}",
+                        'direccion': 'Información de contacto disponible',
+                        'precio': producto.precio_producto_usuario,
+                        'stock': producto.stock_producto_usuario,
+                        'condicion': producto.condicion_producto_usuario,
+                        'estatus': producto.estatus_producto_usuario
+                    }
+                    
+                    item_data = {
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'descripcion': producto.descripcion_producto_usuario,
+                        'marca': producto.marca_producto_usuario,
+                        'modelo': producto.modelo_producto_usuario,
+                        'caracteristicas': producto.caracteristicas_generales_usuario,
+                        'tipo': 'producto',
+                        'empresa': f"Usuario: {producto.id_usuario_fk.nombre_usuario}",
+                        'sucursal': sucursal_info
+                    }
+                except producto_usuario.DoesNotExist:
+                    print(f"DEBUG: No se encontró producto_usuario con id: {item_id}")
+                    return redirect('/ecommerce/index/')
+                
+        elif item_tipo == 'servicio':
+            if item_origen == 'empresa':
+                # Buscar por servicio_sucursal primero (desde búsqueda)
+                try:
+                    print(f"DEBUG: Buscando servicio_sucursal con id: {item_id}")
+                    servicio_sucursal_obj = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
+                    servicio = servicio_sucursal_obj.id_servicio_fk
+                    print(f"DEBUG: Servicio encontrado: {servicio.nombre_servicio_empresa}")
+                    
+                    # Obtener imágenes del servicio
+                    imagenes_servicio = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                    imagenes = [img.ruta_imagen_servicio_empresa.url for img in imagenes_servicio if img.ruta_imagen_servicio_empresa]
+                    
+                    sucursal_info = {
+                        'nombre': servicio_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                        'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                        'precio': servicio_sucursal_obj.precio_servicio_sucursal,
+                        'estatus': servicio_sucursal_obj.estatus_servicio_sucursal
+                    }
+                    
+                    item_data = {
+                        'id': servicio.id_servicio_empresa,
+                        'nombre': servicio.nombre_servicio_empresa,
+                        'descripcion': servicio.descripcion_servicio_empresa,
+                        'caracteristicas': servicio.descripcion_servicio_empresa,
+                        'tipo': 'servicio',
+                        'empresa': servicio.id_empresa_fk.nombre_empresa,
+                        'sucursal': sucursal_info
+                    }
+                except servicio_sucursal.DoesNotExist:
+                    print(f"DEBUG: No se encontró servicio_sucursal con id: {item_id}, buscando en servicio_empresa")
+                    # Si no se encuentra por servicio_sucursal, buscar directamente por servicio_empresa
+                    try:
+                        servicio = servicio_empresa.objects.get(id_servicio_empresa=item_id)
+                        print(f"DEBUG: Servicio encontrado directamente: {servicio.nombre_servicio_empresa}")
+                        # Obtener imágenes del servicio
+                        imagenes_servicio = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                        imagenes = [img.ruta_imagen_servicio_empresa.url for img in imagenes_servicio if img.ruta_imagen_servicio_empresa]
+                        
+                        # Obtener información de la sucursal si está asociado
+                        servicio_sucursal_obj = servicio_sucursal.objects.filter(id_servicio_fk=servicio).first()
+                        sucursal_info = None
+                        if servicio_sucursal_obj:
+                            sucursal_info = {
+                                'nombre': servicio_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                                'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                                'precio': servicio_sucursal_obj.precio_servicio_sucursal,
+                                'estatus': servicio_sucursal_obj.estatus_servicio_sucursal
+                            }
+                        
+                        item_data = {
+                            'id': servicio.id_servicio_empresa,
+                            'nombre': servicio.nombre_servicio_empresa,
+                            'descripcion': servicio.descripcion_servicio_empresa,
+                            'caracteristicas': servicio.descripcion_servicio_empresa,
+                            'tipo': 'servicio',
+                            'empresa': servicio.id_empresa_fk.nombre_empresa,
+                            'sucursal': sucursal_info
+                        }
+                    except servicio_empresa.DoesNotExist:
+                        print(f"DEBUG: No se encontró servicio_empresa con id: {item_id}")
+                        return redirect('/ecommerce/index/')
+            else:  # item_origen == 'usuario'
+                try:
+                    print(f"DEBUG: Buscando servicio_usuario con id: {item_id}")
+                    servicio = servicio_usuario.objects.get(id_servicio_usuario=item_id)
+                    print(f"DEBUG: Servicio de usuario encontrado: {servicio.nombre_servicio_usuario}")
+                    # Obtener imágenes del servicio de usuario
+                    imagenes_servicio = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio)
+                    imagenes = [img.ruta_imagen_servicio_usuario.url for img in imagenes_servicio if img.ruta_imagen_servicio_usuario]
+                    
+                    # Para servicios de usuario, la información está directamente en el servicio
+                    sucursal_info = {
+                        'nombre': f"Usuario: {servicio.id_usuario_fk.nombre_usuario}",
+                        'direccion': 'Información de contacto disponible',
+                        'precio': servicio.precio_servicio_usuario if servicio.precio_servicio_usuario else 'Consultar',
+                        'estatus': servicio.estatus_servicio_usuario
+                    }
+                    
+                    item_data = {
+                        'id': servicio.id_servicio_usuario,
+                        'nombre': servicio.nombre_servicio_usuario,
+                        'descripcion': servicio.descripcion_servicio_usuario,
+                        'caracteristicas': servicio.descripcion_servicio_usuario,
+                        'tipo': 'servicio',
+                        'empresa': f"Usuario: {servicio.id_usuario_fk.nombre_usuario}",
+                        'sucursal': sucursal_info
+                    }
+                except servicio_usuario.DoesNotExist:
+                    print(f"DEBUG: No se encontró servicio_usuario con id: {item_id}")
+                    return redirect('/ecommerce/index/')
+        else:
+            print(f"DEBUG: Tipo de item no válido: {item_tipo}")
+            return redirect('/ecommerce/index/')
+        
+        context = {
+            'item': item_data,
+            'imagenes': imagenes
+        }
+        
+        print(f"DEBUG: Renderizando vista_items exitosamente para {item_data['tipo']}: {item_data['nombre']}")
+        return render(request, 'ecommerce_app/vista_items.html', context)
+        
+    except Exception as e:
+        print(f"Error en vista_items: {str(e)}")
+        # En lugar de redirigir al index, mostrar un mensaje de error
+        context = {
+            'error': True,
+            'error_message': f'Error al cargar el item: {str(e)}',
+            'item': None,
+            'imagenes': []
+        }
+        return render(request, 'ecommerce_app/vista_items.html', context)

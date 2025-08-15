@@ -311,6 +311,27 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
             } else {
                 console.log('❌ Campo edit_descripcion_servicio no encontrado');
             }
+            
+            // Asignar campos adicionales para usuarios tipo persona
+            if (userType === 'persona') {
+                const precioField = document.getElementById('edit_precio_servicio');
+                const estatusField = document.getElementById('edit_estatus_servicio');
+                
+                if (precioField) {
+                    precioField.value = btn.getAttribute('data-precio') || '0';
+                    console.log('✅ Precio del servicio asignado:', btn.getAttribute('data-precio'));
+                } else {
+                    console.log('❌ Campo edit_precio_servicio no encontrado');
+                }
+                
+                if (estatusField) {
+                    estatusField.value = btn.getAttribute('data-estatus') || 'Activo';
+                    console.log('✅ Estatus del servicio asignado:', btn.getAttribute('data-estatus'));
+                } else {
+                    console.log('❌ Campo edit_estatus_servicio no encontrado');
+                }
+            }
+            
             // Ya no establecemos el valor de estatus_servicio porque el campo se ha eliminado
             // Seleccionar la categoría correcta
             const categoria = btn.getAttribute('data-categoria') || '';
@@ -491,6 +512,14 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
                             const servicioCaracteristicas = esEmpresa ? servicio.caracteristicas_generales_empresa : servicio.caracteristicas_generales_usuario;
                             const userType = esEmpresa ? 'empresa' : 'persona';
                             
+                            // Construir atributos adicionales para usuarios tipo persona
+                            let additionalAttributes = '';
+                            if (userType === 'persona') {
+                                additionalAttributes = `
+                                                data-precio="${servicio.precio_servicio_usuario || '0'}"
+                                                data-estatus="${servicio.estatus_servicio_usuario || 'Activo'}"`;
+                            }
+                            
                             const servicioHTML = `
                             <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
                                 <div class="single-featuer" style="max-width: 240px; min-width: 180px; width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.7rem 0.5rem 0.7rem; margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,0.07);">
@@ -509,7 +538,7 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
                                                 data-descripcion="${servicioDescripcion || ''}"
                                                 data-caracteristicas="${servicioCaracteristicas || ''}"
                                                 data-imagen="${servicio.imagen_url || ''}"
-                                                data-user-type="${userType}">
+                                                data-user-type="${userType}"${additionalAttributes}>
                                             <i class="lni lni-pencil"></i> Editar
                                         </button>
                                         <button class="btn btn-delete" data-id="${servicioId}" data-nombre="${servicioNombre}" data-user-type="${userType}">

@@ -52,5 +52,7 @@ urlpatterns = [
     path('api/guardar_producto_servicio_sucursal/', views.guardar_producto_servicio_sucursal, name='guardar_producto_servicio_sucursal'),
     path('busquedad/', views.busquedad, name='busquedad'),
     path('localizacion/', views.localizacion, name='localizacion'),
+    path('carrito/', views.carrito, name='carrito'),
+    path('vista_items/', views.vista_items, name='vista_items'),
 
 ]
