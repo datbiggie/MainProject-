@@ -7,6 +7,7 @@ urlpatterns = [
     path('login_ajax/', login_ajax, name='login_ajax'),
     path('validate-email/', validate_email, name='validate_email'),
     path('prueba/', prueba, name='prueba'),
+    path('debug_user_info/', debug_user_info, name='debug_user_info'),
     path('registrar_persona/',  registrar_persona, name='registrar_persona'),
     path('registrar_empresa/', registrar_empresa, name='registrar_empresa'),
     path('sucursal/', sucursalfuncion, name='sucursalfuncion'),
@@ -45,6 +46,8 @@ urlpatterns = [
     path('api/eliminar_imagen_servicio/', views.api_eliminar_imagen_servicio, name='api_eliminar_imagen_servicio'),
     path('perfil_empresa/', views.perfil_empresa, name='perfil_empresa'),
     path('cambiar_logo_empresa/', views.cambiar_logo_empresa, name='cambiar_logo_empresa'),
+    path('perfil_usuario/', views.perfil_usuario, name='perfil_usuario'),
+    path('cambiar_foto_usuario/', views.cambiar_foto_usuario, name='cambiar_foto_usuario'),
 
     # API para productos y servicios no asociados a una sucursal
     path('api/productos_servicios_disponibles/', views.api_productos_servicios_disponibles, name='api_productos_servicios_disponibles'),
@@ -52,5 +55,12 @@ urlpatterns = [
     path('api/guardar_producto_servicio_sucursal/', views.guardar_producto_servicio_sucursal, name='guardar_producto_servicio_sucursal'),
     path('busquedad/', views.busquedad, name='busquedad'),
     path('localizacion/', views.localizacion, name='localizacion'),
+    path('carrito/', views.carrito, name='carrito'),
+    path('vista_items/', views.vista_items, name='vista_items'),
+    path('perfil_sucursales_asociadas/', views.perfil_sucursales_asociadas, name='perfil_sucursales_asociadas'),
+    path('perfil_productos/', views.perfil_productos, name='perfil_productos'),
+    path('perfil_servicios/', views.perfil_servicios, name='perfil_servicios'),
+
+
 
 ]

@@ -479,8 +479,50 @@ $(document).ready(function() {
                 return false;
             }
 
-            // Si pasa validación, enviar el formulario normalmente (dejar que el backend maneje los errores)
-            this.submit();
+            // Si pasa validación, enviar el formulario con AJAX
+            const formData = new FormData(this);
+            
+            $.ajax({
+                url: $(this).attr('action') || window.location.pathname,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: '¡Registro exitoso!',
+                            text: response.message || 'Empresa registrada correctamente',
+                            icon: 'success',
+                            confirmButtonText: 'Continuar',
+                            confirmButtonColor: '#3b82f6'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Redirigir a la página de sucursal
+                                window.location.href = response.redirect_url || '/ecommerce/sucursal/';
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error en el registro',
+                            text: response.message || 'Ocurrió un error al registrar la empresa',
+                            icon: 'error',
+                            confirmButtonText: 'Aceptar',
+                            confirmButtonColor: '#3b82f6'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error en la petición AJAX:', error);
+                    Swal.fire({
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.',
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                }
+            });
         });
     }
 });

@@ -98,6 +98,10 @@
                                         data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
                                         data-descripcion="{{ producto_all.descripcion_producto_usuario|default:'' }}"
                                         data-caracteristicas="{{ producto_all.caracteristicas_generales_usuario|default:'' }}"
+                                        data-stock="{{ producto_all.stock_producto_usuario|default:'0' }}"
+                                        data-precio="{{ producto_all.precio_producto_usuario|default:'0' }}"
+                                        data-condicion="{{ producto_all.condicion_producto_usuario|default:'Nuevo' }}"
+                                        data-estatus="{{ producto_all.estatus_producto_usuario|default:'Activo' }}"
                                         data-imagen="{% if producto_all.primera_imagen %}{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}{% endif %}">
                                     <i class="lni lni-pencil"></i> Editar
                                 </button>
@@ -187,7 +191,32 @@
                                     <label>Características Generales</label>
                                     <textarea class="form-control enhanced-input" name="caracteristicas_generales" id="edit_caracteristicas" style="height: 80px;" required></textarea>
                                 </div>
-                                <!-- El campo estatus_producto se ha eliminado ya que ahora está en producto_sucursal -->
+                                
+                                <!-- Campos adicionales solo para usuarios con rol 'persona' -->
+                                {% if user_info.tipo == 'persona' %}
+                                <div class="form-group">
+                                    <label>Stock</label>
+                                    <input type="number" class="form-control enhanced-input" name="stock_producto_usuario" id="edit_stock" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Precio</label>
+                                    <input type="number" class="form-control enhanced-input" name="precio_producto_usuario" id="edit_precio" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Condición</label>
+                                    <select class="form-control enhanced-input" name="condicion_producto_usuario" id="edit_condicion">
+                                        <option value="Nuevo">Nuevo</option>
+                                        <option value="Usado">Usado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Estatus</label>
+                                    <select class="form-control enhanced-input" name="estatus_producto_usuario" id="edit_estatus">
+                                        <option value="Activo">Activo</option>
+                                        <option value="Inactivo">Inactivo</option>
+                                    </select>
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">

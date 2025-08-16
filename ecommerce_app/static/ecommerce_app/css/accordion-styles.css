@@ -1,0 +1,146 @@
+/* Estilos personalizados para acordeones de categorías */
+
+.accordion {
+  margin-bottom: 2rem;
+}
+
+.accordion-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px !important;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.accordion-item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.accordion-header {
+  border-radius: 8px !important;
+}
+
+.accordion-button {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: none;
+  border-radius: 8px !important;
+  font-weight: 600;
+  color: #495057;
+  padding: 1rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.accordion-button:not(.collapsed) {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  box-shadow: none;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+  border-color: transparent;
+}
+
+.accordion-button::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23495057'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+  transition: transform 0.3s ease;
+}
+
+.accordion-button:not(.collapsed)::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+  transform: rotate(180deg);
+}
+
+.accordion-collapse {
+  border-radius: 0 0 8px 8px;
+}
+
+.accordion-body {
+  padding: 1.5rem;
+  background-color: #ffffff;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Badge de contador de elementos */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 50px;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+/* Estilos para las tarjetas horizontales dentro del acordeón */
+.accordion-body .ml-horizontal-card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.accordion-body .ml-horizontal-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Animaciones suaves para el colapso */
+.accordion-collapse {
+  transition: all 0.35s ease;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .accordion-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .accordion-body {
+    padding: 1rem;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Mejoras para accesibilidad */
+.accordion-button:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* Animación de entrada para los elementos */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.accordion-item {
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.accordion-item:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.accordion-item:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.accordion-item:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.accordion-item:nth-child(5) {
+  animation-delay: 0.4s;
+}

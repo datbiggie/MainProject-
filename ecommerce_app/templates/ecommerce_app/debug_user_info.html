@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug User Info</title>
+</head>
+<body>
+    <h1>Debug User Info</h1>
+    
+    <h2>Raw user_info object:</h2>
+    <pre>{{ user_info }}</pre>
+    
+    <h2>Individual fields:</h2>
+    <ul>
+        <li><strong>user_info exists:</strong> {% if user_info %}YES{% else %}NO{% endif %}</li>
+        <li><strong>user_info.is_authenticated:</strong> {{ user_info.is_authenticated }}</li>
+        <li><strong>user_info.nombre:</strong> {{ user_info.nombre }}</li>
+        <li><strong>user_info.email:</strong> {{ user_info.email }}</li>
+        <li><strong>user_info.tipo:</strong> {{ user_info.tipo }}</li>
+        <li><strong>user_info.id:</strong> {{ user_info.id }}</li>
+    </ul>
+    
+    <h2>Conditional tests:</h2>
+    <ul>
+        <li><strong>{% if user_info %}:</strong> {% if user_info %}TRUE{% else %}FALSE{% endif %}</li>
+        <li><strong>{% if user_info.is_authenticated %}:</strong> {% if user_info.is_authenticated %}TRUE{% else %}FALSE{% endif %}</li>
+    </ul>
+    
+    <h2>Session info (if available):</h2>
+    <ul>
+        <li><strong>request.session.is_authenticated:</strong> {{ request.session.is_authenticated }}</li>
+        <li><strong>request.session.user_id:</strong> {{ request.session.user_id }}</li>
+        <li><strong>request.session.account_type:</strong> {{ request.session.account_type }}</li>
+    </ul>
+</body>
+</html>

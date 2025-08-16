@@ -56,10 +56,27 @@
                     {% endfor %}
                   </select>
                 </div>
-                <!-- El campo estatus_servicio se ha eliminado completamente ya que ahora está en servicio_sucursal -->
-                <!-- Este campo se manejará automáticamente al agregar el servicio a una sucursal -->
-
+                
+                <!-- Campos adicionales solo para usuarios con rol 'persona' -->
+                {% if user_info.tipo == 'persona' %}
+                <div class="col-md-6 form-group mb-5">
+                  <label for="precio_servicio" class="col-form-label">Precio del Servicio *</label>
+                  <input type="number" class="form-control" name="precio_servicio_usuario" id="precio_servicio" step="0.01" min="0" placeholder="0.00" style="max-width: 200px;">
+                </div>
+                {% endif %}
               </div>
+              
+              {% if user_info.tipo == 'persona' %}
+              <div class="row">
+                <div class="col-md-6 form-group mb-5">
+                  <label for="estatus_servicio" class="col-form-label">Estatus del Servicio *</label>
+                  <select class="form-control" name="estatus_servicio_usuario" id="estatus_servicio" style="max-width: 200px;">
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+              {% endif %}
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
@@ -102,8 +119,8 @@
               <div class="row">
                 <div class="col-md-12 form-group">
                   <input type="submit" value="Guardar Servicio" class="btn btn-primary rounded-0 py-2 px-4">
-                  <a href="{% url 'categ_servicio_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500;">
-                    Ver Categorías
+                  <a href="{% url 'servicio_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500;">
+                    Ver Servicios
                   </a>
                   <span class="submitting"></span>
                 </div>

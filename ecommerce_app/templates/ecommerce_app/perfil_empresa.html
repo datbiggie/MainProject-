@@ -30,33 +30,48 @@
 
 {% include 'ecommerce_app/barra_superior_index.html' %}
 
-<!-- Presentación de la Empresa -->
-<section class="empresa-presentacion py-4 border-bottom">
-  <div class="container-lg">
-    <div class="row align-items-center">
-      <div class="col-md-2 text-center mb-3 mb-md-0">
-        <div class="logo-empresa-circular">
-          {% if empresa.logo_empresa %}
-            <img src="{{ empresa.logo_empresa.url }}" alt="Logo Empresa">
-          {% else %}
-            <img src="{% static 'perfil_empresa/images/logo.jpg' %}" alt="Logo Empresa">
-          {% endif %}
-        </div>
-
-        <!-- Formulario para subir/cambiar logo -->
-        <form method="post" enctype="multipart/form-data" action="{% url 'cambiar_logo_empresa' %}" class="mt-2">
-          {% csrf_token %}
-          <input type="file" name="logo" accept="image/*" class="form-control form-control-sm mb-2" style="max-width:180px; margin:0 auto;">
-          <button type="submit" class="btn btn-outline-primary btn-sm">Actualizar logo</button>
-        </form>
-      </div>
-      <div class="col-md-10">
-  <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ empresa.nombre_empresa|default:'Nombre de la Empresa' }}</h1>
-  <p class="lead mb-0" style="color:#444;">{{ empresa.descripcion_empresa|default:'Aquí va una breve descripción de la empresa, su misión, visión o cualquier información relevante que quieras mostrar a los usuarios.' }}</p>
-      </div>
+<!-- Mostrar error si existe -->
+{% if error %}
+  <div class="container-lg py-4">
+    <div class="alert alert-danger" role="alert">
+      <h4 class="alert-heading">Error</h4>
+      <p>{{ error }}</p>
+      <hr>
+      <p class="mb-0">
+        <a href="{% url 'index' %}" class="btn btn-primary">Volver al Inicio</a>
+      </p>
     </div>
   </div>
-</section>
+{% else %}
+  <!-- Presentación de la Empresa -->
+  <section class="empresa-presentacion py-4 border-bottom">
+    <div class="container-lg">
+      <div class="row align-items-center">
+        <div class="col-md-2 text-center mb-3 mb-md-0">
+          <div class="logo-empresa-circular">
+            {% if empresa.logo_empresa %}
+              <img src="{{ empresa.logo_empresa.url }}" alt="Logo Empresa">
+            {% else %}
+              <img src="{% static 'perfil_empresa/images/logo.jpg' %}" alt="Logo Empresa">
+            {% endif %}
+          </div>
+
+          <!-- Formulario para subir/cambiar logo solo para usuarios autenticados -->
+          {% if user_info.is_authenticated and not user_info.is_public_profile %}
+            <form method="post" enctype="multipart/form-data" action="{% url 'cambiar_logo_empresa' %}" class="mt-2">
+              {% csrf_token %}
+              <input type="file" name="logo" accept="image/*" class="form-control form-control-sm mb-2" style="max-width:180px; margin:0 auto;">
+              <button type="submit" class="btn btn-outline-primary btn-sm">Actualizar logo</button>
+            </form>
+          {% endif %}
+        </div>
+        <div class="col-md-10">
+    <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ empresa.nombre_empresa|default:'Nombre de la Empresa' }}</h1>
+    <p class="lead mb-0" style="color:#444;">{{ empresa.descripcion_empresa|default:'Aquí va una breve descripción de la empresa, su misión, visión o cualquier información relevante que quieras mostrar a los usuarios.' }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
 <div class="container-fluid">
   <div class="row gx-2 gy-3 align-items-stretch mt-4">
@@ -72,7 +87,13 @@
             <li><strong style="color:#111;">Ubicación:</strong> <span style="color:#111;">{{ empresa.estado_empresa|default:'-' }}, {{ empresa.pais_empresa|default:'-' }}</span></li>
             <li><strong style="color:#111;">Tel/WhatsApp:</strong> <span style="color:#111;">04249692650</span></li>
             <li><strong style="color:#111;">Email:</strong> <span style="color:#111;">{{ empresa.email|default:'-' }}</span></li>
-            <li><strong style="color:#111;">Web/Perfil:</strong> {% if empresa.sitio_web %}<a href="{{ empresa.sitio_web }}" target="_blank">Sitio Web</a>{% else %}-{% endif %}</li>
+            <li><strong style="color:#111;">Web/Perfil:</strong> 
+              {% if empresa.sitio_web %}
+                <a href="{{ empresa.sitio_web }}" target="_blank">Sitio Web</a>
+              {% else %}
+                -
+              {% endif %}
+            </li>
           </ul>
         </div>
       </div>
@@ -85,7 +106,7 @@
         <div class="card-body p-0">
           <h5 class="fw-bold mb-2">Sucursales Asociadas</h5>
           <p class="mb-3 small">Explora los productos más destacados.</p>
-          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+          <a href="{% url 'perfil_sucursales_asociadas' %}?empresa_id={{ empresa.id_empresa }}" class="btn btn-sm btn-primary-soft w-100">Ver</a>
         </div>
       </div>
     </div>
@@ -97,7 +118,8 @@
         <div class="card-body p-0">
           <h5 class="fw-bold mb-2">Productos Destacados</h5>
           <p class="mb-3 small">Explora los productos más destacados.</p>
-          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+          <a href="{% url 'perfil_productos' %}?empresa_id={{ empresa.id_empresa }}" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+
         </div>
       </div>
     </div>
@@ -109,7 +131,8 @@
         <div class="card-body p-0">
           <h5 class="fw-bold mb-2">Servicios Destacados</h5>
           <p class="mb-3 small">Explora los servicios más destacados.</p>
-          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+          <a href="{% url 'perfil_servicios' %}?empresa_id={{ empresa.id_empresa }}" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+
         </div>
       </div>
     </div>
@@ -444,6 +467,8 @@
         </div>
       </div>
     </footer>
+    
+  {% endif %}
     
   <script src="{% static 'perfil_empresa/js/jquery-1.11.0.min.js' %}"></script>
     

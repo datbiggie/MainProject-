@@ -1,0 +1,254 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Perfil Usuario</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{% static 'perfil_usuario/style.css' %}">
+  </head>
+    <body>
+
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<!-- Mostrar error si existe -->
+{% if error %}
+  <div class="container-lg py-4">
+    <div class="alert alert-danger" role="alert">
+      <h4 class="alert-heading">Error</h4>
+      <p>{{ error }}</p>
+      <hr>
+      <p class="mb-0">
+        <a href="{% url 'index' %}" class="btn btn-primary">Volver al Inicio</a>
+      </p>
+    </div>
+  </div>
+{% else %}
+  <!-- Presentación del Usuario -->
+  <section class="usuario-presentacion py-4 border-bottom">
+    <div class="container-lg">
+      <div class="row align-items-center">
+        <div class="col-md-2 text-center mb-3 mb-md-0">
+          <div class="foto-usuario-circular">
+            {% if usuario.foto_usuario %}
+              <img src="{{ usuario.foto_usuario.url }}" alt="Foto Usuario">
+            {% else %}
+              <img src="{% static 'perfil_usuario/images/default-user.svg' %}" alt="Foto Usuario">
+            {% endif %}
+          </div>
+
+          <!-- Formulario para subir/cambiar foto solo para usuarios autenticados -->
+          {% if user_info.is_authenticated and not user_info.is_public_profile %}
+            <form method="post" enctype="multipart/form-data" action="{% url 'cambiar_foto_usuario' %}" class="mt-2">
+              {% csrf_token %}
+              <input type="file" name="foto" accept="image/*" class="form-control form-control-sm mb-2" style="max-width:180px; margin:0 auto;">
+              <button type="submit" class="btn btn-outline-primary btn-sm">Actualizar foto</button>
+            </form>
+          {% endif %}
+        </div>
+        <div class="col-md-10">
+    <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ usuario.nombre_usuario|default:'Nombre del Usuario' }} {{ usuario.apellido_usuario|default:'' }}</h1>
+    
+        </div>
+      </div>
+    </div>
+  </section>
+
+<div class="container-fluid">
+  <div class="row gx-2 gy-3 align-items-stretch mt-4">
+    <div class="col-md-3 col-12 ps-0">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero" style="background: #f4f8fb;">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#user"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Información Personal</h5>
+          <ul class="list-unstyled small text-start mb-2" style="min-width:180px;">
+            <li><strong style="color:#111;">Nombre:</strong> <span style="color:#111;">{{ usuario.nombre_usuario|default:'-' }} {{ usuario.apellido_usuario|default:'' }}</span></li>
+            <li><strong style="color:#111;">Rol:</strong> <span style="color:#111;">{{ usuario.rol_usuario|default:'-' }}</span></li>
+            <li><strong style="color:#111;">Email:</strong> <span style="color:#111;">{{ usuario.correo_usuario|default:'-' }}</span></li>
+            <li><strong style="color:#111;">Teléfono:</strong> <span style="color:#111;">{{ usuario.telefono_usuario|default:'-' }}</span></li>
+            <li><strong style="color:#111;">Fecha de registro:</strong> <span style="color:#111;">{{ usuario.fecha_registro_usuario|date:"d/m/Y"|default:'-' }}</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-12">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#category"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Productos</h5>
+          <p class="mb-3 small">Gestiona tus productos publicados.</p>
+          <a href="{% url 'perfil_productos' %}?usuario_id={{ usuario.id_usuario }}" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-12">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#secure"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Servicios</h5>
+          <p class="mb-3 small">Gestiona tus servicios publicados.</p>
+          <a href="{% url 'perfil_servicios' %}?usuario_id={{ usuario.id_usuario }}" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+
+        </div>
+      </div>
+    </div>
+        <div class="col-md-3 col-12">
+      <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
+        <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
+          <svg width="56" height="56"><use xlink:href="#delivery"></use></svg>
+        </div>
+        <div class="card-body p-0">
+          <h5 class="fw-bold mb-2">Información de Pago</h5>
+          <p class="mb-3 small">Revisa la formas de pagos</p>
+          <a href="#" class="btn btn-sm btn-primary-soft w-100">Ver</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</div>
+
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+    <footer class="py-5">
+      <div class="container-lg">
+        <div class="row">
+
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <img src="{% static 'perfil_empresa/images/logo.jpg' %}" width="160" height="180" alt="logo">
+              <div class="social-links mt-3">
+                <ul class="d-flex list-unstyled gap-2">
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-facebook">
+                      <svg width="16" height="16"><use xlink:href="#facebook"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-youtube">
+                      <svg width="16" height="16"><use xlink:href="#youtube"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-instagram">
+                      <svg width="16" height="16"><use xlink:href="#instagram"></use></svg>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Todo Aquí</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Sobre Nosotros</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Condiciones </a>
+                </li>    
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Enlaces rápidos</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Ofertas</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Descuentos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Tiendas</a>
+                </li>
+              
+               
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Servicio al cliente</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">FAQ</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Contactos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Política de Privacidad</a>
+                </li>
+                
+              </ul>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Suscríbete con nosotros</h5>
+              <p>Suscríbete a nuestro boletín para recibir actualizaciones sobre nuestras grandes ofertas.</p>
+              <a href="{% url 'iniciar_sesion' %}" class="btn btn-dark rounded-end rounded-0 mt-3 d-inline-block">Subscribir</a>
+
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </footer>
+    
+  <script src="{% static 'perfil_empresa/js/jquery-1.11.0.min.js' %}"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+  <script src="{% static 'perfil_empresa/js/plugins.js' %}"></script>
+  <script src="{% static 'perfil_empresa/js/script.js' %}"></script>
+    
+   
+
+  <script src="{% static 'perfil_empresa/js/rating-system.js' %}"></script>
+  </body>
+</html>

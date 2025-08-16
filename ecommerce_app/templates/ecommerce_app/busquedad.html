@@ -89,61 +89,173 @@
         <div>
           <h4 class="mb-0">{% if query %}Resultados para "{{ query }}"{% else %}Todos los productos y servicios{% endif %}</h4>
           <span class="text-muted">{{ total_resultados }} resultado(s)</span>
+          {% if query and resultados_empresas or resultados_usuarios %}
+            <div class="mt-1">
+              <small class="text-info">
+                <i class="fas fa-info-circle me-1"></i>
+                {% if resultados_empresas %}Se encontraron empresas con este nombre.{% endif %}
+                {% if resultados_usuarios %}Se encontraron personas con este nombre.{% endif %}
+                {% if not resultados_productos and not resultados_servicios %}No se muestran productos/servicios para mantener la búsqueda enfocada.{% endif %}
+              </small>
+            </div>
+          {% endif %}
         </div>
         <a href="#" id="btnGenerarLocalizacion" class="btn btn-primary" style="background-color: #007bff; border-color: #007bff; font-weight: 500;" onclick="generarLocalizacion()">
            <i class="fas fa-map text-warning me-2"></i>Generar Localización
          </a>
       </div>
 
-      {% if resultados %}
-        {% for item in resultados %}
-          <div class="ml-horizontal-card mb-3">
-            {% if item.imagen %}
-              <img src="{{ item.imagen }}" class="ml-horizontal-card-img" alt="{{ item.nombre }}">
-            {% else %}
-              <div class="ml-horizontal-card-img d-flex align-items-center justify-content-center bg-light">
-                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image text-secondary" viewBox="0 0 16 16">
-                  <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-                  <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
-                </svg>
-              </div>
-            {% endif %}
-            <div class="ml-horizontal-card-body">
-              <div class="ml-horizontal-card-title">{{ item.nombre }}</div>
-              <div class="text-muted mb-2">{{ item.descripcion|truncatechars:100 }}</div>
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="ml-horizontal-card-price">
-                  {% if item.tipo == 'producto' %}
-                    ${{ item.precio }}
-                  {% else %}
-                    {% if item.precio == 'Consultar' %}
-                      Precio: Consultar
-                    {% else %}
-                      ${{ item.precio }}
-                    {% endif %}
-                  {% endif %}
-                </div>
-                <div>
-                  <span class="badge {% if item.tipo == 'producto' %}bg-primary{% else %}bg-success{% endif %} rounded-pill">{{ item.tipo|title }}</span>
-                  <span class="badge bg-secondary rounded-pill ms-1">{{ item.sucursal }}</span>
-                  {% if item.tipo == 'producto' and item.stock %}
-                    <span class="badge bg-info rounded-pill ms-1">Stock: {{ item.stock }}</span>
-                  {% endif %}
-                  {% if item.tipo == 'producto' and item.condicion %}
-                    <span class="badge {% if item.condicion == 'Nuevo' %}bg-success{% else %}bg-warning{% endif %} rounded-pill ms-1">{{ item.condicion }}</span>
-                  {% endif %}
+      <!-- Resultados de Empresas -->
+      {% if resultados_empresas %}
+        <div class="mb-4">
+          <h5 class="mb-3 text-primary">
+            <i class="fas fa-building me-2"></i>Empresas ({{ resultados_empresas|length }})
+          </h5>
+          <div class="row">
+            {% for empresa in resultados_empresas %}
+              <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 shadow-sm border-0 rounded-4">
+                  <div class="card-body text-center p-3">
+                    <div class="mb-3">
+                      {% if empresa.logo %}
+                        <img src="{{ empresa.logo }}" alt="{{ empresa.nombre }}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                      {% else %}
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;">
+                          <i class="fas fa-building fa-2x text-secondary"></i>
+                        </div>
+                      {% endif %}
+                    </div>
+                    <h6 class="card-title fw-bold mb-2">{{ empresa.nombre }}</h6>
+                    <p class="card-text text-muted small mb-2">{{ empresa.descripcion|truncatechars:80 }}</p>
+                    <div class="mb-2">
+                      <span class="badge bg-primary me-1">{{ empresa.tipo_empresa|title }}</span>
+                      <span class="badge bg-info">{{ empresa.pais }}, {{ empresa.estado }}</span>
+                    </div>
+                    <a href="{% url 'perfil_empresa' %}?id={{ empresa.id }}" class="btn btn-outline-primary btn-sm w-100">
+                      <i class="fas fa-eye me-1"></i>Ver Perfil
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
+            {% endfor %}
           </div>
-        {% endfor %}
-      {% else %}
-        <div class="alert alert-info">
-          {% if query %}
-            No se encontraron resultados para "{{ query }}". Intenta con otra búsqueda.
+        </div>
+      {% endif %}
+
+      <!-- Resultados de Usuarios -->
+      {% if resultados_usuarios %}
+        <div class="mb-4">
+          <h5 class="mb-3 text-success">
+            <i class="fas fa-user me-2"></i>Personas ({{ resultados_usuarios|length }})
+          </h5>
+          <div class="row">
+            {% for usuario in resultados_usuarios %}
+              <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 shadow-sm border-0 rounded-4">
+                  <div class="card-body text-center p-3">
+                    <div class="mb-3">
+                      {% if usuario.foto %}
+                        <img src="{{ usuario.foto }}" alt="{{ usuario.nombre }}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                      {% else %}
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;">
+                          <i class="fas fa-user fa-2x text-secondary"></i>
+                        </div>
+                      {% endif %}
+                    </div>
+                    <h6 class="card-title fw-bold mb-2">{{ usuario.nombre }}</h6>
+                    <p class="card-text text-muted small mb-2">{{ usuario.descripcion }}</p>
+                    <div class="mb-2">
+                      <span class="badge bg-success me-1">Persona</span>
+                      <span class="badge bg-info">{{ usuario.pais }}, {{ usuario.estado }}</span>
+                    </div>
+                    <a href="{% url 'perfil_usuario' %}?id={{ usuario.id }}" class="btn btn-outline-success btn-sm w-100">
+                      <i class="fas fa-eye me-1"></i>Ver Perfil
+                    </a>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Resultados de Productos y Servicios -->
+      {% if resultados_productos or resultados_servicios %}
+        <div class="mb-4">
+          <h5 class="mb-3 text-warning">
+            <i class="fas fa-shopping-bag me-2"></i>Productos y Servicios ({{ resultados_productos|length|add:resultados_servicios|length }})
+          </h5>
+          
+          {% if resultados %}
+            {% for item in resultados %}
+              <div class="ml-horizontal-card mb-3">
+                {% if item.imagen %}
+                  <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none" onclick="console.log('Click en imagen: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
+                    <img src="{{ item.imagen }}" class="ml-horizontal-card-img" alt="{{ item.nombre }}" style="cursor: pointer;">
+                  </a>
+                {% else %}
+                  <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none" onclick="console.log('Click en imagen placeholder: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
+                    <div class="ml-horizontal-card-img d-flex align-items-center justify-content-center bg-light" style="cursor: pointer;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image text-secondary" viewBox="0 0 16 16">
+                        <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0z"/>
+                        <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                      </svg>
+                    </div>
+                  </a>
+                {% endif %}
+                <div class="ml-horizontal-card-body">
+                  <div class="ml-horizontal-card-title">
+                    <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none text-dark" onclick="console.log('Click en título: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
+                      {{ item.nombre }}
+                    </a>
+                  </div>
+                  <div class="text-muted mb-2">{{ item.descripcion|truncatechars:100 }}</div>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="ml-horizontal-card-price">
+                      {% if item.tipo == 'producto' %}
+                        ${{ item.precio }}
+                      {% else %}
+                        {% if item.precio == 'Consultar' %}
+                          Precio: Consultar
+                        {% else %}
+                          ${{ item.precio }}
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                    <div>
+                      <span class="badge {% if item.tipo == 'producto' %}bg-primary{% else %}bg-success{% endif %} rounded-pill">{{ item.tipo|title }}</span>
+                      <span class="badge bg-secondary rounded-pill ms-1">{{ item.sucursal }}</span>
+                      {% if item.tipo == 'producto' and item.stock %}
+                        <span class="badge bg-info rounded-pill ms-1">Stock: {{ item.stock }}</span>
+                      {% endif %}
+                      {% if item.tipo == 'producto' and item.condicion %}
+                        <span class="badge {% if item.condicion == 'Nuevo' %}bg-success{% else %}bg-warning{% endif %} rounded-pill ms-1">{{ item.condicion }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
           {% else %}
-            Realiza una búsqueda para ver productos y servicios.
+            <div class="alert alert-info">
+              {% if query %}
+                No se encontraron resultados para "{{ query }}". Intenta con otra búsqueda.
+              {% else %}
+                Realiza una búsqueda para ver productos y servicios.
+              {% endif %}
+            </div>
           {% endif %}
+        </div>
+      {% elif query and not resultados_productos and not resultados_servicios and resultados_empresas or resultados_usuarios %}
+        <div class="mb-4">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Búsqueda enfocada:</strong> 
+            {% if resultados_empresas %}Se encontraron empresas con el nombre "{{ query }}".{% endif %}
+            {% if resultados_usuarios %}Se encontraron personas con el nombre "{{ query }}".{% endif %}
+            <br>
+            <small>Para ver productos y servicios, intenta con términos más específicos como "laptop", "reparación", etc.</small>
+          </div>
         </div>
       {% endif %}
     </div>
@@ -362,6 +474,10 @@
     <script src="{% static 'index/js/rating-system.js' %}"></script>
     
     <script>
+    // Debug: Mostrar información de los items en la consola
+    console.log('Items disponibles en la búsqueda:');
+  
+    
     function generarLocalizacion() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {

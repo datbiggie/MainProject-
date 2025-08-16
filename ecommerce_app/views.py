@@ -6,6 +6,17 @@ from .models import producto_empresa, servicio_empresa, producto_sucursal, servi
 @require_GET
 def api_productos_servicios_disponibles(request):
     try:
+        # Obtener usuario actual
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Solo las empresas pueden acceder a esta función
+        if account_type != 'empresa':
+            return JsonResponse({'success': False, 'message': 'Acceso no autorizado'})
+        
         id_sucursal = request.GET.get('id_sucursal') or request.GET.get('sucursal_id')
         tipo = request.GET.get('tipo', 'todos')  # Nuevo parámetro para filtrar por tipo (productos, servicios o todos)
         
@@ -21,10 +32,11 @@ def api_productos_servicios_disponibles(request):
             productos_asociados_qs = producto_sucursal.objects.filter(id_sucursal_fk=id_sucursal).values_list('id_producto_fk', flat=True)
             productos_asociados_list = list(productos_asociados_qs)
             
+            # Filtrar productos solo de la empresa actual
             if productos_asociados_list:
-                productos_disponibles = producto_empresa.objects.exclude(id_producto__in=productos_asociados_list)
+                productos_disponibles = producto_empresa.objects.filter(id_empresa_fk=current_user).exclude(id_producto_empresa__in=productos_asociados_list)
             else:
-                productos_disponibles = producto_empresa.objects.all()
+                productos_disponibles = producto_empresa.objects.filter(id_empresa_fk=current_user)
                 
             productos_list = [
                 {'id': p.id_producto_empresa, 'nombre': p.nombre_producto_empresa}
@@ -36,10 +48,11 @@ def api_productos_servicios_disponibles(request):
             servicios_asociados_qs = servicio_sucursal.objects.filter(id_sucursal_fk=id_sucursal).values_list('id_servicio_fk', flat=True)
             servicios_asociados_list = list(servicios_asociados_qs)
             
+            # Filtrar servicios solo de la empresa actual
             if servicios_asociados_list:
-                servicios_disponibles = servicio_empresa.objects.exclude(id_servicio_empresa__in=servicios_asociados_list)
+                servicios_disponibles = servicio_empresa.objects.filter(id_empresa_fk=current_user).exclude(id_servicio_empresa__in=servicios_asociados_list)
             else:
-                servicios_disponibles = servicio_empresa.objects.all()
+                servicios_disponibles = servicio_empresa.objects.filter(id_empresa_fk=current_user)
                 
             servicios_list = [
                 {'id': s.id_servicio_empresa, 'nombre': s.nombre_servicio_empresa}
@@ -60,7 +73,12 @@ def guardar_producto_servicio_sucursal(request):
         producto_id = request.POST.get('producto_id')
         servicio_id = request.POST.get('servicio_id')
         stock = request.POST.get('stock', 0)
-        precio = request.POST.get('precio', 0)
+        precio_raw = request.POST.get('precio', '')
+        # Convertir precio a decimal, usar 0 si está vacío o no es válido
+        try:
+            precio = float(precio_raw) if precio_raw and precio_raw.strip() else 0
+        except (ValueError, TypeError):
+            precio = 0
         estatus_producto_sucursal = request.POST.get('estatus_producto_sucursal', 'Activo')
         estatus_servicio_sucursal = request.POST.get('estatus_servicio_sucursal', 'Activo')
         condicion_producto_sucursal = request.POST.get('condicion_producto_sucursal', 'Nuevo')
@@ -158,6 +176,29 @@ def cambiar_logo_empresa(request):
     empresa_obj.logo_empresa = logo
     empresa_obj.save()
     return redirect('/ecommerce/perfil_empresa/')
+
+# Vista para cambiar la foto del usuario
+@require_POST
+def cambiar_foto_usuario(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    account_type = request.session.get('account_type', 'usuario')
+    
+    if account_type == 'usuario':
+        # Para usuarios, current_user ya es el usuario
+        usuario_obj = current_user
+    else:
+        # Si es empresa, redirigir al perfil de empresa
+        return redirect('/ecommerce/perfil_empresa/')
+    
+    foto = request.FILES.get('foto')
+    if not foto:
+        return redirect('/ecommerce/perfil_usuario/')
+    usuario_obj.foto_usuario = foto
+    usuario_obj.save()
+    return redirect('/ecommerce/perfil_usuario/')
 
 # Vista para eliminar servicio
 from django.views.decorators.csrf import csrf_exempt
@@ -279,6 +320,18 @@ def editar_servicio(request):
                     servicio_obj.nombre_servicio_usuario = request.POST.get('nombre_servicio_usuario') or request.POST.get('nombre_servicio', servicio_obj.nombre_servicio_usuario)
                     servicio_obj.descripcion_servicio_usuario = request.POST.get('descripcion_servicio_usuario') or request.POST.get('descripcion_servicio', servicio_obj.descripcion_servicio_usuario)
                     
+                    # Actualizar campos adicionales para usuarios
+                    precio_servicio = request.POST.get('precio_servicio_usuario')
+                    if precio_servicio is not None:
+                        try:
+                            servicio_obj.precio_servicio_usuario = float(precio_servicio)
+                        except (ValueError, TypeError):
+                            servicio_obj.precio_servicio_usuario = 0.0
+                    
+                    estatus_servicio = request.POST.get('estatus_servicio_usuario')
+                    if estatus_servicio:
+                        servicio_obj.estatus_servicio_usuario = estatus_servicio
+                    
                     # Actualizar categoría si se proporciona
                     id_categoria = request.POST.get('categoria_servicio')
                     if id_categoria:
@@ -377,6 +430,8 @@ def api_filtrar_servicios(request):
                     'imagen_url': imagen_url,
                     'categoria_servicio': serv.id_categoria_servicios_fk.nombre_categoria_serv_usuario if serv.id_categoria_servicios_fk else '',
                     'caracteristicas_generales_usuario': '',
+                    'precio_servicio_usuario': serv.precio_servicio_usuario or 0,
+                    'estatus_servicio_usuario': serv.estatus_servicio_usuario or 'Activo',
                     'serial': idx
                 })
         
@@ -494,6 +549,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.paginator import Paginator
+from django.db import transaction, IntegrityError
 from .models import *
 import logging
 
@@ -821,8 +877,7 @@ def login_ajax(request):
     }, content_type='application/json')
 
 
-def prueba(request):
-    return render(request, 'ecommerce_app/prueba.html')
+
 
 
 def registrar_persona(request):
@@ -943,6 +998,7 @@ def registrar_persona(request):
     
     return render(request, 'ecommerce_app/registrar_persona.html', {'user_info': user_info})
 
+@transaction.atomic
 def registrar_empresa(request):
     if request.method == 'POST':
         try:
@@ -1065,24 +1121,52 @@ def registrar_empresa(request):
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
             logger.info(f"Dirección guardada: {nueva_empresa.direccion_empresa}")
 
+            # Crear sesión automáticamente después del registro exitoso
+            request.session['user_id'] = nueva_empresa.id_empresa
+            request.session['user_email'] = nueva_empresa.correo_empresa
+            request.session['user_name'] = nueva_empresa.nombre_empresa
+            request.session['user_type'] = nueva_empresa.rol_empresa
+            request.session['is_authenticated'] = True
+            request.session['account_type'] = 'empresa'
+            
+            logger.info(f"Sesión creada automáticamente para empresa: {nueva_empresa.correo_empresa}")
+
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
                     'message': 'Empresa registrada exitosamente',
-                    'redirect_url': '/ecommerce/iniciar_sesion/'
+                    'redirect_url': '/ecommerce/sucursal/'
                 })
             else:
-                return redirect('/ecommerce/iniciar_sesion/')
-        except Exception as e:
-            logger.error(f"Error al guardar la empresa: {str(e)}")
+                return redirect('/ecommerce/sucursal/')
+        except IntegrityError as e:
+            logger.error(f"Error de integridad al guardar la empresa: {str(e)}")
+            error_message = 'El correo electrónico ya está registrado. Por favor, use otro correo.'
+            if 'correo_empresa' in str(e):
+                error_message = 'El correo electrónico ya está registrado. Por favor, use otro correo.'
+            elif 'nombre_empresa' in str(e):
+                error_message = 'El nombre de empresa ya está registrado. Por favor, use otro nombre.'
+            
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
-                    'message': str(e)
+                    'message': error_message
                 })
             else:
                 return render(request, 'ecommerce_app/registrar_empresa.html', {
-                    'error_message': str(e)
+                    'error_message': error_message
+                })
+        except Exception as e:
+            logger.error(f"Error inesperado al guardar la empresa: {str(e)}")
+            error_message = 'Ocurrió un error inesperado. Por favor, inténtelo de nuevo.'
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message
+                })
+            else:
+                return render(request, 'ecommerce_app/registrar_empresa.html', {
+                    'error_message': error_message
                 })
     
     # Si es GET, mostrar el formulario
@@ -1383,6 +1467,12 @@ def producto_funcion(request):
             else:
                 categoria_producto_consul = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
                 
+                # Obtener los campos adicionales para usuario
+                stock_producto = request.POST.get('stock_producto_usuario', 0)
+                precio_producto = request.POST.get('precio_producto_usuario', 0)
+                condicion_producto = request.POST.get('condicion_producto_usuario', 'Nuevo')
+                estatus_producto = request.POST.get('estatus_producto_usuario', 'Activo')
+                
                 # Crear el producto para usuario
                 nuevo_producto = producto_usuario(
                     nombre_producto_usuario=nombre_producto,
@@ -1390,6 +1480,10 @@ def producto_funcion(request):
                     marca_producto_usuario=marca_producto,
                     modelo_producto_usuario=modelo_producto,
                     caracteristicas_generales_usuario=caracteristicas_generales,
+                    stock_producto_usuario=stock_producto,
+                    precio_producto_usuario=precio_producto,
+                    condicion_producto_usuario=condicion_producto,
+                    estatus_producto_usuario=estatus_producto,
                     id_usuario_fk=current_user,
                     id_categoria_prod_fk=categoria_producto_consul
                 )
@@ -1507,14 +1601,27 @@ def servicio_funcion(request):
                 logger.info(f"Se guardaron {len(imagenes_servicio)} imágenes para el servicio de empresa {nuevo_servicio.nombre_servicio_empresa}")
             else:
                 categoria_servicio_consul = categoria_servicio_usuario.objects.get(id_categoria_serv_usuario=categoria_id)
+                
+                # Obtener campos adicionales para usuarios con rol 'persona'
+                precio_servicio = request.POST.get('precio_servicio_usuario', '0')
+                estatus_servicio = request.POST.get('estatus_servicio_usuario', 'Activo')
+                
+                # Convertir precio a float con manejo de errores
+                try:
+                    precio_float = float(precio_servicio) if precio_servicio else 0.0
+                except (ValueError, TypeError):
+                    precio_float = 0.0
+                
                 nuevo_servicio = servicio_usuario(
                     nombre_servicio_usuario=nombre_servicio,
                     descripcion_servicio_usuario=descripcion_servicio,
+                    precio_servicio_usuario=precio_float,
+                    estatus_servicio_usuario=estatus_servicio,
                     id_usuario_fk=current_user,
                     id_categoria_servicios_fk=categoria_servicio_consul
                 )
                 nuevo_servicio.save()   
-                logger.info(f"Servicio de usuario guardado exitosamente: {nuevo_servicio.nombre_servicio_usuario}")
+                logger.info(f"Servicio de usuario guardado exitosamente: {nuevo_servicio.nombre_servicio_usuario} con precio: {precio_float} y estatus: {estatus_servicio}")
                 
                 # Guardar las imágenes en la tabla imagen_servicio_usuario
                 for imagen in imagenes_servicio:
@@ -2495,6 +2602,12 @@ def editar_producto(request):
                     producto_obj.modelo_producto_usuario = request.POST.get('modelo_producto_usuario')
                     producto_obj.caracteristicas_generales_usuario = request.POST.get('caracteristicas_generales')
                     
+                    # Actualizar campos adicionales para usuarios
+                    producto_obj.stock_producto_usuario = request.POST.get('stock_producto_usuario', 0)
+                    producto_obj.precio_producto_usuario = request.POST.get('precio_producto_usuario', 0)
+                    producto_obj.condicion_producto_usuario = request.POST.get('condicion_producto_usuario', 'Nuevo')
+                    producto_obj.estatus_producto_usuario = request.POST.get('estatus_producto_usuario', 'Activo')
+                    
                     # Actualizar categoría si se proporciona
                     categoria_id = request.POST.get('categoria_producto')
                     if categoria_id:
@@ -2776,50 +2889,71 @@ def get_user_info(request):
 
 
 def perfil_empresa(request):
-    # Validar usuario autenticado y obtener empresa asociada
+    # Obtener información del usuario si está autenticado
     user_info = None
     empresa_obj = None
     
-    if not is_user_authenticated(request):
-        # Si no está autenticado, redirigir a iniciar sesión
-        return redirect('/ecommerce/iniciar_sesion')
-    
-    current_user = get_current_user(request)
-    if not current_user:
-        return redirect('/ecommerce/iniciar_sesion')
-    
-    account_type = request.session.get('account_type', 'usuario')
-    
-    if account_type == 'empresa':
-        # Para empresas, current_user ya es la empresa
-        empresa_obj = current_user
-        user_info = {
-            'id': current_user.id_empresa,
-            'nombre': current_user.nombre_empresa,
-            'email': current_user.correo_empresa,
-            'tipo': current_user.rol_empresa,
-            'is_authenticated': True,
-            'empresa_nombre': current_user.nombre_empresa
-        }
-    else:
-        # Para usuarios, buscar empresa asociada
-        empresa_nombre = None
+    # Verificar si se está solicitando un perfil específico por ID
+    empresa_id = request.GET.get('id')
+    if empresa_id:
         try:
-            empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
-            if empresa_obj:
-                empresa_nombre = empresa_obj.nombre_empresa
-        except Exception as e:
-            empresa_obj = None
-            empresa_nombre = None
+            empresa_obj = empresa.objects.get(id_empresa=empresa_id)
+            # Para perfiles públicos, no necesitamos user_info completo
+            user_info = {
+                'is_authenticated': False,
+                'is_public_profile': True
+            }
+        except empresa.DoesNotExist:
+            # Si no existe la empresa, redirigir o mostrar error
+            return render(request, 'ecommerce_app/perfil_empresa.html', {
+                'error': 'Empresa no encontrada',
+                'user_info': {'is_authenticated': False}
+            })
+    else:
+        # Verificar si hay usuario autenticado
+        current_user = None
+        if is_user_authenticated(request):
+            current_user = get_current_user(request)
         
-        user_info = {
-            'id': current_user.id_usuario,
-            'nombre': current_user.nombre_usuario,
-            'email': current_user.correo_usuario,
-            'tipo': current_user.rol_usuario,
-            'is_authenticated': True,
-            'empresa_nombre': empresa_nombre
-        }
+        account_type = request.session.get('account_type', 'usuario')
+        
+        if current_user and account_type == 'empresa':
+            # Para empresas autenticadas, current_user ya es la empresa
+            empresa_obj = current_user
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True,
+                'empresa_nombre': current_user.nombre_empresa
+            }
+        elif current_user:
+            # Para usuarios autenticados, buscar empresa asociada
+            empresa_nombre = None
+            try:
+                empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                if empresa_obj:
+                    empresa_nombre = empresa_obj.nombre_empresa
+            except Exception as e:
+                empresa_obj = None
+                empresa_nombre = None
+            
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True,
+                'empresa_nombre': empresa_nombre
+            }
+        else:
+            # Usuario no autenticado - mostrar información por defecto
+            user_info = {
+                'is_authenticated': False
+            }
+            # Obtener la primera empresa disponible para mostrar como ejemplo
+            empresa_obj = empresa.objects.first()
     
     return render(request, 'ecommerce_app/perfil_empresa.html', {
         'user_info': user_info,
@@ -2831,21 +2965,66 @@ def busquedad(request):
     query = request.GET.get('query', '')
     resultados_productos = []
     resultados_servicios = []
+    resultados_empresas = []
+    resultados_usuarios = []
     
     if query:
-        # Buscar en productos_sucursal con estado activo
-        productos_sucursal_list = producto_sucursal.objects.filter(
-            id_producto_fk__nombre_producto__icontains=query,
-            estatus_producto_sucursal='Activo'  # Ahora el estatus está en producto_sucursal
-        ).select_related('id_producto_fk', 'id_sucursal_fk')
+        # Determinar el tipo de búsqueda
+        query_lower = query.lower().strip()
         
-        # Buscar en servicios_sucursal con estado activo
-        servicios_sucursal_list = servicio_sucursal.objects.filter(
-            id_servicio_fk__nombre_servicio__icontains=query,
-            estatus_servicio_sucursal='Activo'  # Ahora el estatus está en servicio_sucursal
-        ).select_related('id_servicio_fk', 'id_sucursal_fk')
+        # Palabras clave que indican búsqueda de productos/servicios
+        palabras_producto = ['laptop', 'computadora', 'celular', 'telefono', 'ropa', 'zapatos', 'libro', 'mueble', 'casa', 'carro', 'auto']
+        palabras_servicio = ['reparacion', 'mantenimiento', 'limpieza', 'consultoria', 'asesoria', 'diseño', 'programacion', 'corte', 'pintura']
         
-        # Formatear resultados de productos
+        # Buscar empresas por nombre (prioridad alta)
+        empresas_list = empresa.objects.filter(
+            nombre_empresa__icontains=query
+        )
+        
+        # Buscar usuarios por nombre (prioridad alta)
+        usuarios_list = usuario.objects.filter(
+            nombre_usuario__icontains=query
+        )
+        
+        # Determinar si la búsqueda es para productos/servicios o personas/empresas
+        es_busqueda_producto_servicio = any(palabra in query_lower for palabra in palabras_producto + palabras_servicio)
+        es_busqueda_persona_empresa = len(query) <= 3 or query_lower in ['juan', 'maria', 'carlos', 'ana', 'empresa', 'tienda', 'negocio']
+        
+        # Solo buscar productos y servicios si:
+        # 1. La búsqueda es específica para productos/servicios, O
+        # 2. No se encontraron empresas/usuarios específicos Y la búsqueda es suficientemente larga
+        if es_busqueda_producto_servicio or (len(query) > 3 and not empresas_list.exists() and not usuarios_list.exists()):
+            # Buscar en productos_sucursal con estado activo (productos de empresa)
+            productos_sucursal_list = producto_sucursal.objects.filter(
+                id_producto_fk__nombre_producto_empresa__icontains=query,
+                estatus_producto_sucursal='Activo'
+            ).select_related('id_producto_fk', 'id_sucursal_fk')
+            
+            # Buscar en productos de usuario con estado activo
+            productos_usuario_list = producto_usuario.objects.filter(
+                nombre_producto_usuario__icontains=query,
+                estatus_producto_usuario='Activo'
+            )
+            
+            # Buscar en servicios_sucursal con estado activo (servicios de empresa)
+            servicios_sucursal_list = servicio_sucursal.objects.filter(
+                id_servicio_fk__nombre_servicio_empresa__icontains=query,
+                estatus_servicio_sucursal='Activo'
+            ).select_related('id_servicio_fk', 'id_sucursal_fk')
+            
+            # Buscar en servicios de usuario con estado activo
+            servicios_usuario_list = servicio_usuario.objects.filter(
+                nombre_servicio_usuario__icontains=query,
+                estatus_servicio_usuario='Activo'
+            )
+        else:
+            # Si se encontraron empresas o usuarios, no mostrar productos/servicios
+            productos_sucursal_list = producto_sucursal.objects.none()
+            productos_usuario_list = producto_usuario.objects.none()
+            servicios_sucursal_list = servicio_sucursal.objects.none()
+            servicios_usuario_list = servicio_usuario.objects.none()
+        
+        # Formatear resultados de productos de empresa
         for ps in productos_sucursal_list:
             # Obtener la primera imagen del producto desde la nueva tabla
             primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=ps.id_producto_fk).first()
@@ -2853,17 +3032,37 @@ def busquedad(request):
             
             resultados_productos.append({
                 'id': ps.id_producto_sucursal,
-                'nombre': ps.id_producto_fk.nombre_producto,
-                'descripcion': ps.id_producto_fk.descripcion_producto,
+                'nombre': ps.id_producto_fk.nombre_producto_empresa,
+                'descripcion': ps.id_producto_fk.descripcion_producto_empresa,
                 'precio': ps.precio_producto_sucursal,
                 'stock': ps.stock_producto_sucursal,
                 'condicion': ps.condicion_producto_sucursal,
                 'imagen': imagen_url,
                 'sucursal': ps.id_sucursal_fk.nombre_sucursal,
-                'tipo': 'producto'
+                'tipo': 'producto',
+                'origen': 'empresa'
             })
         
-        # Formatear resultados de servicios
+        # Formatear resultados de productos de usuario
+        for pu in productos_usuario_list:
+            # Obtener la primera imagen del producto de usuario
+            primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=pu).first()
+            imagen_url = primera_imagen.ruta_imagen_producto_usuario.url if primera_imagen and primera_imagen.ruta_imagen_producto_usuario else None
+            
+            resultados_productos.append({
+                'id': pu.id_producto_usuario,
+                'nombre': pu.nombre_producto_usuario,
+                'descripcion': pu.descripcion_producto_usuario,
+                'precio': pu.precio_producto_usuario,
+                'stock': pu.stock_producto_usuario,
+                'condicion': pu.condicion_producto_usuario,
+                'imagen': imagen_url,
+                'sucursal': f"Usuario: {pu.id_usuario_fk.nombre_usuario}",
+                'tipo': 'producto',
+                'origen': 'usuario'
+            })
+        
+        # Formatear resultados de servicios de empresa
         for ss in servicios_sucursal_list:
             # Obtener la primera imagen del servicio desde la nueva tabla
             primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
@@ -2876,16 +3075,63 @@ def busquedad(request):
                 'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
                 'imagen': imagen_url,
                 'sucursal': ss.id_sucursal_fk.nombre_sucursal,
-                'tipo': 'servicio'
+                'tipo': 'servicio',
+                'origen': 'empresa'
+            })
+        
+        # Formatear resultados de servicios de usuario
+        for su in servicios_usuario_list:
+            # Obtener la primera imagen del servicio de usuario
+            primera_imagen = imagen_servicio_usuario.objects.filter(id_servicio_fk=su).first()
+            imagen_url = primera_imagen.ruta_imagen_servicio_usuario.url if primera_imagen and primera_imagen.ruta_imagen_servicio_usuario else None
+            
+            resultados_servicios.append({
+                'id': su.id_servicio_usuario,
+                'nombre': su.nombre_servicio_usuario,
+                'descripcion': su.descripcion_servicio_usuario,
+                'precio': su.precio_servicio_usuario if su.precio_servicio_usuario else 'Consultar',
+                'imagen': imagen_url,
+                'sucursal': f"Usuario: {su.id_usuario_fk.nombre_usuario}",
+                'tipo': 'servicio',
+                'origen': 'usuario'
+            })
+        
+        # Formatear resultados de empresas
+        for emp in empresas_list:
+            resultados_empresas.append({
+                'id': emp.id_empresa,
+                'nombre': emp.nombre_empresa,
+                'descripcion': emp.descripcion_empresa or 'Sin descripción disponible',
+                'tipo': 'empresa',
+                'logo': emp.logo_empresa.url if emp.logo_empresa else None,
+                'pais': emp.pais_empresa,
+                'estado': emp.estado_empresa,
+                'tipo_empresa': emp.tipo_empresa
+            })
+        
+        # Formatear resultados de usuarios
+        for usr in usuarios_list:
+            resultados_usuarios.append({
+                'id': usr.id_usuario,
+                'nombre': usr.nombre_usuario,
+                'descripcion': f'Usuario registrado en {usr.fecha_registro_usuario.strftime("%Y")}',
+                'tipo': 'usuario',
+                'foto': usr.foto_usuario.url if usr.foto_usuario else None,
+                'pais': usr.pais,
+                'estado': usr.estado
             })
     
     # Combinar resultados
-    resultados_combinados = resultados_productos + resultados_servicios
+    resultados_combinados = resultados_productos + resultados_servicios + resultados_empresas + resultados_usuarios
     
     return render(request, 'ecommerce_app/busquedad.html', {
         'query': query,
         'resultados': resultados_combinados,
-        'total_resultados': len(resultados_combinados)
+        'total_resultados': len(resultados_combinados),
+        'resultados_productos': resultados_productos,
+        'resultados_servicios': resultados_servicios,
+        'resultados_empresas': resultados_empresas,
+        'resultados_usuarios': resultados_usuarios
     })
 
 
@@ -3169,8 +3415,8 @@ def localizacion(request):
                 
                 resultado = {
                     'id': ss.id_servicio_sucursal,
-                    'nombre': ss.id_servicio_fk.nombre_servicio,
-                    'descripcion': ss.id_servicio_fk.descripcion_servicio,
+                    'nombre': ss.id_servicio_fk.nombre_servicio_empresa,
+                    'descripcion': ss.id_servicio_fk.descripcion_servicio_empresa,
                     'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
                     'imagen': imagen_url,
                     'sucursal': ss.id_sucursal_fk.nombre_sucursal,
@@ -3225,3 +3471,897 @@ def localizacion(request):
         'user_lat': user_lat,
         'user_lng': user_lng
     })
+
+
+def carrito(request):
+    return render(request, 'ecommerce_app/carrito.html')
+
+def vista_items(request):
+    try:
+        # Obtener información del usuario autenticado
+        user_info = None
+        current_user = get_current_user(request)
+        if current_user:
+            account_type = request.session.get('account_type', 'usuario')
+            
+            if account_type == 'empresa':
+                user_info = {
+                    'id': current_user.id_empresa,
+                    'nombre': current_user.nombre_empresa,
+                    'email': current_user.correo_empresa,
+                    'tipo': current_user.rol_empresa,
+                    'is_authenticated': True
+                }
+            else:
+                user_info = {
+                    'id': current_user.id_usuario,
+                    'nombre': current_user.nombre_usuario,
+                    'email': current_user.correo_usuario,
+                    'tipo': current_user.rol_usuario,
+                    'is_authenticated': True
+                }
+        
+        item_id = request.GET.get('id')
+        item_tipo = request.GET.get('tipo')
+        item_origen = request.GET.get('origen', 'empresa')  # Por defecto empresa para compatibilidad
+        
+        print(f"DEBUG: vista_items - id: {item_id}, tipo: {item_tipo}, origen: {item_origen}")
+        
+        if not item_id or not item_tipo:
+            print(f"DEBUG: Parámetros faltantes - id: {item_id}, tipo: {item_tipo}")
+            return redirect('/ecommerce/index/')
+        
+        item_data = None
+        imagenes = []
+        
+        if item_tipo == 'producto':
+            if item_origen == 'empresa':
+                # Buscar por producto_sucursal primero (desde búsqueda)
+                try:
+                    print(f"DEBUG: Buscando producto_sucursal con id: {item_id}")
+                    producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=item_id)
+                    producto = producto_sucursal_obj.id_producto_fk
+                    print(f"DEBUG: Producto encontrado: {producto.nombre_producto_empresa}")
+                    
+                    # Obtener imágenes del producto
+                    imagenes_producto = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                    imagenes = [img.ruta_imagen_producto_empresa.url for img in imagenes_producto if img.ruta_imagen_producto_empresa]
+                    
+                    sucursal_info = {
+                        'nombre': producto_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                        'direccion': producto_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                        'precio': producto_sucursal_obj.precio_producto_sucursal,
+                        'stock': producto_sucursal_obj.stock_producto_sucursal,
+                        'condicion': producto_sucursal_obj.condicion_producto_sucursal,
+                        'estatus': producto_sucursal_obj.estatus_producto_sucursal
+                    }
+                    
+                    item_data = {
+                        'id': producto.id_producto_empresa,
+                        'nombre': producto.nombre_producto_empresa,
+                        'descripcion': producto.descripcion_producto_empresa,
+                        'marca': producto.marca_producto_empresa,
+                        'modelo': producto.modelo_producto_empresa,
+                        'caracteristicas': producto.caracteristicas_generales_empresa,
+                        'tipo': 'producto',
+                        'empresa': producto.id_empresa_fk.nombre_empresa,
+                        'sucursal': sucursal_info
+                    }
+                except producto_sucursal.DoesNotExist:
+                    print(f"DEBUG: No se encontró producto_sucursal con id: {item_id}, buscando en producto_empresa")
+                    # Si no se encuentra por producto_sucursal, buscar directamente por producto_empresa
+                    try:
+                        producto = producto_empresa.objects.get(id_producto_empresa=item_id)
+                        print(f"DEBUG: Producto encontrado directamente: {producto.nombre_producto_empresa}")
+                        # Obtener imágenes del producto
+                        imagenes_producto = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                        imagenes = [img.ruta_imagen_producto_empresa.url for img in imagenes_producto if img.ruta_imagen_producto_empresa]
+                        
+                        # Obtener información de la sucursal si está asociado
+                        producto_sucursal_obj = producto_sucursal.objects.filter(id_producto_fk=producto).first()
+                        sucursal_info = None
+                        if producto_sucursal_obj:
+                            sucursal_info = {
+                                'nombre': producto_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                                'direccion': producto_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                                'precio': producto_sucursal_obj.precio_producto_sucursal,
+                                'stock': producto_sucursal_obj.stock_producto_sucursal,
+                                'condicion': producto_sucursal_obj.condicion_producto_sucursal,
+                                'estatus': producto_sucursal_obj.estatus_producto_sucursal
+                            }
+                        
+                        item_data = {
+                            'id': producto.id_producto_empresa,
+                            'nombre': producto.nombre_producto_empresa,
+                            'descripcion': producto.descripcion_producto_empresa,
+                            'marca': producto.marca_producto_empresa,
+                            'modelo': producto.modelo_producto_empresa,
+                            'caracteristicas': producto.caracteristicas_generales_empresa,
+                            'tipo': 'producto',
+                            'empresa': producto.id_empresa_fk.nombre_empresa,
+                            'sucursal': sucursal_info
+                        }
+                    except producto_empresa.DoesNotExist:
+                        print(f"DEBUG: No se encontró producto_empresa con id: {item_id}")
+                        return redirect('/ecommerce/index/')
+            else:  # item_origen == 'usuario'
+                try:
+                    print(f"DEBUG: Buscando producto_usuario con id: {item_id}")
+                    producto = producto_usuario.objects.get(id_producto_usuario=item_id)
+                    print(f"DEBUG: Producto de usuario encontrado: {producto.nombre_producto_usuario}")
+                    # Obtener imágenes del producto de usuario
+                    imagenes_producto = imagen_producto_usuario.objects.filter(id_producto_fk=producto)
+                    imagenes = [img.ruta_imagen_producto_usuario.url for img in imagenes_producto if img.ruta_imagen_producto_usuario]
+                    
+                    # Para productos de usuario, la información está directamente en el producto
+                    sucursal_info = {
+                        'nombre': f"Usuario: {producto.id_usuario_fk.nombre_usuario}",
+                        'direccion': 'Información de contacto disponible',
+                        'precio': producto.precio_producto_usuario,
+                        'stock': producto.stock_producto_usuario,
+                        'condicion': producto.condicion_producto_usuario,
+                        'estatus': producto.estatus_producto_usuario
+                    }
+                    
+                    item_data = {
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'descripcion': producto.descripcion_producto_usuario,
+                        'marca': producto.marca_producto_usuario,
+                        'modelo': producto.modelo_producto_usuario,
+                        'caracteristicas': producto.caracteristicas_generales_usuario,
+                        'tipo': 'producto',
+                        'empresa': f"Usuario: {producto.id_usuario_fk.nombre_usuario}",
+                        'sucursal': sucursal_info
+                    }
+                except producto_usuario.DoesNotExist:
+                    print(f"DEBUG: No se encontró producto_usuario con id: {item_id}")
+                    return redirect('/ecommerce/index/')
+                
+        elif item_tipo == 'servicio':
+            if item_origen == 'empresa':
+                # Buscar por servicio_sucursal primero (desde búsqueda)
+                try:
+                    print(f"DEBUG: Buscando servicio_sucursal con id: {item_id}")
+                    servicio_sucursal_obj = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
+                    servicio = servicio_sucursal_obj.id_servicio_fk
+                    print(f"DEBUG: Servicio encontrado: {servicio.nombre_servicio_empresa}")
+                    
+                    # Obtener imágenes del servicio
+                    imagenes_servicio = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                    imagenes = [img.ruta_imagen_servicio_empresa.url for img in imagenes_servicio if img.ruta_imagen_servicio_empresa]
+                    
+                    sucursal_info = {
+                        'nombre': servicio_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                        'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                        'precio': servicio_sucursal_obj.precio_servicio_sucursal,
+                        'estatus': servicio_sucursal_obj.estatus_servicio_sucursal
+                    }
+                    
+                    item_data = {
+                        'id': servicio.id_servicio_empresa,
+                        'nombre': servicio.nombre_servicio_empresa,
+                        'descripcion': servicio.descripcion_servicio_empresa,
+                        'caracteristicas': servicio.descripcion_servicio_empresa,
+                        'tipo': 'servicio',
+                        'empresa': servicio.id_empresa_fk.nombre_empresa,
+                        'sucursal': sucursal_info
+                    }
+                except servicio_sucursal.DoesNotExist:
+                    print(f"DEBUG: No se encontró servicio_sucursal con id: {item_id}, buscando en servicio_empresa")
+                    # Si no se encuentra por servicio_sucursal, buscar directamente por servicio_empresa
+                    try:
+                        servicio = servicio_empresa.objects.get(id_servicio_empresa=item_id)
+                        print(f"DEBUG: Servicio encontrado directamente: {servicio.nombre_servicio_empresa}")
+                        # Obtener imágenes del servicio
+                        imagenes_servicio = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                        imagenes = [img.ruta_imagen_servicio_empresa.url for img in imagenes_servicio if img.ruta_imagen_servicio_empresa]
+                        
+                        # Obtener información de la sucursal si está asociado
+                        servicio_sucursal_obj = servicio_sucursal.objects.filter(id_servicio_fk=servicio).first()
+                        sucursal_info = None
+                        if servicio_sucursal_obj:
+                            sucursal_info = {
+                                'nombre': servicio_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                                'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                                'precio': servicio_sucursal_obj.precio_servicio_sucursal,
+                                'estatus': servicio_sucursal_obj.estatus_servicio_sucursal
+                            }
+                        
+                        item_data = {
+                            'id': servicio.id_servicio_empresa,
+                            'nombre': servicio.nombre_servicio_empresa,
+                            'descripcion': servicio.descripcion_servicio_empresa,
+                            'caracteristicas': servicio.descripcion_servicio_empresa,
+                            'tipo': 'servicio',
+                            'empresa': servicio.id_empresa_fk.nombre_empresa,
+                            'sucursal': sucursal_info
+                        }
+                    except servicio_empresa.DoesNotExist:
+                        print(f"DEBUG: No se encontró servicio_empresa con id: {item_id}")
+                        return redirect('/ecommerce/index/')
+            else:  # item_origen == 'usuario'
+                try:
+                    print(f"DEBUG: Buscando servicio_usuario con id: {item_id}")
+                    servicio = servicio_usuario.objects.get(id_servicio_usuario=item_id)
+                    print(f"DEBUG: Servicio de usuario encontrado: {servicio.nombre_servicio_usuario}")
+                    # Obtener imágenes del servicio de usuario
+                    imagenes_servicio = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio)
+                    imagenes = [img.ruta_imagen_servicio_usuario.url for img in imagenes_servicio if img.ruta_imagen_servicio_usuario]
+                    
+                    # Para servicios de usuario, la información está directamente en el servicio
+                    sucursal_info = {
+                        'nombre': f"Usuario: {servicio.id_usuario_fk.nombre_usuario}",
+                        'direccion': 'Información de contacto disponible',
+                        'precio': servicio.precio_servicio_usuario if servicio.precio_servicio_usuario else 'Consultar',
+                        'estatus': servicio.estatus_servicio_usuario
+                    }
+                    
+                    item_data = {
+                        'id': servicio.id_servicio_usuario,
+                        'nombre': servicio.nombre_servicio_usuario,
+                        'descripcion': servicio.descripcion_servicio_usuario,
+                        'caracteristicas': servicio.descripcion_servicio_usuario,
+                        'tipo': 'servicio',
+                        'empresa': f"Usuario: {servicio.id_usuario_fk.nombre_usuario}",
+                        'sucursal': sucursal_info
+                    }
+                except servicio_usuario.DoesNotExist:
+                    print(f"DEBUG: No se encontró servicio_usuario con id: {item_id}")
+                    return redirect('/ecommerce/index/')
+        else:
+            print(f"DEBUG: Tipo de item no válido: {item_tipo}")
+            return redirect('/ecommerce/index/')
+        
+        context = {
+            'item': item_data,
+            'imagenes': imagenes,
+            'user_info': user_info
+        }
+        
+        print(f"DEBUG: Renderizando vista_items exitosamente para {item_data['tipo']}: {item_data['nombre']}")
+        return render(request, 'ecommerce_app/vista_items.html', context)
+        
+    except Exception as e:
+        print(f"Error en vista_items: {str(e)}")
+        # En lugar de redirigir al index, mostrar un mensaje de error
+        context = {
+            'error': True,
+            'error_message': f'Error al cargar el item: {str(e)}',
+            'item': None,
+            'imagenes': [],
+            'user_info': user_info
+        }
+        return render(request, 'ecommerce_app/vista_items.html', context)
+
+
+
+def perfil_usuario(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    usuario_obj = None
+    
+    # Verificar si se está solicitando un perfil específico por ID
+    usuario_id = request.GET.get('id')
+    if usuario_id:
+        try:
+            usuario_obj = usuario.objects.get(id_usuario=usuario_id)
+            # Para perfiles públicos, no necesitamos user_info completo
+            user_info = {
+                'is_authenticated': False,
+                'is_public_profile': True
+            }
+        except usuario.DoesNotExist:
+            # Si no existe el usuario, redirigir o mostrar error
+            return render(request, 'ecommerce_app/perfil_usuario.html', {
+                'error': 'Usuario no encontrado',
+                'user_info': {'is_authenticated': False}
+            })
+    else:
+        # Verificar si hay usuario autenticado
+        current_user = None
+        if is_user_authenticated(request):
+            current_user = get_current_user(request)
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        if current_user and account_type == 'usuario':
+            # Para usuarios autenticados, current_user ya es el usuario
+            usuario_obj = current_user
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+        elif current_user and account_type == 'empresa':
+            # Si es empresa autenticada, redirigir al perfil de empresa
+            return redirect('/ecommerce/perfil_empresa/')
+        else:
+            # Usuario no autenticado - mostrar información por defecto
+            user_info = {
+                'is_authenticated': False
+            }
+            # Obtener el primer usuario disponible para mostrar como ejemplo
+            usuario_obj = usuario.objects.first()
+    
+    return render(request, 'ecommerce_app/perfil_usuario.html', {
+        'user_info': user_info,
+        'usuario': usuario_obj
+    })
+
+
+def perfil_sucursales_asociadas(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    empresa_obj = None
+    sucursales_empresa = []
+    
+    # Verificar si se está solicitando sucursales de una empresa específica
+    empresa_id = request.GET.get('empresa_id')
+    
+    # Verificar si hay usuario autenticado
+    current_user = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Si se especifica una empresa_id, mostrar sucursales de esa empresa
+    if empresa_id:
+        try:
+            empresa_obj = empresa.objects.get(id_empresa=empresa_id)
+            sucursales_empresa = sucursal.objects.filter(id_empresa_fk=empresa_obj).order_by('nombre_sucursal')
+            user_info = {
+                'is_authenticated': bool(current_user),
+                'is_public_profile': True
+            }
+            
+            return render(request, 'ecommerce_app/perfil_sucursales_asociadas.html', {
+                'user_info': user_info,
+                'empresa_obj': empresa_obj,
+                'sucursales_empresa': sucursales_empresa,
+                'usuario': None
+            })
+        except empresa.DoesNotExist:
+            # Si no existe la empresa, mostrar error
+            return render(request, 'ecommerce_app/perfil_sucursales_asociadas.html', {
+                'error': 'Empresa no encontrada',
+                'user_info': {'is_authenticated': bool(current_user)},
+                'empresa_obj': None,
+                'sucursales_empresa': [],
+                'usuario': None
+            })
+    
+    elif current_user and account_type == 'empresa':
+        # Para empresas autenticadas, current_user ya es la empresa
+        empresa_obj = current_user
+        user_info = {
+            'id': current_user.id_empresa,
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'tipo': current_user.rol_empresa,
+            'is_authenticated': True,
+            'empresa_nombre': current_user.nombre_empresa
+        }
+        
+        # Obtener todas las sucursales de esta empresa
+        sucursales_empresa = sucursal.objects.filter(id_empresa_fk=empresa_obj).order_by('nombre_sucursal')
+        
+    elif current_user:
+        # Para usuarios autenticados, buscar empresa asociada
+        empresa_nombre = None
+        try:
+            empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+            if empresa_obj:
+                empresa_nombre = empresa_obj.nombre_empresa
+                # Obtener sucursales de la empresa asociada
+                sucursales_empresa = sucursal.objects.filter(id_empresa_fk=empresa_obj).order_by('nombre_sucursal')
+        except Exception as e:
+            empresa_obj = None
+            empresa_nombre = None
+        
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.rol_usuario,
+            'is_authenticated': True,
+            'empresa_nombre': empresa_nombre
+        }
+    else:
+        # Usuario no autenticado - mostrar información por defecto
+        user_info = {
+            'is_authenticated': False
+        }
+        # Obtener la primera empresa disponible para mostrar como ejemplo
+        empresa_obj = empresa.objects.first()
+        if empresa_obj:
+            sucursales_empresa = sucursal.objects.filter(id_empresa_fk=empresa_obj).order_by('nombre_sucursal')
+    
+    return render(request, 'ecommerce_app/perfil_sucursales_asociadas.html', {
+        'user_info': user_info,
+        'empresa_obj': empresa_obj,
+        'sucursales_empresa': sucursales_empresa,
+        'usuario': current_user if current_user and account_type == 'usuario' else None
+    })
+
+def prueba(request):
+    return render(request, 'ecommerce_app/prueba.html')
+
+def debug_user_info(request):
+    # Verificar si hay usuario autenticado
+    current_user = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    # Obtener tipo de cuenta
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Inicializar variables
+    user_info = {
+        'is_authenticated': bool(current_user),
+        'tipo': 'empresa' if account_type == 'empresa' else 'persona'
+    }
+    
+    if current_user and account_type != 'empresa':
+        user_info.update({
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'id': current_user.id_usuario
+        })
+    elif current_user and account_type == 'empresa':
+        user_info.update({
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'id': current_user.id_empresa
+        })
+    
+    return render(request, 'ecommerce_app/debug_user_info.html', {
+        'user_info': user_info
+    })
+
+
+def perfil_productos(request):
+    from collections import defaultdict
+    
+    # Verificar si hay usuario autenticado
+    current_user = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    # Obtener tipo de cuenta
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Verificar si se está solicitando productos de una empresa o usuario específico
+    empresa_id = request.GET.get('empresa_id')
+    usuario_id = request.GET.get('usuario_id')
+    
+    # Inicializar variables
+    productos = []
+    user_info = {
+        'is_authenticated': bool(current_user),
+        'tipo': 'empresa' if account_type == 'empresa' else 'persona'
+    }
+    
+    # Si se especifica una empresa_id, mostrar productos de esa empresa
+    if empresa_id:
+        try:
+            empresa_obj = empresa.objects.get(id_empresa=empresa_id)
+            productos_query = producto_empresa.objects.filter(id_empresa_fk=empresa_obj).select_related('id_categoria_prod_fk')
+            productos_con_imagenes = []
+            productos_por_categoria = defaultdict(list)
+            
+            for prod in productos_query:
+                primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
+                prod.primera_imagen = primera_imagen
+                productos_con_imagenes.append(prod)
+                
+                # Agrupar por categoría
+                categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else 'Sin categoría'
+                productos_por_categoria[categoria_nombre].append(prod)
+            
+            entity_name = f'Productos de {empresa_obj.nombre_empresa}'
+            
+            # Configurar user_info para mostrar como empresa cuando se especifica empresa_id
+            user_info['tipo'] = 'empresa'
+            
+            # Si hay un usuario autenticado, agregar su información al user_info
+            if current_user and account_type == 'empresa':
+                user_info.update({
+                    'nombre': current_user.nombre_empresa,
+                    'email': current_user.correo_empresa,
+                    'id': current_user.id_empresa,
+                    'empresa_nombre': current_user.nombre_empresa
+                })
+            elif current_user:
+                user_info.update({
+                    'nombre': current_user.nombre_usuario,
+                    'email': current_user.correo_usuario,
+                    'id': current_user.id_usuario
+                })
+            
+            return render(request, 'ecommerce_app/perfil_productos.html', {
+                'user_info': user_info,
+                'empresa_obj': empresa_obj,
+                'productos': productos_con_imagenes,
+                'productos_por_categoria': dict(productos_por_categoria),
+                'entity_name': entity_name
+            })
+        except empresa.DoesNotExist:
+            # Si no existe la empresa, mostrar error
+            return render(request, 'ecommerce_app/perfil_productos.html', {
+                'error': 'Empresa no encontrada',
+                'user_info': user_info,
+                'productos': [],
+                'entity_name': 'Error'
+            })
+    elif usuario_id:
+        try:
+            usuario_obj = usuario.objects.get(id_usuario=usuario_id)
+            productos_query = producto_usuario.objects.filter(id_usuario_fk=usuario_obj).select_related('id_categoria_prod_fk')
+            productos_con_imagenes = []
+            productos_por_categoria = defaultdict(list)
+            
+            for prod in productos_query:
+                primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=prod).first()
+                prod.primera_imagen = primera_imagen
+                productos_con_imagenes.append(prod)
+                
+                # Agrupar por categoría
+                categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_usuario if prod.id_categoria_prod_fk else 'Sin categoría'
+                productos_por_categoria[categoria_nombre].append(prod)
+            
+            entity_name = f'Productos de {usuario_obj.nombre_usuario}'
+            
+            # Configurar user_info para mostrar como persona cuando se especifica usuario_id
+            user_info['tipo'] = 'persona'
+            
+            # Si hay un usuario autenticado, agregar su información al user_info
+            if current_user and account_type == 'empresa':
+                user_info.update({
+                    'nombre': current_user.nombre_empresa,
+                    'email': current_user.correo_empresa,
+                    'id': current_user.id_empresa,
+                    'empresa_nombre': current_user.nombre_empresa
+                })
+            elif current_user:
+                user_info.update({
+                    'nombre': current_user.nombre_usuario,
+                    'email': current_user.correo_usuario,
+                    'id': current_user.id_usuario
+                })
+            
+            return render(request, 'ecommerce_app/perfil_productos.html', {
+                'user_info': user_info,
+                'usuario_obj': usuario_obj,
+                'productos': productos_con_imagenes,
+                'productos_por_categoria': dict(productos_por_categoria),
+                'entity_name': entity_name
+            })
+        except usuario.DoesNotExist:
+            # Si no existe el usuario, mostrar error
+            return render(request, 'ecommerce_app/perfil_productos.html', {
+                'error': 'Usuario no encontrado',
+                'user_info': user_info,
+                'productos': [],
+                'entity_name': 'Error'
+            })
+    
+    elif current_user and account_type == 'empresa':
+        # Usuario autenticado es empresa
+        empresa_obj = current_user
+        empresa_nombre = empresa_obj.nombre_empresa
+        
+        # Obtener productos de la empresa con sus imágenes
+        productos_query = producto_empresa.objects.filter(id_empresa_fk=current_user).select_related('id_categoria_prod_fk')
+        productos_con_imagenes = []
+        productos_por_categoria = defaultdict(list)
+        
+        for prod in productos_query:
+            primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
+            prod.primera_imagen = primera_imagen
+            productos_con_imagenes.append(prod)
+            
+            # Agrupar por categoría
+            categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else 'Sin categoría'
+            productos_por_categoria[categoria_nombre].append(prod)
+        
+        user_info.update({
+            'nombre': empresa_nombre,
+            'email': empresa_obj.correo_empresa,
+            'id': empresa_obj.id_empresa
+        })
+        
+        return render(request, 'ecommerce_app/perfil_productos.html', {
+            'user_info': user_info,
+            'empresa_obj': empresa_obj,
+            'productos': productos_con_imagenes,
+            'productos_por_categoria': dict(productos_por_categoria),
+            'entity_name': empresa_nombre
+        })
+    elif current_user:
+        # Usuario autenticado es persona
+        usuario_obj = current_user
+        usuario_nombre = usuario_obj.nombre_usuario
+        
+        # Obtener productos del usuario con sus imágenes
+        productos_query = producto_usuario.objects.filter(id_usuario_fk=current_user).select_related('id_categoria_prod_fk')
+        productos_con_imagenes = []
+        productos_por_categoria = defaultdict(list)
+        
+        for prod in productos_query:
+            primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=prod).first()
+            prod.primera_imagen = primera_imagen
+            productos_con_imagenes.append(prod)
+            
+            # Agrupar por categoría
+            categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_usuario if prod.id_categoria_prod_fk else 'Sin categoría'
+            productos_por_categoria[categoria_nombre].append(prod)
+        
+        user_info.update({
+            'nombre': usuario_nombre,
+            'email': usuario_obj.correo_usuario,
+            'id': usuario_obj.id_usuario
+        })
+        
+        return render(request, 'ecommerce_app/perfil_productos.html', {
+            'user_info': user_info,
+            'usuario_obj': usuario_obj,
+            'productos': productos_con_imagenes,
+            'productos_por_categoria': dict(productos_por_categoria),
+            'entity_name': usuario_nombre
+        })
+    else:
+        # Usuario no autenticado - mostrar productos de ejemplo
+        # Mostrar productos de la primera empresa disponible
+        empresa_obj = empresa.objects.first()
+        productos_con_imagenes = []
+        entity_name = 'Productos Disponibles'
+        
+        if empresa_obj:
+            productos_query = producto_empresa.objects.filter(id_empresa_fk=empresa_obj).select_related('id_categoria_prod_fk')[:5]  # Limitar a 5 productos
+            productos_por_categoria = defaultdict(list)
+            
+            for prod in productos_query:
+                primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
+                prod.primera_imagen = primera_imagen
+                productos_con_imagenes.append(prod)
+                
+                # Agrupar por categoría
+                categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else 'Sin categoría'
+                productos_por_categoria[categoria_nombre].append(prod)
+            entity_name = f'Productos de {empresa_obj.nombre_empresa}'
+        else:
+            productos_por_categoria = {}
+        
+        return render(request, 'ecommerce_app/perfil_productos.html', {
+            'user_info': user_info,
+            'empresa_obj': empresa_obj,
+            'productos': productos_con_imagenes,
+            'productos_por_categoria': dict(productos_por_categoria),
+            'entity_name': entity_name
+        })
+
+
+def perfil_servicios(request):
+    from collections import defaultdict
+    
+    # Verificar si hay usuario autenticado
+    current_user = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    # Obtener tipo de cuenta
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Verificar si se está solicitando servicios de una empresa o usuario específico
+    empresa_id = request.GET.get('empresa_id')
+    usuario_id = request.GET.get('usuario_id')
+    
+    # Inicializar variables
+    servicios = []
+    user_info = {
+        'is_authenticated': bool(current_user),
+        'tipo': 'empresa' if account_type == 'empresa' else 'persona'
+    }
+    
+    # Si se especifica una empresa_id, mostrar servicios de esa empresa
+    if empresa_id:
+        try:
+            empresa_obj = empresa.objects.get(id_empresa=empresa_id)
+            servicios_query = servicio_empresa.objects.filter(id_empresa_fk=empresa_obj).select_related('id_categoria_servicios_fk')
+            servicios_con_imagenes = []
+            servicios_por_categoria = defaultdict(list)
+            
+            for serv in servicios_query:
+                primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
+                serv.primera_imagen = primera_imagen
+                servicios_con_imagenes.append(serv)
+                
+                # Agrupar por categoría
+                categoria_nombre = serv.id_categoria_servicios_fk.nombre_categoria_serv_empresa if serv.id_categoria_servicios_fk else 'Sin categoría'
+                servicios_por_categoria[categoria_nombre].append(serv)
+            
+            entity_name = f'Servicios de {empresa_obj.nombre_empresa}'
+            
+            # Configurar user_info para mostrar como empresa cuando se especifica empresa_id
+            user_info['tipo'] = 'empresa'
+            
+            # Si hay un usuario autenticado, agregar su información al user_info
+            if current_user and account_type == 'empresa':
+                user_info.update({
+                    'nombre': current_user.nombre_empresa,
+                    'email': current_user.correo_empresa,
+                    'id': current_user.id_empresa,
+                    'empresa_nombre': current_user.nombre_empresa
+                })
+            elif current_user:
+                user_info.update({
+                    'nombre': current_user.nombre_usuario,
+                    'email': current_user.correo_usuario,
+                    'id': current_user.id_usuario
+                })
+            
+            return render(request, 'ecommerce_app/perfil_servicios.html', {
+                'user_info': user_info,
+                'empresa_obj': empresa_obj,
+                'servicios': servicios_con_imagenes,
+                'servicios_por_categoria': dict(servicios_por_categoria),
+                'entity_name': entity_name
+            })
+        except empresa.DoesNotExist:
+            # Si no existe la empresa, mostrar error
+            return render(request, 'ecommerce_app/perfil_servicios.html', {
+                'error': 'Empresa no encontrada',
+                'user_info': user_info,
+                'servicios': [],
+                'entity_name': 'Error'
+            })
+    elif usuario_id:
+        try:
+            usuario_obj = usuario.objects.get(id_usuario=usuario_id)
+            servicios_query = servicio_usuario.objects.filter(id_usuario_fk=usuario_obj).select_related('id_categoria_servicios_fk')
+            servicios_con_imagenes = []
+            servicios_por_categoria = defaultdict(list)
+            
+            for serv in servicios_query:
+                primera_imagen = imagen_servicio_usuario.objects.filter(id_servicio_fk=serv).first()
+                serv.primera_imagen = primera_imagen
+                servicios_con_imagenes.append(serv)
+                
+                # Agrupar por categoría
+                categoria_nombre = serv.id_categoria_servicios_fk.nombre_categoria_serv_usuario if serv.id_categoria_servicios_fk else 'Sin categoría'
+                servicios_por_categoria[categoria_nombre].append(serv)
+            
+            entity_name = f'Servicios de {usuario_obj.nombre_usuario}'
+            
+            # Configurar user_info para mostrar como persona cuando se especifica usuario_id
+            user_info['tipo'] = 'persona'
+            
+            # Si hay un usuario autenticado, agregar su información al user_info
+            if current_user and account_type == 'empresa':
+                user_info.update({
+                    'nombre': current_user.nombre_empresa,
+                    'email': current_user.correo_empresa,
+                    'id': current_user.id_empresa,
+                    'empresa_nombre': current_user.nombre_empresa
+                })
+            elif current_user:
+                user_info.update({
+                    'nombre': current_user.nombre_usuario,
+                    'email': current_user.correo_usuario,
+                    'id': current_user.id_usuario
+                })
+            
+            return render(request, 'ecommerce_app/perfil_servicios.html', {
+                'user_info': user_info,
+                'usuario_obj': usuario_obj,
+                'servicios': servicios_con_imagenes,
+                'servicios_por_categoria': dict(servicios_por_categoria),
+                'entity_name': entity_name
+            })
+        except usuario.DoesNotExist:
+            # Si no existe el usuario, mostrar error
+            return render(request, 'ecommerce_app/perfil_servicios.html', {
+                'error': 'Usuario no encontrado',
+                'user_info': user_info,
+                'servicios': [],
+                'entity_name': 'Error'
+            })
+    
+    elif current_user and account_type == 'empresa':
+        # Usuario autenticado es empresa
+        empresa_obj = current_user
+        empresa_nombre = empresa_obj.nombre_empresa
+        
+        # Obtener servicios de la empresa con sus imágenes
+        servicios_query = servicio_empresa.objects.filter(id_empresa_fk=current_user).select_related('id_categoria_servicios_fk')
+        servicios_con_imagenes = []
+        servicios_por_categoria = defaultdict(list)
+        
+        for serv in servicios_query:
+            primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
+            serv.primera_imagen = primera_imagen
+            servicios_con_imagenes.append(serv)
+            
+            # Agrupar por categoría
+            categoria_nombre = serv.id_categoria_servicios_fk.nombre_categoria_serv_empresa if serv.id_categoria_servicios_fk else 'Sin categoría'
+            servicios_por_categoria[categoria_nombre].append(serv)
+        
+        user_info.update({
+            'nombre': empresa_nombre,
+            'email': empresa_obj.correo_empresa,
+            'id': empresa_obj.id_empresa
+        })
+        
+        return render(request, 'ecommerce_app/perfil_servicios.html', {
+            'user_info': user_info,
+            'empresa_obj': empresa_obj,
+            'servicios': servicios_con_imagenes,
+            'servicios_por_categoria': dict(servicios_por_categoria),
+            'entity_name': empresa_nombre
+        })
+    elif current_user:
+        # Usuario autenticado es persona
+        usuario_obj = current_user
+        usuario_nombre = usuario_obj.nombre_usuario
+        
+        # Obtener servicios del usuario con sus imágenes
+        servicios_query = servicio_usuario.objects.filter(id_usuario_fk=current_user).select_related('id_categoria_servicios_fk')
+        servicios_con_imagenes = []
+        servicios_por_categoria = defaultdict(list)
+        
+        for serv in servicios_query:
+            primera_imagen = imagen_servicio_usuario.objects.filter(id_servicio_fk=serv).first()
+            serv.primera_imagen = primera_imagen
+            servicios_con_imagenes.append(serv)
+            
+            # Agrupar por categoría
+            categoria_nombre = serv.id_categoria_servicios_fk.nombre_categoria_serv_usuario if serv.id_categoria_servicios_fk else 'Sin categoría'
+            servicios_por_categoria[categoria_nombre].append(serv)
+        
+        user_info.update({
+            'nombre': usuario_nombre,
+            'email': usuario_obj.correo_usuario,
+            'id': usuario_obj.id_usuario
+        })
+        
+        return render(request, 'ecommerce_app/perfil_servicios.html', {
+            'user_info': user_info,
+            'usuario_obj': usuario_obj,
+            'servicios': servicios_con_imagenes,
+            'servicios_por_categoria': dict(servicios_por_categoria),
+            'entity_name': usuario_nombre
+        })
+    else:
+        # Usuario no autenticado - mostrar servicios de ejemplo
+        # Mostrar servicios de la primera empresa disponible
+        empresa_obj = empresa.objects.first()
+        servicios_con_imagenes = []
+        entity_name = 'Servicios Disponibles'
+        
+        if empresa_obj:
+            servicios_query = servicio_empresa.objects.filter(id_empresa_fk=empresa_obj).select_related('id_categoria_servicios_fk')[:5]  # Limitar a 5 servicios
+            servicios_por_categoria = defaultdict(list)
+            
+            for serv in servicios_query:
+                primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
+                serv.primera_imagen = primera_imagen
+                servicios_con_imagenes.append(serv)
+                
+                # Agrupar por categoría
+                categoria_nombre = serv.id_categoria_servicios_fk.nombre_categoria_serv_empresa if serv.id_categoria_servicios_fk else 'Sin categoría'
+                servicios_por_categoria[categoria_nombre].append(serv)
+            entity_name = f'Servicios de {empresa_obj.nombre_empresa}'
+        else:
+            servicios_por_categoria = {}
+        
+        return render(request, 'ecommerce_app/perfil_servicios.html', {
+            'user_info': user_info,
+            'empresa_obj': empresa_obj,
+            'servicios': servicios_con_imagenes,
+            'servicios_por_categoria': dict(servicios_por_categoria),
+            'entity_name': entity_name
+        })

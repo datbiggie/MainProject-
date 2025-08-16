@@ -286,14 +286,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const estatus = button.getAttribute('data-estatus');
             const descripcion = button.getAttribute('data-descripcion');
             const caracteristicas = button.getAttribute('data-caracteristicas');
+            const stock = button.getAttribute('data-stock');
+            const precio = button.getAttribute('data-precio');
+            const condicion = button.getAttribute('data-condicion');
+            const estatusUsuario = button.getAttribute('data-estatus');
             const imagen = button.getAttribute('data-imagen');
             
-            console.log('Datos obtenidos:', { id, nombre, marca, modelo, categoria, estatus, descripcion, caracteristicas, imagen });
+            console.log('Datos obtenidos:', { id, nombre, marca, modelo, categoria, estatus, descripcion, caracteristicas, stock, precio, condicion, estatusUsuario, imagen });
             
             // Debug detallado de todos los atributos data-
             console.log('=== DEBUG ATRIBUTOS DATA- ===');
             console.log('data-id:', id);
             console.log('data-nombre:', nombre);
+            console.log('data-stock:', stock);
+            console.log('data-precio:', precio);
+            console.log('data-condicion:', condicion);
+            console.log('data-estatus:', estatusUsuario);
             console.log('data-marca:', marca);
             console.log('data-modelo:', modelo);
             console.log('data-categoria:', categoria);
@@ -413,6 +421,42 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('✅ Características asignadas:', caracteristicas);
                 } else {
                     console.log('❌ Campo edit_caracteristicas no encontrado');
+                }
+                
+                // Asignar campos adicionales para usuarios tipo persona
+                if (userType === 'persona') {
+                    const stockField = document.getElementById('edit_stock');
+                    const precioField = document.getElementById('edit_precio');
+                    const condicionField = document.getElementById('edit_condicion');
+                    const estatusField = document.getElementById('edit_estatus');
+                    
+                    if (stockField) {
+                        stockField.value = stock || '0';
+                        console.log('✅ Stock asignado:', stock);
+                    } else {
+                        console.log('❌ Campo edit_stock no encontrado');
+                    }
+                    
+                    if (precioField) {
+                        precioField.value = precio || '0';
+                        console.log('✅ Precio asignado:', precio);
+                    } else {
+                        console.log('❌ Campo edit_precio no encontrado');
+                    }
+                    
+                    if (condicionField) {
+                        condicionField.value = condicion || 'Nuevo';
+                        console.log('✅ Condición asignada:', condicion);
+                    } else {
+                        console.log('❌ Campo edit_condicion no encontrado');
+                    }
+                    
+                    if (estatusField) {
+                        estatusField.value = estatusUsuario || 'Activo';
+                        console.log('✅ Estatus asignado:', estatusUsuario);
+                    } else {
+                        console.log('❌ Campo edit_estatus no encontrado');
+                    }
                 }
                 
                 // Cargar imágenes existentes del producto

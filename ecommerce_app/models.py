@@ -23,6 +23,7 @@ class usuario(models.Model):
     pais = models.CharField(max_length=100)  
     estado = models.CharField(max_length=100)  
     rol_usuario = models.CharField(max_length=10, choices=OPCIONES_ROL, default='persona')
+    foto_usuario = models.ImageField(upload_to='perfil_usuario/', blank=True, null=True)
     fecha_registro_usuario = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -251,6 +252,11 @@ class producto_usuario(models.Model):
         ('Activo', 'Activo'),
         ('Inactivo', 'Inactivo'),
     ]
+    
+    CONDICION_CHOICES = [
+        ('Nuevo', 'Nuevo'),
+        ('Usado', 'Usado'),
+    ]
 
     id_producto_usuario = models.AutoField(primary_key=True)
     nombre_producto_usuario = models.CharField(max_length=150)
@@ -258,6 +264,10 @@ class producto_usuario(models.Model):
     marca_producto_usuario = models.CharField(max_length=100, blank=True, null=True)
     modelo_producto_usuario = models.CharField(max_length=100, blank=True, null=True)
     caracteristicas_generales_usuario = models.TextField(blank=True, null=True)
+    stock_producto_usuario = models.PositiveIntegerField(default=0)
+    precio_producto_usuario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    condicion_producto_usuario = models.CharField(max_length=10, choices=CONDICION_CHOICES, default='Nuevo')
+    estatus_producto_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     fecha_creacion_producto_usuario = models.DateTimeField(auto_now_add=True)
     id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='productos')
     id_categoria_prod_fk = models.ForeignKey('categoria_producto_usuario', on_delete=models.SET_NULL, null=True, related_name='productos')
@@ -275,6 +285,8 @@ class servicio_usuario(models.Model):
     id_servicio_usuario = models.AutoField(primary_key=True)
     nombre_servicio_usuario = models.CharField(max_length=150)
     descripcion_servicio_usuario = models.TextField(blank=True, null=True)
+    precio_servicio_usuario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
+    estatus_servicio_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     fecha_creacion_servicio_usuario = models.DateTimeField(auto_now_add=True)
     id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='servicios')
     id_categoria_servicios_fk = models.ForeignKey('categoria_servicio_usuario', on_delete=models.SET_NULL, null=True, related_name='servicios')

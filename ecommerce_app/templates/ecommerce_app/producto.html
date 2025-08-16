@@ -74,10 +74,38 @@
                     
                   </select>
                 </div>
-                <!-- El campo estatus_producto se ha eliminado completamente ya que ahora está en producto_sucursal -->
-                <!-- Este campo se manejará automáticamente al agregar el producto a una sucursal -->
-
               </div>
+
+              <!-- Campos adicionales solo para usuarios con rol 'persona' -->
+              {% if user_info.tipo == 'persona' %}
+              <div class="row">
+                <div class="col-md-6 form-group mb-5">
+                  <label for="stock" class="col-form-label">Stock *</label>
+                  <input type="number" class="form-control" name="stock_producto_usuario" id="stock" placeholder="Cantidad disponible" min="0" value="0">
+                </div>
+                <div class="col-md-6 form-group mb-5">
+                  <label for="precio" class="col-form-label">Precio *</label>
+                  <input type="number" class="form-control" name="precio_producto_usuario" id="precio" placeholder="0.00" step="0.01" min="0" value="0">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group mb-5">
+                  <label for="condicion" class="col-form-label">Condición *</label>
+                  <select class="form-control" name="condicion_producto_usuario" id="condicion">
+                    <option value="Nuevo">Nuevo</option>
+                    <option value="Usado">Usado</option>
+                  </select>
+                </div>
+                <div class="col-md-6 form-group mb-5">
+                  <label for="estatus" class="col-form-label">Estatus *</label>
+                  <select class="form-control" name="estatus_producto_usuario" id="estatus">
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+              {% endif %}
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">

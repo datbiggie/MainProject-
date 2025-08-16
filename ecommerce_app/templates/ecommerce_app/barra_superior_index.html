@@ -269,7 +269,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            {% if user_info %}
+            {% if user_info.is_authenticated %}
               <div class="alert alert-success">
                 <h6 class="alert-heading">¡Bienvenido!</h6>
                 <p class="mb-1"><strong>Nombre:</strong> {{ user_info.nombre }}</p>
@@ -282,8 +282,53 @@
                   <p class="mb-0"><strong>Empresa asociada:</strong> <span class="text-muted">Sin empresa</span></p>
                   {% endif %}
               </div>
-              <div class="d-grid gap-2">
-                <a href="{% url 'cerrar_sesion' %}" class="btn btn-danger">
+              <style>
+                .btn-perfil {
+                  background-color: #0d6efd;
+                  border-color: #0d6efd;
+                  color: white;
+                  transition: all 0.3s ease;
+                  border-radius: 8px;
+                  font-weight: 500;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .btn-perfil:hover {
+                  background-color: #0b5ed7;
+                  border-color: #0a58ca;
+                  color: white;
+                  transform: translateY(-1px);
+                  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                }
+                .btn-cerrar {
+                  background-color: #dc3545;
+                  border-color: #dc3545;
+                  color: white;
+                  transition: all 0.3s ease;
+                  border-radius: 8px;
+                  font-weight: 500;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .btn-cerrar:hover {
+                  background-color: #c82333;
+                  border-color: #bd2130;
+                  color: white;
+                  transform: translateY(-1px);
+                  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                }
+              </style>
+              <div class="d-flex gap-3 justify-content-center">
+                {% if user_info.tipo == 'empresa' %}
+                  <a href="{% url 'perfil_empresa' %}" class="btn btn-sm btn-perfil">
+                    <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+                    Ver Perfil
+                  </a>
+                {% else %}
+                  <a href="{% url 'perfil_usuario' %}" class="btn btn-sm btn-perfil">
+                    <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
+                    Ver Perfil
+                  </a>
+                {% endif %}
+                <a href="{% url 'cerrar_sesion' %}" class="btn btn-sm btn-cerrar">
                   <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
                   Cerrar Sesión
                 </a>
@@ -293,8 +338,8 @@
                 <h6 class="alert-heading">No has iniciado sesión</h6>
                 <p class="mb-0">Para acceder a todas las funcionalidades, por favor inicia sesión.</p>
               </div>
-              <div class="d-grid gap-2">
-                <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary">
+              <div class="d-flex justify-content-center">
+                <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary btn-sm">
                   <svg width="16" height="16" class="me-2"><use xlink:href="#user"></use></svg>
                   Iniciar Sesión
                 </a>

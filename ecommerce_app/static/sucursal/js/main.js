@@ -1076,17 +1076,7 @@ $(document).ready(function() {
             return false;
         }
         
-        // Validar precio
-        if (!precio) {
-            Swal.fire({
-                title: 'Error',
-                text: 'El precio es obligatorio para servicios',
-                icon: 'error',
-                confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
-            });
-            return false;
-        }
+        // El precio no es obligatorio para servicios en sucursal
         
         // Enviar datos al servidor
         $.ajax({

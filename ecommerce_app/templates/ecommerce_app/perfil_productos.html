@@ -1,0 +1,321 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Perfil Productos</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{% static 'perfil_usuario/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'ecommerce_app/css/accordion-styles.css' %}">
+  </head>
+    <body>
+
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<!-- Presentación del Usuario/Empresa -->
+<section class="empresa-presentacion py-4 border-bottom">
+  <div class="container-lg">
+    <div class="row align-items-center">
+      <div class="col-md-2 text-center mb-3 mb-md-0">
+        <div class="logo-empresa-circular">
+          {% if user_info.tipo == 'empresa' %}
+            {% if empresa_obj.logo_empresa %}
+              <img src="{{ empresa_obj.logo_empresa.url }}" alt="Logo Empresa">
+            {% else %}
+              <img src="{% static 'perfil_usuario/images/default-user.svg' %}" alt="Logo Empresa">
+            {% endif %}
+          {% else %}
+            {% if usuario_obj.foto_usuario %}
+              <img src="{{ usuario_obj.foto_usuario.url }}" alt="Foto Usuario">
+            {% else %}
+              <img src="{% static 'perfil_usuario/images/default-user.svg' %}" alt="Foto Usuario">
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-8">
+        <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ entity_name|default:'Nombre del Usuario' }}</h1>
+        <p class="lead mb-0" style="color:#444;">
+          {% if user_info.tipo == 'empresa' %}
+            Gestiona los productos de tu empresa. Aquí puedes ver todos los productos asociados a tu negocio y mantener actualizada la información de cada producto.
+          {% else %}
+            Gestiona tus productos. Aquí puedes ver todos los productos que has registrado y mantener actualizada la información de cada uno.
+          {% endif %}
+        </p>
+      </div>
+      <div class="col-md-2 text-end">
+        {% if user_info.tipo == 'empresa' %}
+          <a href="{% url 'perfil_empresa' %}" class="btn btn-primary">
+            <i class="fas fa-user"></i> Ver Perfil
+          </a>
+        {% else %}
+          <a href="{% url 'perfil_usuario' %}" class="btn btn-primary">
+            <i class="fas fa-user"></i> Ver Perfil
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container-fluid">
+
+
+<!-- Sección de Productos -->
+<section class="py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <h3 class="mb-4">Productos de {{ entity_name }}</h3>
+        
+        {% if productos_por_categoria %}
+          <div class="accordion" id="productosAccordion">
+            {% for categoria, productos_categoria in productos_por_categoria.items %}
+              <div class="accordion-item mb-3">
+                <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
+                    <strong>{{ categoria }}</strong>
+                    <span class="badge bg-primary ms-2">{{ productos_categoria|length }}</span>
+                  </button>
+                </h2>
+                <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#productosAccordion">
+                  <div class="accordion-body">
+                    <div class="row">
+                      {% for producto in productos_categoria %}
+                        <div class="col-12 mb-3">
+                          <div class="ml-horizontal-card">
+                            <div class="ml-horizontal-card-img">
+                              {% if user_info.tipo == 'empresa' %}
+                                <a href="{% url 'vista_items' %}?id={{ producto.id_producto_empresa }}&tipo=producto&origen=empresa" style="text-decoration: none;">
+                                  {% if producto.primera_imagen and producto.primera_imagen.ruta_imagen_producto_empresa %}
+                                    <img src="{{ producto.primera_imagen.ruta_imagen_producto_empresa.url }}" alt="{{ producto.nombre_producto_empresa }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;">
+                                  {% else %}
+                                    <!-- Imagen por defecto para productos -->
+                                    <svg width="60" height="60" fill="#6b7280" viewBox="0 0 24 24" style="cursor: pointer;">
+                                      <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z"/>
+                                      <path d="M9 8V17H11V8H9ZM13 8V17H15V8H13Z"/>
+                                    </svg>
+                                  {% endif %}
+                                </a>
+                              {% else %}
+                                <a href="{% url 'vista_items' %}?id={{ producto.id_producto_usuario }}&tipo=producto&origen=usuario" style="text-decoration: none;">
+                                  {% if producto.primera_imagen and producto.primera_imagen.ruta_imagen_producto_usuario %}
+                                    <img src="{{ producto.primera_imagen.ruta_imagen_producto_usuario.url }}" alt="{{ producto.nombre_producto_usuario }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;">
+                                  {% else %}
+                                    <!-- Imagen por defecto para productos -->
+                                    <svg width="60" height="60" fill="#6b7280" viewBox="0 0 24 24" style="cursor: pointer;">
+                                      <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z"/>
+                                      <path d="M9 8V17H11V8H9ZM13 8V17H15V8H13Z"/>
+                                    </svg>
+                                  {% endif %}
+                                </a>
+                              {% endif %}
+                            </div>
+                            <div class="ml-horizontal-card-body">
+                              {% if user_info.tipo == 'empresa' %}
+                                <h5 class="ml-horizontal-card-title">
+                                  <a href="{% url 'vista_items' %}?id={{ producto.id_producto_empresa }}&tipo=producto&origen=empresa" style="text-decoration: none; color: inherit;">
+                                    {{ producto.nombre_producto_empresa }}
+                                  </a>
+                                </h5>
+                                <p class="ml-horizontal-card-description">{{ producto.descripcion_producto_empresa|default:'Sin descripción' }}</p>
+                                <div class="ml-horizontal-card-info">
+                                  {% if producto.marca_producto_empresa %}
+                                    <span><i class="fas fa-tag"></i> {{ producto.marca_producto_empresa }}</span>
+                                  {% endif %}
+                                  {% if producto.modelo_producto_empresa %}
+                                    <span><i class="fas fa-cog"></i> {{ producto.modelo_producto_empresa }}</span>
+                                  {% endif %}
+                                  <span class="ml-horizontal-card-status activo">
+                                    <i class="fas fa-check-circle"></i> Empresa
+                                  </span>
+                                </div>
+                              {% else %}
+                                <h5 class="ml-horizontal-card-title">
+                                  <a href="{% url 'vista_items' %}?id={{ producto.id_producto_usuario }}&tipo=producto&origen=usuario" style="text-decoration: none; color: inherit;">
+                                    {{ producto.nombre_producto_usuario }}
+                                  </a>
+                                </h5>
+                                <p class="ml-horizontal-card-description">{{ producto.descripcion_producto_usuario|default:'Sin descripción' }}</p>
+                                <div class="ml-horizontal-card-info">
+                                  {% if producto.marca_producto_usuario %}
+                                    <span><i class="fas fa-tag"></i> {{ producto.marca_producto_usuario }}</span>
+                                  {% endif %}
+                                  {% if producto.modelo_producto_usuario %}
+                                    <span><i class="fas fa-cog"></i> {{ producto.modelo_producto_usuario }}</span>
+                                  {% endif %}
+                                  {% if producto.precio_producto_usuario %}
+                                    <span><i class="fas fa-dollar-sign"></i> ${{ producto.precio_producto_usuario }}</span>
+                                  {% endif %}
+                                  <span class="ml-horizontal-card-status {% if producto.estatus_producto_usuario == 'Activo' %}activo{% else %}inactivo{% endif %}">
+                                    {% if producto.estatus_producto_usuario == 'Activo' %}
+                                      <i class="fas fa-check-circle"></i> Activo
+                                    {% else %}
+                                      <i class="fas fa-times-circle"></i> Inactivo
+                                    {% endif %}
+                                  </span>
+                                </div>
+                              {% endif %}
+                            </div>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle"></i>
+            {% if user_info.tipo == 'empresa' %}
+              No hay productos registrados para esta empresa.
+            {% else %}
+              No tienes productos registrados.
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+   
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+    <footer class="py-5">
+      <div class="container-lg">
+        <div class="row">
+
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <img src="{% static 'perfil_empresa/images/logo.jpg' %}" width="160" height="180" alt="logo">
+              <div class="social-links mt-3">
+                <ul class="d-flex list-unstyled gap-2">
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-facebook">
+                      <svg width="16" height="16"><use xlink:href="#facebook"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-youtube">
+                      <svg width="16" height="16"><use xlink:href="#youtube"></use></svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="btn btn-outline-light social-instagram">
+                      <svg width="16" height="16"><use xlink:href="#instagram"></use></svg>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Todo Aquí</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Sobre Nosotros</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Condiciones </a>
+                </li>    
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Enlaces rápidos</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Ofertas</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Descuentos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Tiendas</a>
+                </li>
+              
+               
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-2 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Servicio al cliente</h5>
+              <ul class="menu-list list-unstyled">
+                <li class="menu-item">
+                  <a href="#" class="nav-link">FAQ</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Contactos</a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="nav-link">Política de Privacidad</a>
+                </li>
+                
+              </ul>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 col-sm-6">
+            <div class="footer-menu">
+              <h5 class="widget-title">Suscríbete con nosotros</h5>
+              <p>Suscríbete a nuestro boletín para recibir actualizaciones sobre nuestras grandes ofertas.</p>
+              <a href="{% url 'iniciar_sesion' %}" class="btn btn-dark rounded-end rounded-0 mt-3 d-inline-block">Subscribir</a>
+
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </footer>
+    
+  <script src="{% static 'perfil_empresa/js/jquery-1.11.0.min.js' %}"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="{% static 'ecommerce_app/js/accordion-functionality.js' %}"></script>
+</body>  <script src="{% static 'perfil_empresa/js/plugins.js' %}"></script>
+  <script src="{% static 'perfil_empresa/js/script.js' %}"></script>
+    
+   
+
+  <script src="{% static 'perfil_empresa/js/rating-system.js' %}"></script>
+  </body>
+</html>
