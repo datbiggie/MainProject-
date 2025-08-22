@@ -1,0 +1,332 @@
+/* ===== PEDIDO STYLES - ELEGANT DESIGN ===== */
+
+/* General Styles */
+.customer-info-section .card {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.customer-info-section .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+}
+
+.customer-info-section .card-header {
+    border-radius: 15px 15px 0 0 !important;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    padding: 1.5rem;
+}
+
+.customer-info-section .form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.customer-info-section .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Vendor Order Cards */
+.vendor-order-card .card {
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.vendor-order-card .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.vendor-order-card .card-header {
+    padding: 1.5rem;
+    border: none;
+}
+
+.vendor-order-card .card-header.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+}
+
+.vendor-order-card .card-header.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+}
+
+.vendor-total-badge .badge {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-weight: 600;
+}
+
+/* Product Items */
+.product-item-new {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    margin-bottom: 0.75rem;
+}
+
+.product-item-new:hover {
+    background: #ffffff;
+    border-color: #007bff;
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+}
+
+.product-item-new .row {
+    align-items: center;
+}
+
+.product-item-new .col-md-2:first-child {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.product-item-new .badge {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+}
+
+/* Payment Section */
+.payment-section {
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 2px solid #e9ecef;
+}
+
+.payment-section .form-select {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.payment-section .form-select:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.payment-section .form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.payment-section .form-control:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Buttons */
+.btn-finalizar-individual {
+    border-radius: 25px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-finalizar-individual:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    background: linear-gradient(135deg, #20c997, #28a745);
+}
+
+.btn-finalizar-individual:active {
+    transform: translateY(0);
+}
+
+.btn-finalizar-individual.processing {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    cursor: not-allowed;
+}
+
+.btn-finalizar-todos {
+    border-radius: 30px;
+    padding: 1rem 2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+}
+
+.btn-finalizar-todos:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 123, 255, 0.4);
+    background: linear-gradient(135deg, #0056b3, #007bff);
+}
+
+.btn-finalizar-todos:active {
+    transform: translateY(-1px);
+}
+
+/* Order Status */
+.order-status .alert {
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+    font-weight: 600;
+    animation: slideInUp 0.5s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Total Summary Section */
+.total-summary-section .card {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.total-summary-section .card-header {
+    background: linear-gradient(135deg, #343a40, #495057) !important;
+    border-radius: 15px 15px 0 0 !important;
+    padding: 1.5rem;
+}
+
+.total-summary-section .card-body {
+    padding: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vendor-order-card .col-lg-8,
+    .vendor-order-card .col-lg-4 {
+        margin-bottom: 1rem;
+    }
+    
+    .product-item-new .col-md-2,
+    .product-item-new .col-md-4,
+    .product-item-new .col-md-2 {
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+    
+
+    
+    .btn-finalizar-todos {
+        width: 100%;
+        margin-top: 1rem;
+    }
+}
+
+/* Loading States */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+.btn.processing .btn-text {
+    opacity: 0.7;
+}
+
+/* Form Labels */
+.form-label.fw-bold {
+    color: #495057;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Comprobante Section */
+.comprobante-section {
+    background: #fff3cd;
+    border-radius: 10px;
+    padding: 1rem;
+    border: 2px dashed #ffc107;
+    transition: all 0.3s ease;
+}
+
+.comprobante-section.show {
+    animation: fadeInDown 0.5s ease;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hover Effects */
+.card:hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Success States */
+.order-processed {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.order-processed .card {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+}
+
+/* Icons */
+.fas {
+    transition: all 0.3s ease;
+}
+
+.card-header .fas:hover {
+    transform: scale(1.1);
+}
+
+/* Custom Scrollbar */
+.products-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.products-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.products-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.products-list::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 10px;
+}
+
+.products-list::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}

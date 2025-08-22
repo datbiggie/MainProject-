@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Pedido - E-commerce</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .confirmation-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .success-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 1rem;
+        }
+        .order-summary {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .order-item {
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .total-section {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .btn-continue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-continue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .order-details {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Incluir barra superior -->
+    {% if account_type == 'empresa' %}
+        {% include 'ecommerce_app/barra_superior_operaciones.html' %}
+    {% else %}
+        {% include 'ecommerce_app/barra_superior_bienvenido.html' %}
+    {% endif %}
+
+    <div class="container">
+        <div class="confirmation-container text-center">
+            <!-- Icono de éxito -->
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            
+            <!-- Título principal -->
+            <h1 class="h2 mb-3 text-success">¡Pedido Realizado con Éxito!</h1>
+            <p class="lead mb-4">Tu pedido ha sido procesado correctamente y está siendo preparado.</p>
+            
+            <!-- Información del cliente -->
+            <div class="order-details text-start">
+                <h4 class="mb-3"><i class="fas fa-user me-2"></i>Información del Cliente</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nombre:</strong> {{ datos_cliente.nombre }}</p>
+                        <p><strong>Email:</strong> {{ datos_cliente.email }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Teléfono:</strong> {{ datos_cliente.telefono }}</p>
+                        <p><strong>Método de Pago:</strong> {{ datos_cliente.metodo_pago }}</p>
+                    </div>
+                </div>
+                <p><strong>Dirección de Entrega:</strong> {{ datos_cliente.direccion_entrega }}</p>
+                {% if datos_cliente.notas %}
+                <p><strong>Notas:</strong> {{ datos_cliente.notas }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Resumen de pedidos -->
+            <div class="order-summary text-start">
+                <h4 class="mb-3"><i class="fas fa-shopping-bag me-2"></i>Resumen de Pedidos</h4>
+                
+                {% for pedido in pedidos_creados %}
+                <div class="order-item">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">Pedido #{{ pedido.numero_pedido }}</h5>
+                        <span class="badge bg-primary">{{ pedido.estado_pedido|default:"Pendiente" }}</span>
+                    </div>
+                    <p class="mb-1"><strong>Vendedor:</strong> {{ pedido.vendedor_nombre }}</p>
+                    <p class="mb-1"><strong>Fecha:</strong> {{ pedido.fecha_pedido|date:"d/m/Y H:i" }}</p>
+                    
+                    <!-- Detalles de productos -->
+                    <div class="mt-3">
+                        <h6>Productos:</h6>
+                        {% for detalle in pedido.detalles %}
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <span class="fw-bold">{{ detalle.nombre_producto }}</span>
+                                <small class="text-muted d-block">Cantidad: {{ detalle.cantidad }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-bold">${{ detalle.subtotal|floatformat:2 }}</span>
+                                <small class="text-muted d-block">${{ detalle.precio_unitario|floatformat:2 }} c/u</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="text-end mt-3">
+                        <h5 class="text-primary">Total: ${{ pedido.total_pedido|floatformat:2 }}</h5>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Total general -->
+                <div class="total-section">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Total General:</h4>
+                        <h4 class="mb-0 text-success">${{ total_general|floatformat:2 }}</h4>
+                    </div>
+                    <small class="text-muted">{{ pedidos_creados|length }} pedido{{ pedidos_creados|length|pluralize:",s" }} creado{{ pedidos_creados|length|pluralize:",s" }}</small>
+                </div>
+            </div>
+            
+            <!-- Información adicional -->
+            <div class="alert alert-info mt-4">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>¿Qué sigue?</strong><br>
+                Recibirás una notificación cuando tu pedido cambie de estado. Puedes revisar el estado de tus pedidos en tu perfil.
+            </div>
+            
+            <!-- Botones de acción -->
+            <div class="mt-4">
+                <a href="{% url 'ecommerce_app:index' %}" class="btn btn-continue me-3">
+                    <i class="fas fa-home me-2"></i>Volver al Inicio
+                </a>
+                <a href="{% url 'ecommerce_app:perfil_usuario' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-user me-2"></i>Ver Mis Pedidos
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

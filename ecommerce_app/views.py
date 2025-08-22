@@ -1,3 +1,4 @@
+import json
 from django.views.decorators.http import require_GET, require_POST
 from django.http import JsonResponse
 from .models import producto_empresa, servicio_empresa, producto_sucursal, servicio_sucursal, sucursal, imagen_producto_empresa, imagen_servicio_empresa, categoria_servicio_usuario, categoria_servicio_empresa, imagen_producto_usuario, producto_usuario, categoria_producto_usuario, categoria_producto_empresa
@@ -2898,11 +2899,39 @@ def perfil_empresa(request):
     if empresa_id:
         try:
             empresa_obj = empresa.objects.get(id_empresa=empresa_id)
-            # Para perfiles públicos, no necesitamos user_info completo
-            user_info = {
-                'is_authenticated': False,
-                'is_public_profile': True
-            }
+            
+            # Verificar si hay usuario autenticado para mantener la información de sesión
+            current_user = None
+            if is_user_authenticated(request):
+                current_user = get_current_user(request)
+            
+            account_type = request.session.get('account_type', 'usuario')
+            
+            if current_user and account_type == 'empresa':
+                # Para empresas autenticadas viendo otro perfil
+                user_info = {
+                    'id': current_user.id_empresa,
+                    'nombre': current_user.nombre_empresa,
+                    'email': current_user.correo_empresa,
+                    'tipo': account_type,
+                    'is_authenticated': True,
+                    'empresa_nombre': current_user.nombre_empresa
+                }
+            elif current_user and account_type == 'usuario':
+                # Para usuarios autenticados viendo perfil de empresa
+                user_info = {
+                    'id': current_user.id_usuario,
+                    'nombre': current_user.nombre_usuario,
+                    'email': current_user.correo_usuario,
+                    'tipo': account_type,
+                    'is_authenticated': True
+                }
+            else:
+                # Para perfiles públicos sin autenticación
+                user_info = {
+                    'is_authenticated': False,
+                    'is_public_profile': True
+                }
         except empresa.DoesNotExist:
             # Si no existe la empresa, redirigir o mostrar error
             return render(request, 'ecommerce_app/perfil_empresa.html', {
@@ -2955,9 +2984,36 @@ def perfil_empresa(request):
             # Obtener la primera empresa disponible para mostrar como ejemplo
             empresa_obj = empresa.objects.first()
     
+    # Obtener productos y servicios recientes si hay una empresa
+    productos_recientes = []
+    servicios_recientes = []
+    
+    if empresa_obj:
+        # Obtener los 4 productos más recientes de la empresa con sus imágenes
+        productos_query = producto_empresa.objects.filter(
+            id_empresa_fk=empresa_obj
+        ).order_by('-fecha_creacion_producto_empresa')[:4]
+        
+        for prod in productos_query:
+            primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
+            prod.primera_imagen = primera_imagen
+            productos_recientes.append(prod)
+        
+        # Obtener los 4 servicios más recientes de la empresa con sus imágenes
+        servicios_query = servicio_empresa.objects.filter(
+            id_empresa_fk=empresa_obj
+        ).order_by('-fecha_creacion_servicio_empresa')[:4]
+        
+        for serv in servicios_query:
+            primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
+            serv.primera_imagen = primera_imagen
+            servicios_recientes.append(serv)
+    
     return render(request, 'ecommerce_app/perfil_empresa.html', {
         'user_info': user_info,
-        'empresa': empresa_obj
+        'empresa': empresa_obj,
+        'productos_recientes': productos_recientes,
+        'servicios_recientes': servicios_recientes
     })
 
 
@@ -3124,6 +3180,29 @@ def busquedad(request):
     # Combinar resultados
     resultados_combinados = resultados_productos + resultados_servicios + resultados_empresas + resultados_usuarios
     
+    # Obtener información del usuario para el modal de sesión
+    current_user = get_current_user(request)
+    account_type = request.session.get('account_type')
+    
+    if current_user and account_type:
+        empresa_nombre = None
+        if account_type == 'empresa':
+            # Obtener el nombre de la empresa
+            empresa_nombre = current_user.nombre_empresa if hasattr(current_user, 'nombre_empresa') else None
+        
+        user_info = {
+            'id': current_user.id_usuario if account_type == 'usuario' else current_user.id_empresa,
+            'nombre': current_user.nombre_usuario if account_type == 'usuario' else current_user.nombre_empresa,
+            'email': current_user.correo_usuario if account_type == 'usuario' else current_user.correo_empresa,
+            'tipo': account_type,
+            'is_authenticated': True,
+            'empresa_nombre': empresa_nombre
+        }
+    else:
+        user_info = {
+            'is_authenticated': False
+        }
+    
     return render(request, 'ecommerce_app/busquedad.html', {
         'query': query,
         'resultados': resultados_combinados,
@@ -3131,7 +3210,8 @@ def busquedad(request):
         'resultados_productos': resultados_productos,
         'resultados_servicios': resultados_servicios,
         'resultados_empresas': resultados_empresas,
-        'resultados_usuarios': resultados_usuarios
+        'resultados_usuarios': resultados_usuarios,
+        'user_info': user_info
     })
 
 
@@ -3473,8 +3553,232 @@ def localizacion(request):
     })
 
 
+@require_login
 def carrito(request):
-    return render(request, 'ecommerce_app/carrito.html')
+    # Obtener información del usuario autenticado
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    # Determinar el tipo de cuenta
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Inicializar variables para el carrito
+    productos_carrito = []
+    servicios_carrito = []
+    total_productos = 0
+    total_servicios = 0
+    cantidad_productos = 0
+    
+    if account_type == 'empresa':
+        user_info = {
+            'id': current_user.id_empresa,
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'tipo': current_user.rol_empresa,
+            'is_authenticated': True
+        }
+        
+        # Obtener carrito activo o pendiente de la empresa
+        carrito_empresa = carrito_compra_producto_empresa.objects.filter(
+            id_empresa_fk=current_user,
+            estatuscarrito_prod_empresa__in=['activo', 'pendiente']
+        ).first()
+        
+        if carrito_empresa:
+            # Obtener detalles del carrito
+            detalles_carrito = detalle_compra_producto_empresa.objects.filter(
+                id_fk_carritocompra_empresa=carrito_empresa
+            ).select_related('id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            for detalle in detalles_carrito:
+                # Manejar productos de empresa (a través de producto_sucursal)
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto_sucursal = detalle.id_fk_producto_sucursal_empresa
+                    producto = producto_sucursal.id_producto_fk
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_empresa.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    # Obtener información de la sucursal
+                    sucursal_info = producto_sucursal.id_sucursal_fk
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_empresa,
+                        'nombre': producto.nombre_producto_empresa,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                        'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
+                        'sucursal': sucursal_info.nombre_sucursal if sucursal_info else 'N/A',
+                        'estatus_carrito': carrito_empresa.estatuscarrito_prod_empresa,
+                        'fecha_creacion_carrito': carrito_empresa.fecha_creacion_carrito_prod_empresa
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_empresa
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_empresa
+                
+                elif detalle.idproducto_fk_usuario:
+                    producto_usuario = detalle.idproducto_fk_usuario
+                    
+                    # Obtener la primera imagen del producto de usuario
+                    imagen = imagen_producto_usuario.objects.filter(
+                        id_producto_fk=producto_usuario
+                    ).first()
+                    
+                    productos_carrito.append({
+                        'id': producto_usuario.id_producto_usuario,
+                        'nombre': producto_usuario.nombre_producto_usuario,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                        'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None,
+                        'sucursal': 'Producto de Usuario',
+                        'estatus_carrito': carrito_empresa.estatuscarrito_prod_empresa,
+                        'fecha_creacion_carrito': carrito_empresa.fecha_creacion_carrito_prod_empresa
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_empresa
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_empresa
+
+
+
+            
+    else:
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.rol_usuario,
+            'is_authenticated': True
+        }
+        
+        # Obtener carrito activo o pendiente del usuario
+        carrito_usuario = carrito_compra_producto_usuario.objects.filter(
+            id_usuario_fk=current_user,
+            estatuscarrito_prod_usuario__in=['activo', 'pendiente']
+        ).first()
+        
+        if carrito_usuario:
+            # Obtener detalles del carrito
+            detalles_carrito = detalle_compra_producto_usuario.objects.filter(
+                id_fk_carritocompra_usuario=carrito_usuario
+            ).select_related('idproducto_fk_usuario', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            for detalle in detalles_carrito:
+                # Manejar productos de empresa (a través de producto_sucursal)
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto_sucursal = detalle.id_fk_producto_sucursal_empresa
+                    producto = producto_sucursal.id_producto_fk
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_empresa.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    # Obtener información de la sucursal
+                    sucursal_info = producto_sucursal.id_sucursal_fk
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_empresa,
+                        'nombre': producto.nombre_producto_empresa,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                        'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
+                        'sucursal': sucursal_info.nombre_sucursal if sucursal_info else 'N/A',
+                        'estatus_carrito': carrito_usuario.estatuscarrito_prod_usuario,
+                        'fecha_creacion_carrito': carrito_usuario.fecha_creacion_carrito_prod_usuario
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_usuario
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_usuario
+                
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_usuario.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                        'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None,
+                        'sucursal': 'Producto de Usuario',
+                        'estatus_carrito': carrito_usuario.estatuscarrito_prod_usuario,
+                        'fecha_creacion_carrito': carrito_usuario.fecha_creacion_carrito_prod_usuario
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_usuario
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_usuario
+    
+    # Calcular total general
+    total_general = total_productos + total_servicios
+    
+    # Información adicional del carrito
+    carrito_info = None
+    if account_type == 'empresa' and 'carrito_empresa' in locals() and carrito_empresa is not None:
+        carrito_info = {
+            'id': carrito_empresa.id_carrito_prod_empresa,
+            'estatus': carrito_empresa.estatuscarrito_prod_empresa,
+            'fecha_creacion': carrito_empresa.fecha_creacion_carrito_prod_empresa,
+            'total': carrito_empresa.total_carrito_prod_empresa,
+            'propietario': {
+                'tipo': 'empresa',
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'id': current_user.id_empresa
+            }
+        }
+    elif account_type == 'usuario' and 'carrito_usuario' in locals() and carrito_usuario is not None:
+        carrito_info = {
+            'id': carrito_usuario.id_carrito_prod_usuario,
+            'estatus': carrito_usuario.estatuscarrito_prod_usuario,
+            'fecha_creacion': carrito_usuario.fecha_creacion_carrito_prod_usuario,
+            'total': carrito_usuario.total_carrito_prod_usuario,
+            'propietario': {
+                'tipo': 'usuario',
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'id': current_user.id_usuario
+            }
+        }
+    
+    # Verificar si existen pedidos pendientes
+    pedidos_pendientes = False
+    if account_type == 'empresa':
+        pedidos_pendientes = pedido_empresa.objects.filter(
+            id_carrito_fk__id_empresa_fk=current_user,
+            estado_pedido='pendiente'
+        ).exists()
+    else:
+        pedidos_pendientes = pedido_usuario.objects.filter(
+            id_carrito_fk__id_usuario_fk=current_user,
+            estado_pedido='pendiente'
+        ).exists()
+    
+    context = {
+        'user_info': user_info,
+        'account_type': account_type,
+        'productos_carrito': productos_carrito,
+        'servicios_carrito': servicios_carrito,
+        'total_productos': total_productos,
+        'total_servicios': total_servicios,
+        'total_general': total_general,
+        'cantidad_productos': len(productos_carrito),
+        'cantidad_servicios': len(servicios_carrito),
+        'carrito_info': carrito_info,
+        'pedidos_pendientes': pedidos_pendientes
+    }
+    
+    return render(request, 'ecommerce_app/carrito.html', context)
 
 def vista_items(request):
     try:
@@ -3544,6 +3848,7 @@ def vista_items(request):
                         'modelo': producto.modelo_producto_empresa,
                         'caracteristicas': producto.caracteristicas_generales_empresa,
                         'tipo': 'producto',
+                        'tipo_propietario': 'empresa',
                         'empresa': producto.id_empresa_fk.nombre_empresa,
                         'sucursal': sucursal_info
                     }
@@ -3574,6 +3879,7 @@ def vista_items(request):
                             'id': producto.id_producto_empresa,
                             'nombre': producto.nombre_producto_empresa,
                             'descripcion': producto.descripcion_producto_empresa,
+                            'tipo_propietario': 'empresa',
                             'marca': producto.marca_producto_empresa,
                             'modelo': producto.modelo_producto_empresa,
                             'caracteristicas': producto.caracteristicas_generales_empresa,
@@ -3611,6 +3917,7 @@ def vista_items(request):
                         'modelo': producto.modelo_producto_usuario,
                         'caracteristicas': producto.caracteristicas_generales_usuario,
                         'tipo': 'producto',
+                        'tipo_propietario': 'usuario',
                         'empresa': f"Usuario: {producto.id_usuario_fk.nombre_usuario}",
                         'sucursal': sucursal_info
                     }
@@ -3644,6 +3951,7 @@ def vista_items(request):
                         'descripcion': servicio.descripcion_servicio_empresa,
                         'caracteristicas': servicio.descripcion_servicio_empresa,
                         'tipo': 'servicio',
+                        'tipo_propietario': 'empresa',
                         'empresa': servicio.id_empresa_fk.nombre_empresa,
                         'sucursal': sucursal_info
                     }
@@ -3674,6 +3982,7 @@ def vista_items(request):
                             'descripcion': servicio.descripcion_servicio_empresa,
                             'caracteristicas': servicio.descripcion_servicio_empresa,
                             'tipo': 'servicio',
+                            'tipo_propietario': 'empresa',
                             'empresa': servicio.id_empresa_fk.nombre_empresa,
                             'sucursal': sucursal_info
                         }
@@ -3703,6 +4012,7 @@ def vista_items(request):
                         'descripcion': servicio.descripcion_servicio_usuario,
                         'caracteristicas': servicio.descripcion_servicio_usuario,
                         'tipo': 'servicio',
+                        'tipo_propietario': 'usuario',
                         'empresa': f"Usuario: {servicio.id_usuario_fk.nombre_usuario}",
                         'sucursal': sucursal_info
                     }
@@ -4365,3 +4675,2105 @@ def perfil_servicios(request):
             'servicios_por_categoria': dict(servicios_por_categoria),
             'entity_name': entity_name
         })
+
+@require_login
+def detalle_carrito(request):
+    # Obtener información del usuario autenticado
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    # Determinar el tipo de cuenta
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Inicializar variables para el carrito
+    productos_carrito = []
+    total_productos = 0
+    cantidad_productos = 0
+    
+    if account_type == 'empresa':
+        user_info = {
+            'id': current_user.id_empresa,
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'tipo': current_user.rol_empresa,
+            'is_authenticated': True
+        }
+        
+        # Obtener carrito activo o pendiente de la empresa
+        carrito_empresa = carrito_compra_producto_empresa.objects.filter(
+            id_empresa_fk=current_user,
+            estatuscarrito_prod_empresa__in=['activo', 'pendiente']
+        ).first()
+        
+        if carrito_empresa:
+            # Obtener detalles del carrito
+            detalles_carrito = detalle_compra_producto_empresa.objects.filter(
+                id_fk_carritocompra_empresa=carrito_empresa
+            ).select_related('id_fk_producto_sucursal_empresa__id_producto_fk', 'idproducto_fk_usuario')
+            
+            for detalle in detalles_carrito:
+                # Procesar productos de empresa
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto_sucursal = detalle.id_fk_producto_sucursal_empresa
+                    producto = producto_sucursal.id_producto_fk
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_empresa.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    # Obtener información de la sucursal
+                    sucursal_info = producto_sucursal.id_sucursal_fk
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_empresa,
+                        'nombre': producto.nombre_producto_empresa,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                        'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
+                        'sucursal': sucursal_info.nombre_sucursal if sucursal_info else 'N/A',
+                        'estatus_carrito': carrito_empresa.estatuscarrito_prod_empresa,
+                        'fecha_creacion_carrito': carrito_empresa.fecha_creacion_carrito_prod_empresa
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_empresa
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_empresa
+                
+                # Procesar productos de usuario
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_usuario.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                        'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None,
+                        'sucursal': 'Usuario Individual',  # Los productos de usuario no tienen sucursal
+                        'estatus_carrito': carrito_empresa.estatuscarrito_prod_empresa,
+                        'fecha_creacion_carrito': carrito_empresa.fecha_creacion_carrito_prod_empresa
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_empresa
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_empresa
+            
+    else:
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.rol_usuario,
+            'is_authenticated': True
+        }
+        
+        # Obtener carrito activo o pendiente del usuario
+        carrito_usuario = carrito_compra_producto_usuario.objects.filter(
+            id_usuario_fk=current_user,
+            estatuscarrito_prod_usuario__in=['activo', 'pendiente']
+        ).first()
+        
+        if carrito_usuario:
+            # Obtener detalles del carrito
+            detalles_carrito = detalle_compra_producto_usuario.objects.filter(
+                id_fk_carritocompra_usuario=carrito_usuario
+            ).select_related('idproducto_fk_usuario', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            for detalle in detalles_carrito:
+                # Manejar productos de empresa (a través de producto_sucursal)
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto_sucursal = detalle.id_fk_producto_sucursal_empresa
+                    producto = producto_sucursal.id_producto_fk
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_empresa.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    # Obtener información de la sucursal
+                    sucursal_info = producto_sucursal.id_sucursal_fk
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_empresa,
+                        'nombre': producto.nombre_producto_empresa,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                        'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
+                        'sucursal': sucursal_info.nombre_sucursal if sucursal_info else 'N/A',
+                        'estatus_carrito': carrito_usuario.estatuscarrito_prod_usuario,
+                        'fecha_creacion_carrito': carrito_usuario.fecha_creacion_carrito_prod_usuario
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_usuario
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_usuario
+                
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    
+                    # Obtener la primera imagen del producto
+                    imagen = imagen_producto_usuario.objects.filter(
+                        id_producto_fk=producto
+                    ).first()
+                    
+                    productos_carrito.append({
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                        'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None,
+                        'sucursal': 'Producto de Usuario',
+                        'estatus_carrito': carrito_usuario.estatuscarrito_prod_usuario,
+                        'fecha_creacion_carrito': carrito_usuario.fecha_creacion_carrito_prod_usuario
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_usuario
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_usuario
+    
+    # Información adicional del carrito
+    carrito_info = None
+    if account_type == 'empresa' and 'carrito_empresa' in locals() and carrito_empresa is not None:
+        carrito_info = {
+            'id': carrito_empresa.id_carrito_prod_empresa,
+            'estatus': carrito_empresa.estatuscarrito_prod_empresa,
+            'fecha_creacion': carrito_empresa.fecha_creacion_carrito_prod_empresa,
+            'total': carrito_empresa.total_carrito_prod_empresa,
+            'propietario': {
+                'tipo': 'empresa',
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'id': current_user.id_empresa
+            }
+        }
+    elif account_type == 'usuario' and 'carrito_usuario' in locals() and carrito_usuario is not None:
+        carrito_info = {
+            'id': carrito_usuario.id_carrito_prod_usuario,
+            'estatus': carrito_usuario.estatuscarrito_prod_usuario,
+            'fecha_creacion': carrito_usuario.fecha_creacion_carrito_prod_usuario,
+            'total': carrito_usuario.total_carrito_prod_usuario,
+            'propietario': {
+                'tipo': 'usuario',
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'id': current_user.id_usuario
+            }
+        }
+    
+    context = {
+        'user_info': user_info,
+        'account_type': account_type,
+        'productos_carrito': productos_carrito,
+        'total_productos': total_productos,
+        'cantidad_productos': cantidad_productos,
+        'carrito_info': carrito_info
+    }
+    
+    return render(request, 'ecommerce_app/detalle_carrito.html', context)
+
+
+@csrf_exempt
+@require_POST
+def agregar_al_carrito(request):
+    """Vista para agregar productos al carrito"""
+    try:
+        # Verificar autenticación
+        if not is_user_authenticated(request):
+            return JsonResponse({
+                'success': False,
+                'message': 'Usuario no autenticado'
+            }, status=401)
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }, status=404)
+        
+        # Obtener datos del request
+        producto_id = request.POST.get('producto_id')
+        tipo_producto = request.POST.get('tipo_propietario')  # 'empresa' o 'usuario'
+        cantidad = int(request.POST.get('cantidad', 1))
+        
+        if not producto_id or not tipo_producto:
+            return JsonResponse({
+                'success': False,
+                'message': 'Datos incompletos'
+            }, status=400)
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Lógica para empresas
+        if account_type == 'empresa':
+            # Buscar carrito existente (activo o pendiente)
+            carrito = carrito_compra_producto_empresa.objects.filter(
+                id_empresa_fk=current_user,
+                estatuscarrito_prod_empresa__in=['activo', 'pendiente']
+            ).first()
+            
+            created = False
+            if not carrito:
+                # Si no existe carrito, crear uno nuevo con estatus activo
+                carrito = carrito_compra_producto_empresa.objects.create(
+                    id_empresa_fk=current_user,
+                    estatuscarrito_prod_empresa='activo',
+                    total_carrito_prod_empresa=0
+                )
+                created = True
+            
+            # Obtener el producto y su precio
+            if tipo_producto == 'empresa':
+                try:
+                    producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=producto_id)
+                    precio = producto_sucursal_obj.precio_producto_sucursal
+                    stock_disponible = producto_sucursal_obj.stock_producto_sucursal
+                    
+                    # Validar stock disponible
+                    if cantidad > stock_disponible:
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'stock_insuficiente': True
+                        }, status=400)
+                    
+                    # Verificar si ya existe en el carrito
+                    detalle_existente = detalle_compra_producto_empresa.objects.filter(
+                        id_fk_carritocompra_empresa=carrito,
+                        id_fk_producto_sucursal_empresa=producto_sucursal_obj
+                    ).first()
+                    
+                    if detalle_existente:
+                        # Validar stock con cantidad existente en carrito
+                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_empresa + cantidad
+                        if nueva_cantidad_total > stock_disponible:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
+                                'stock_insuficiente': True
+                            }, status=400)
+                        
+                        # Actualizar cantidad
+                        detalle_existente.cantidad_deta_carrito_prod_empresa += cantidad
+                        detalle_existente.subtotal_deta_carrito_prod_empresa = (
+                            detalle_existente.cantidad_deta_carrito_prod_empresa * precio
+                        )
+                        detalle_existente.save()
+                    else:
+                        # Crear nuevo detalle
+                        detalle_compra_producto_empresa.objects.create(
+                            id_fk_carritocompra_empresa=carrito,
+                            id_fk_producto_sucursal_empresa=producto_sucursal_obj,
+                            cantidad_deta_carrito_prod_empresa=cantidad,
+                            precio_unit_deta_carrito_prod_empresa=precio,
+                            subtotal_deta_carrito_prod_empresa=cantidad * precio
+                        )
+                        
+                except producto_sucursal.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto de empresa no encontrado'
+                    }, status=404)
+                    
+            elif tipo_producto == 'usuario':
+                try:
+                    producto_usuario_obj = producto_usuario.objects.get(id_producto_usuario=producto_id)
+                    precio = producto_usuario_obj.precio_producto_usuario
+                    stock_disponible = producto_usuario_obj.stock_producto_usuario
+                    
+                    # Validar stock disponible
+                    if cantidad > stock_disponible:
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'stock_insuficiente': True
+                        }, status=400)
+                    
+                    # Verificar si ya existe en el carrito
+                    detalle_existente = detalle_compra_producto_empresa.objects.filter(
+                        id_fk_carritocompra_empresa=carrito,
+                        idproducto_fk_usuario=producto_usuario_obj
+                    ).first()
+                    
+                    if detalle_existente:
+                        # Validar stock con cantidad existente en carrito
+                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_empresa + cantidad
+                        if nueva_cantidad_total > stock_disponible:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
+                                'stock_insuficiente': True
+                            }, status=400)
+                        
+                        # Actualizar cantidad
+                        detalle_existente.cantidad_deta_carrito_prod_empresa += cantidad
+                        detalle_existente.subtotal_deta_carrito_prod_empresa = (
+                            detalle_existente.cantidad_deta_carrito_prod_empresa * precio
+                        )
+                        detalle_existente.save()
+                    else:
+                        # Crear nuevo detalle
+                        detalle_compra_producto_empresa.objects.create(
+                            id_fk_carritocompra_empresa=carrito,
+                            idproducto_fk_usuario=producto_usuario_obj,
+                            cantidad_deta_carrito_prod_empresa=cantidad,
+                            precio_unit_deta_carrito_prod_empresa=precio,
+                            subtotal_deta_carrito_prod_empresa=cantidad * precio
+                        )
+                        
+                except producto_usuario.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto de usuario no encontrado'
+                    }, status=404)
+        
+        # Lógica para usuarios
+        else:
+            # Buscar carrito existente (activo o pendiente)
+            carrito = carrito_compra_producto_usuario.objects.filter(
+                id_usuario_fk=current_user,
+                estatuscarrito_prod_usuario__in=['activo', 'pendiente']
+            ).first()
+            
+            created = False
+            if not carrito:
+                # Si no existe carrito, crear uno nuevo con estatus activo
+                carrito = carrito_compra_producto_usuario.objects.create(
+                    id_usuario_fk=current_user,
+                    estatuscarrito_prod_usuario='activo',
+                    total_carrito_prod_usuario=0
+                )
+                created = True
+            
+            # Obtener el producto y su precio
+            if tipo_producto == 'empresa':
+                try:
+                    producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=producto_id)
+                    precio = producto_sucursal_obj.precio_producto_sucursal
+                    stock_disponible = producto_sucursal_obj.stock_producto_sucursal
+                    
+                    # Validar stock disponible
+                    if cantidad > stock_disponible:
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'stock_insuficiente': True
+                        }, status=400)
+                    
+                    # Verificar si ya existe en el carrito
+                    detalle_existente = detalle_compra_producto_usuario.objects.filter(
+                        id_fk_carritocompra_usuario=carrito,
+                        id_fk_producto_sucursal_empresa=producto_sucursal_obj
+                    ).first()
+                    
+                    if detalle_existente:
+                        # Validar stock con cantidad existente en carrito
+                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_usuario + cantidad
+                        if nueva_cantidad_total > stock_disponible:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
+                                'stock_insuficiente': True
+                            }, status=400)
+                        
+                        # Actualizar cantidad
+                        detalle_existente.cantidad_deta_carrito_prod_usuario += cantidad
+                        detalle_existente.subtotal_deta_carrito_prod_usuario = (
+                            detalle_existente.cantidad_deta_carrito_prod_usuario * precio
+                        )
+                        detalle_existente.save()
+                    else:
+                        # Crear nuevo detalle
+                        detalle_compra_producto_usuario.objects.create(
+                            id_fk_carritocompra_usuario=carrito,
+                            id_fk_producto_sucursal_empresa=producto_sucursal_obj,
+                            cantidad_deta_carrito_prod_usuario=cantidad,
+                            precio_unit_deta_carrito_prod_usuario=precio,
+                            subtotal_deta_carrito_prod_usuario=cantidad * precio
+                        )
+                        
+                except producto_sucursal.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto de empresa no encontrado'
+                    }, status=404)
+                    
+            elif tipo_producto == 'usuario':
+                try:
+                    producto_usuario_obj = producto_usuario.objects.get(id_producto_usuario=producto_id)
+                    precio = producto_usuario_obj.precio_producto_usuario
+                    stock_disponible = producto_usuario_obj.stock_producto_usuario
+                    
+                    # Validar stock disponible
+                    if cantidad > stock_disponible:
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'stock_insuficiente': True
+                        }, status=400)
+                    
+                    # Verificar si ya existe en el carrito
+                    detalle_existente = detalle_compra_producto_usuario.objects.filter(
+                        id_fk_carritocompra_usuario=carrito,
+                        idproducto_fk_usuario=producto_usuario_obj
+                    ).first()
+                    
+                    if detalle_existente:
+                        # Validar stock con cantidad existente en carrito
+                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_usuario + cantidad
+                        if nueva_cantidad_total > stock_disponible:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
+                                'stock_insuficiente': True
+                            }, status=400)
+                        
+                        # Actualizar cantidad
+                        detalle_existente.cantidad_deta_carrito_prod_usuario += cantidad
+                        detalle_existente.subtotal_deta_carrito_prod_usuario = (
+                            detalle_existente.cantidad_deta_carrito_prod_usuario * precio
+                        )
+                        detalle_existente.save()
+                    else:
+                        # Crear nuevo detalle
+                        detalle_compra_producto_usuario.objects.create(
+                            id_fk_carritocompra_usuario=carrito,
+                            idproducto_fk_usuario=producto_usuario_obj,
+                            cantidad_deta_carrito_prod_usuario=cantidad,
+                            precio_unit_deta_carrito_prod_usuario=precio,
+                            subtotal_deta_carrito_prod_usuario=cantidad * precio
+                        )
+                        
+                except producto_usuario.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto de usuario no encontrado'
+                    }, status=404)
+        
+        # Actualizar total del carrito
+        if account_type == 'empresa':
+            total = sum(
+                detalle.subtotal_deta_carrito_prod_empresa 
+                for detalle in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_empresa = total
+        else:
+            total = sum(
+                detalle.subtotal_deta_carrito_prod_usuario 
+                for detalle in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_usuario = total
+        
+        carrito.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Producto agregado al carrito exitosamente',
+            'carrito_created': created
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al agregar producto al carrito: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=500)
+
+@require_POST
+def actualizar_cantidad_carrito(request):
+    """Función para actualizar la cantidad de un producto en el carrito"""
+    
+    # Verificar autenticación usando el sistema personalizado
+    if not is_user_authenticated(request):
+        return JsonResponse({
+            'success': False,
+            'message': 'Usuario no autenticado'
+        }, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        producto_id = data.get('producto_id')
+        nueva_cantidad = data.get('cantidad')
+        
+        if not producto_id or not nueva_cantidad:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID del producto y cantidad son requeridos'
+            }, status=400)
+        
+        if int(nueva_cantidad) <= 0:
+            return JsonResponse({
+                'success': False,
+                'message': 'La cantidad debe ser mayor a 0'
+            }, status=400)
+        
+        # Obtener el usuario actual del sistema personalizado
+        current_user = get_current_user(request)
+        account_type = request.session.get('account_type', 'usuario')
+        
+        if account_type == 'empresa':
+            # Buscar el carrito de empresa
+            try:
+                carrito = carrito_compra_producto_empresa.objects.get(
+                    id_empresa_fk=current_user,
+                    estatuscarrito_prod_empresa='activo'
+                )
+            except carrito_compra_producto_empresa.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró el carrito'
+                }, status=404)
+            
+            # Buscar el detalle del carrito para el producto específico
+            detalle = None
+            try:
+                detalle = detalle_compra_producto_empresa.objects.get(
+                    id_fk_carritocompra_empresa=carrito,
+                    id_fk_producto_sucursal_empresa_id=producto_id
+                )
+            except detalle_compra_producto_empresa.DoesNotExist:
+                try:
+                    detalle = detalle_compra_producto_empresa.objects.get(
+                        id_fk_carritocompra_empresa=carrito,
+                        idproducto_fk_usuario_id=producto_id
+                    )
+                except detalle_compra_producto_empresa.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto no encontrado en el carrito'
+                    }, status=404)
+            
+            # Actualizar la cantidad y recalcular subtotal
+            detalle.cantidad_deta_carrito_prod_empresa = int(nueva_cantidad)
+            detalle.subtotal_deta_carrito_prod_empresa = detalle.cantidad_deta_carrito_prod_empresa * detalle.precio_unit_deta_carrito_prod_empresa
+            detalle.save()
+            
+            # Recalcular el total del carrito
+            total = sum(
+                d.subtotal_deta_carrito_prod_empresa 
+                for d in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_empresa = total
+            carrito.save()
+        
+        else:  # account_type == 'usuario'
+            # Buscar el carrito de usuario
+            try:
+                carrito = carrito_compra_producto_usuario.objects.get(
+                    id_usuario_fk=current_user,
+                    estatuscarrito_prod_usuario='activo'
+                )
+            except carrito_compra_producto_usuario.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró el carrito'
+                }, status=404)
+            
+            # Buscar el detalle del carrito para el producto específico
+            detalle = None
+            try:
+                detalle = detalle_compra_producto_usuario.objects.get(
+                    id_fk_carritocompra_usuario=carrito,
+                    idproducto_fk_usuario_id=producto_id
+                )
+            except detalle_compra_producto_usuario.DoesNotExist:
+                try:
+                    detalle = detalle_compra_producto_usuario.objects.get(
+                        id_fk_carritocompra_usuario=carrito,
+                        id_fk_producto_sucursal_empresa_id=producto_id
+                    )
+                except detalle_compra_producto_usuario.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto no encontrado en el carrito'
+                    }, status=404)
+            
+            # Actualizar la cantidad y recalcular subtotal
+            detalle.cantidad_deta_carrito_prod_usuario = int(nueva_cantidad)
+            detalle.subtotal_deta_carrito_prod_usuario = detalle.cantidad_deta_carrito_prod_usuario * detalle.precio_unit_deta_carrito_prod_usuario
+            detalle.save()
+            
+            # Recalcular el total del carrito
+            total = sum(
+                d.subtotal_deta_carrito_prod_usuario 
+                for d in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_usuario = total
+            carrito.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Cantidad actualizada exitosamente'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos JSON inválidos'
+        }, status=400)
+    except Exception as e:
+        print(f"Error al actualizar cantidad del carrito: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=500)
+
+
+@require_POST
+def eliminar_del_carrito(request):
+    """
+    Elimina un producto específico del carrito de compras
+    """
+    # Usar el sistema de autenticación personalizado
+    if not is_user_authenticated(request):
+        return JsonResponse({
+            'success': False,
+            'message': 'Usuario no autenticado'
+        }, status=401)
+    
+    current_user = get_current_user(request)
+    if not current_user:
+        return JsonResponse({
+            'success': False,
+            'message': 'Usuario no autenticado'
+        }, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        producto_id = data.get('producto_id')
+        
+        if not producto_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID del producto es requerido'
+            }, status=400)
+        
+        # Obtener el usuario actual del sistema personalizado
+        current_user = get_current_user(request)
+        account_type = request.session.get('account_type', 'usuario')
+        
+        if account_type == 'empresa':
+            # Buscar el carrito de empresa
+            try:
+                carrito = carrito_compra_producto_empresa.objects.get(
+                    id_empresa_fk=current_user,
+                    estatuscarrito_prod_empresa='activo'
+                )
+            except carrito_compra_producto_empresa.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró el carrito'
+                }, status=404)
+            
+            # Buscar el detalle del carrito para el producto específico
+            try:
+                detalle = detalle_compra_producto_empresa.objects.get(
+                    id_fk_carritocompra_empresa=carrito,
+                    id_fk_producto_sucursal_empresa_id=producto_id
+                )
+                detalle.delete()
+                
+                # Recalcular el total del carrito
+                total = sum(
+                    d.subtotal_deta_carrito_prod_empresa 
+                    for d in carrito.detalles.all()
+                )
+                carrito.total_carrito_prod_empresa = total
+                carrito.save()
+                
+            except detalle_compra_producto_empresa.DoesNotExist:
+                # Intentar buscar por producto de usuario
+                try:
+                    detalle = detalle_compra_producto_empresa.objects.get(
+                        id_fk_carritocompra_empresa=carrito,
+                        idproducto_fk_usuario_id=producto_id
+                    )
+                    detalle.delete()
+                    
+                    # Recalcular el total del carrito
+                    total = sum(
+                        d.subtotal_deta_carrito_prod_empresa 
+                        for d in carrito.detalles.all()
+                    )
+                    carrito.total_carrito_prod_empresa = total
+                    carrito.save()
+                    
+                except detalle_compra_producto_empresa.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto no encontrado en el carrito'
+                    }, status=404)
+        
+        else:  # account_type == 'usuario'
+            # Buscar el carrito de usuario
+            try:
+                carrito = carrito_compra_producto_usuario.objects.get(
+                    id_usuario_fk=current_user,
+                    estatuscarrito_prod_usuario='activo'
+                )
+            except carrito_compra_producto_usuario.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró el carrito'
+                }, status=404)
+            
+            # Buscar el detalle del carrito para el producto específico
+            try:
+                detalle = detalle_compra_producto_usuario.objects.get(
+                    id_fk_carritocompra_usuario=carrito,
+                    idproducto_fk_usuario_id=producto_id
+                )
+                detalle.delete()
+                
+                # Recalcular el total del carrito
+                total = sum(
+                    d.subtotal_deta_carrito_prod_usuario 
+                    for d in carrito.detalles.all()
+                )
+                carrito.total_carrito_prod_usuario = total
+                carrito.save()
+                
+            except detalle_compra_producto_usuario.DoesNotExist:
+                # Intentar buscar por producto de sucursal
+                try:
+                    detalle = detalle_compra_producto_usuario.objects.get(
+                        id_fk_carritocompra_usuario=carrito,
+                        id_fk_producto_sucursal_empresa_id=producto_id
+                    )
+                    detalle.delete()
+                    
+                    # Recalcular el total del carrito
+                    total = sum(
+                        d.subtotal_deta_carrito_prod_usuario 
+                        for d in carrito.detalles.all()
+                    )
+                    carrito.total_carrito_prod_usuario = total
+                    carrito.save()
+                    
+                except detalle_compra_producto_usuario.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto no encontrado en el carrito'
+                    }, status=404)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Producto eliminado del carrito exitosamente'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos JSON inválidos'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error al eliminar producto del carrito: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=500)
+
+@require_login
+def pedido(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Información del usuario
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+        
+        # Obtener productos del carrito
+        productos_por_vendedor = {}
+        total_productos = 0
+        
+        if account_type == 'empresa':
+            # Lógica para empresas
+            carrito_empresa = carrito_compra_producto_empresa.objects.filter(
+                id_empresa_fk=current_user,
+                estatuscarrito_prod_empresa__in=['activo', 'pendiente']
+            ).first()
+            
+            if carrito_empresa:
+                detalles_carrito = detalle_compra_producto_empresa.objects.filter(
+                    id_fk_carritocompra_empresa=carrito_empresa
+                ).select_related('id_fk_producto_sucursal_empresa__id_producto_fk', 'idproducto_fk_usuario')
+                
+                # Diccionarios para agrupar por vendedor específico
+                productos_por_empresa = {}
+                productos_por_usuario = {}
+                
+                for detalle in detalles_carrito:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        # Producto de empresa
+                        producto_sucursal_obj = detalle.id_fk_producto_sucursal_empresa
+                        producto = producto_sucursal_obj.id_producto_fk
+                        
+                        # Obtener la primera imagen del producto
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=producto
+                        ).first()
+                        
+                        vendedor_id = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa
+                        vendedor_nombre = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.nombre_empresa
+                        
+                        if vendedor_id not in productos_por_empresa:
+                            productos_por_empresa[vendedor_id] = []
+                        
+                        productos_por_empresa[vendedor_id].append({
+                            'id': producto.id_producto_empresa,
+                            'nombre': producto.nombre_producto_empresa,
+                            'descripcion': producto.descripcion_producto_empresa,
+                            'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                            'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
+                            'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                            'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
+                            'vendedor_id': vendedor_id,
+                            'vendedor_nombre': vendedor_nombre
+                        })
+                    
+                    elif detalle.idproducto_fk_usuario:
+                        # Producto de usuario
+                        producto = detalle.idproducto_fk_usuario
+                        
+                        # Obtener la primera imagen del producto
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=producto
+                        ).first()
+                        
+                        vendedor_id = producto.id_usuario_fk.id_usuario
+                        vendedor_nombre = producto.id_usuario_fk.nombre_usuario
+                        
+                        if vendedor_id not in productos_por_usuario:
+                            productos_por_usuario[vendedor_id] = []
+                        
+                        productos_por_usuario[vendedor_id].append({
+                            'id': producto.id_producto_usuario,
+                            'nombre': producto.nombre_producto_usuario,
+                            'descripcion': producto.descripcion_producto_usuario,
+                            'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                            'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
+                            'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                            'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None,
+                            'vendedor_id': vendedor_id,
+                            'vendedor_nombre': vendedor_nombre
+                        })
+                
+                # Agregar cada empresa como un vendedor separado
+                for empresa_id, productos in productos_por_empresa.items():
+                    productos_por_vendedor[f'empresa_{empresa_id}'] = productos
+                
+                # Agregar cada usuario como un vendedor separado
+                for usuario_id, productos in productos_por_usuario.items():
+                    productos_por_vendedor[f'usuario_{usuario_id}'] = productos
+                
+                total_productos = carrito_empresa.total_carrito_prod_empresa
+        
+        else:
+            # Lógica para usuarios
+            carrito_usuario = carrito_compra_producto_usuario.objects.filter(
+                id_usuario_fk=current_user,
+                estatuscarrito_prod_usuario__in=['activo', 'pendiente']
+            ).first()
+            
+            if carrito_usuario:
+                detalles_carrito = detalle_compra_producto_usuario.objects.filter(
+                    id_fk_carritocompra_usuario=carrito_usuario
+                ).select_related('id_fk_producto_sucursal_empresa__id_producto_fk', 'idproducto_fk_usuario')
+                
+                # Diccionarios para agrupar por vendedor específico
+                productos_por_empresa = {}
+                productos_por_usuario = {}
+                
+                for detalle in detalles_carrito:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        # Producto de empresa
+                        producto_sucursal_obj = detalle.id_fk_producto_sucursal_empresa
+                        producto = producto_sucursal_obj.id_producto_fk
+                        
+                        # Obtener la primera imagen del producto
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=producto
+                        ).first()
+                        
+                        vendedor_id = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa
+                        vendedor_nombre = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.nombre_empresa
+                        
+                        if vendedor_id not in productos_por_empresa:
+                            productos_por_empresa[vendedor_id] = []
+                        
+                        productos_por_empresa[vendedor_id].append({
+                            'id': producto.id_producto_empresa,
+                            'nombre': producto.nombre_producto_empresa,
+                            'descripcion': producto.descripcion_producto_empresa,
+                            'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                            'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
+                            'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                            'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
+                            'vendedor_id': vendedor_id,
+                            'vendedor_nombre': vendedor_nombre
+                        })
+                    
+                    elif detalle.idproducto_fk_usuario:
+                        # Producto de usuario
+                        producto = detalle.idproducto_fk_usuario
+                        
+                        # Obtener la primera imagen del producto
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=producto
+                        ).first()
+                        
+                        vendedor_id = producto.id_usuario_fk.id_usuario
+                        vendedor_nombre = producto.id_usuario_fk.nombre_usuario
+                        
+                        if vendedor_id not in productos_por_usuario:
+                            productos_por_usuario[vendedor_id] = []
+                        
+                        productos_por_usuario[vendedor_id].append({
+                            'id': producto.id_producto_usuario,
+                            'nombre': producto.nombre_producto_usuario,
+                            'descripcion': producto.descripcion_producto_usuario,
+                            'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                            'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
+                            'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                            'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None,
+                            'vendedor_id': vendedor_id,
+                            'vendedor_nombre': vendedor_nombre
+                        })
+                
+                # Agregar cada empresa como un vendedor separado
+                for empresa_id, productos in productos_por_empresa.items():
+                    productos_por_vendedor[f'empresa_{empresa_id}'] = productos
+                
+                # Agregar cada usuario como un vendedor separado
+                for usuario_id, productos in productos_por_usuario.items():
+                    productos_por_vendedor[f'usuario_{usuario_id}'] = productos
+                
+                total_productos = carrito_usuario.total_carrito_prod_usuario
+        
+        # Crear lista de productos para el template (compatibilidad)
+        productos_carrito = []
+        for tipo_vendedor, productos in productos_por_vendedor.items():
+            productos_carrito.extend(productos)
+        
+
+        # Convertir Decimal a float para serialización JSON
+        def convert_decimals(obj):
+            if isinstance(obj, dict):
+                return {key: convert_decimals(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_decimals(item) for item in obj]
+            elif hasattr(obj, '__dict__'):
+                return convert_decimals(obj.__dict__)
+            elif str(type(obj)) == "<class 'decimal.Decimal'>":
+                return float(obj)
+            else:
+                return obj
+        
+        productos_por_vendedor_serializable = convert_decimals(productos_por_vendedor)
+        productos_carrito_serializable = convert_decimals(productos_carrito)
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'productos_por_vendedor': productos_por_vendedor,
+            'productos_carrito': productos_carrito,
+            'total_productos': total_productos,
+            'productos_por_vendedor_json': json.dumps(productos_por_vendedor_serializable),
+            'productos_carrito_json': json.dumps(productos_carrito_serializable)
+        }
+        
+        return render(request, 'ecommerce_app/pedido.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función pedido: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error interno del servidor: {str(e)}',
+            'error': str(e)
+        })
+
+
+@csrf_exempt
+@require_POST
+def procesar_pedido(request):
+    try:
+        print("=== INICIO PROCESAR PEDIDO ===")
+        
+        # Obtener información del usuario actual
+        current_user = get_current_user(request)
+        print(f"Usuario actual: {current_user}")
+        if not current_user:
+            return JsonResponse({'success': False, 'error': 'Usuario no autenticado'})
+        
+        # Obtener el tipo de cuenta
+        account_type = request.session.get('account_type')
+        print(f"Tipo de cuenta: {account_type}")
+        
+        # Obtener datos del formulario
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            # Datos del formulario HTML
+            data = {
+                'nombre': request.POST.get('nombre', ''),
+                'email': request.POST.get('email', ''),
+                'telefono': request.POST.get('telefono', ''),
+                'direccionEntrega': request.POST.get('direccion_envio', ''),
+                'metodoPago': request.POST.get('metodo_pago', ''),
+                'notasAdicionales': request.POST.get('notas_pedido', ''),
+                'vendedoresSeleccionados': request.POST.get('vendedores_seleccionados', ''),
+                'finalizarTodos': request.POST.get('finalizar_todos', 'false')
+            }
+        
+        # Obtener archivo de comprobante de pago si existe
+        comprobante_pago = request.FILES.get('comprobante_pago')
+        print(f"Archivo comprobante recibido: {comprobante_pago}")
+        
+        print(f"Datos del formulario: {data}")
+        
+        # Procesar vendedores seleccionados si no es "finalizar todos"
+        vendedores_a_procesar = []
+        if data.get('finalizarTodos', 'false').lower() == 'true':
+            # Procesar todos los vendedores
+            vendedores_a_procesar = None  # None significa todos
+        else:
+            # Procesar solo vendedores seleccionados
+            vendedores_str = data.get('vendedoresSeleccionados', '')
+            if vendedores_str:
+                try:
+                    vendedores_a_procesar = json.loads(vendedores_str)
+                except json.JSONDecodeError:
+                    vendedores_a_procesar = []
+        
+        print(f"Vendedores a procesar: {vendedores_a_procesar}")
+        print(f"Tipo de vendedores_a_procesar: {type(vendedores_a_procesar)}")
+        if vendedores_a_procesar:
+            print(f"Contenido de vendedores_a_procesar: {vendedores_a_procesar}")
+        
+        # Generar número de pedido único
+        import uuid
+        numero_pedido = f"PED-{uuid.uuid4().hex[:8].upper()}"
+        
+        # Obtener información del carrito desde la base de datos (igual que en la función pedido)
+        productos_carrito = []
+        total_productos = 0
+        cantidad_productos = 0
+        carrito_obj = None
+        
+        if account_type == 'empresa':
+            # Obtener carrito activo o pendiente de la empresa
+            carrito_obj = carrito_compra_producto_empresa.objects.filter(
+                id_empresa_fk=current_user,
+                estatuscarrito_prod_empresa__in=['activo', 'pendiente']
+            ).first()
+            carrito_empresa = carrito_obj  # Asignar para uso posterior
+            
+            if not carrito_obj:
+                return JsonResponse({'success': False, 'error': 'No hay carrito disponible para la empresa'})
+            
+            # Obtener detalles del carrito
+            detalles_carrito = detalle_compra_producto_empresa.objects.filter(
+                id_fk_carritocompra_empresa=carrito_obj
+            ).select_related('id_fk_producto_sucursal_empresa__id_producto_fk', 'idproducto_fk_usuario')
+            
+            for detalle in detalles_carrito:
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto_sucursal_obj = detalle.id_fk_producto_sucursal_empresa
+                    producto = producto_sucursal_obj.id_producto_fk
+                    sucursal_info = producto_sucursal_obj.id_sucursal_fk
+                    
+                    productos_carrito.append({
+                        'detalle_obj': detalle,
+                        'id': producto.id_producto_empresa,
+                        'tipo': 'empresa',
+                        'nombre': producto.nombre_producto_empresa,
+                        'precio': detalle.precio_unit_deta_carrito_prod_empresa,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                        'producto_sucursal_obj': producto_sucursal_obj
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_empresa
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_empresa
+                
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    
+                    productos_carrito.append({
+                        'detalle_obj': detalle,
+                        'id': producto.id_producto_usuario,
+                        'tipo': 'usuario',
+                        'nombre': producto.nombre_producto_usuario,
+                        'precio': detalle.precio_unit_deta_carrito_prod_empresa,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
+                        'producto_usuario_obj': producto
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_empresa
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_empresa
+        
+        else:  # account_type == 'usuario'
+            # Obtener carrito activo o pendiente del usuario
+            carrito_obj = carrito_compra_producto_usuario.objects.filter(
+                id_usuario_fk=current_user,
+                estatuscarrito_prod_usuario__in=['activo', 'pendiente']
+            ).first()
+            carrito_usuario = carrito_obj  # Asignar para uso posterior
+            
+            if not carrito_obj:
+                return JsonResponse({'success': False, 'error': 'No hay carrito disponible para el usuario'})
+            
+            # Obtener detalles del carrito
+            detalles_carrito = detalle_compra_producto_usuario.objects.filter(
+                id_fk_carritocompra_usuario=carrito_obj
+            ).select_related('idproducto_fk_usuario', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            for detalle in detalles_carrito:
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto_sucursal_obj = detalle.id_fk_producto_sucursal_empresa
+                    producto = producto_sucursal_obj.id_producto_fk
+                    sucursal_info = producto_sucursal_obj.id_sucursal_fk
+                    
+                    productos_carrito.append({
+                        'detalle_obj': detalle,
+                        'id': producto.id_producto_empresa,
+                        'tipo': 'empresa',
+                        'nombre': producto.nombre_producto_empresa,
+                        'precio': detalle.precio_unit_deta_carrito_prod_usuario,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                        'producto_sucursal_obj': producto_sucursal_obj
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_usuario
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_usuario
+                
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    
+                    productos_carrito.append({
+                        'detalle_obj': detalle,
+                        'id': producto.id_producto_usuario,
+                        'tipo': 'usuario',
+                        'nombre': producto.nombre_producto_usuario,
+                        'precio': detalle.precio_unit_deta_carrito_prod_usuario,
+                        'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                        'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
+                        'producto_usuario_obj': producto
+                    })
+                    
+                    total_productos += detalle.subtotal_deta_carrito_prod_usuario
+                    cantidad_productos += detalle.cantidad_deta_carrito_prod_usuario
+        
+        print(f"Productos encontrados en carrito: {len(productos_carrito)}")
+        print(f"Total productos: {total_productos}")
+        
+        if not productos_carrito:
+            return JsonResponse({'success': False, 'error': 'Carrito vacío'})
+        
+        # Separar productos por vendedor (empresa/usuario) para crear pedidos agrupados
+        print(f"Separando productos por vendedor...")
+        print(f"Total productos en carrito antes del filtrado: {len(productos_carrito)}")
+        for i, prod in enumerate(productos_carrito[:3]):  # Solo mostrar los primeros 3
+            print(f"Producto {i+1}: tipo={prod.get('tipo')}, id={prod.get('id')}, nombre={prod.get('nombre')}")
+            if prod['tipo'] == 'empresa' and 'producto_sucursal_obj' in prod:
+                empresa_id = prod['producto_sucursal_obj'].id_sucursal_fk.id_empresa_fk.id_empresa
+                print(f"  -> Empresa ID: {empresa_id}, vendedor_key: empresa_{empresa_id}")
+            elif prod['tipo'] == 'usuario' and 'producto_usuario_obj' in prod:
+                usuario_id = prod['producto_usuario_obj'].id_usuario_fk.id_usuario
+                print(f"  -> Usuario ID: {usuario_id}, vendedor_key: usuario_{usuario_id}")
+        productos_por_empresa = {}
+        productos_por_usuario = {}
+        
+        for producto in productos_carrito:
+            if producto['tipo'] == 'empresa':
+                # Agrupar por sucursal/empresa
+                if 'producto_sucursal_obj' in producto:
+                    sucursal_id = producto['producto_sucursal_obj'].id_sucursal_fk.id_sucursal
+                    empresa_id = producto['producto_sucursal_obj'].id_sucursal_fk.id_empresa_fk.id_empresa
+                    
+                    # Filtrar por vendedores seleccionados si no es "finalizar todos"
+                    if vendedores_a_procesar is not None:
+                        vendedor_key = f"empresa_{empresa_id}"
+                        if vendedor_key not in vendedores_a_procesar:
+                            continue  # Saltar este producto si el vendedor no está seleccionado
+                    
+                    if empresa_id not in productos_por_empresa:
+                        productos_por_empresa[empresa_id] = {
+                            'empresa_obj': producto['producto_sucursal_obj'].id_sucursal_fk.id_empresa_fk,
+                            'productos': [],
+                            'total': 0
+                        }
+                    
+                    productos_por_empresa[empresa_id]['productos'].append(producto)
+                    productos_por_empresa[empresa_id]['total'] += producto['subtotal']
+            
+            elif producto['tipo'] == 'usuario':
+                # Agrupar por usuario vendedor
+                if 'producto_usuario_obj' in producto:
+                    usuario_id = producto['producto_usuario_obj'].id_usuario_fk.id_usuario
+                    
+                    # Filtrar por vendedores seleccionados si no es "finalizar todos"
+                    if vendedores_a_procesar is not None:
+                        vendedor_key = f"usuario_{usuario_id}"
+                        if vendedor_key not in vendedores_a_procesar:
+                            continue  # Saltar este producto si el vendedor no está seleccionado
+                    
+                    if usuario_id not in productos_por_usuario:
+                        productos_por_usuario[usuario_id] = {
+                            'usuario_obj': producto['producto_usuario_obj'].id_usuario_fk,
+                            'productos': [],
+                            'total': 0
+                        }
+                    
+                    productos_por_usuario[usuario_id]['productos'].append(producto)
+                    productos_por_usuario[usuario_id]['total'] += producto['subtotal']
+        
+        print(f"Productos agrupados (filtrados) - Empresas: {len(productos_por_empresa)}, Usuarios: {len(productos_por_usuario)}")
+        
+        # Verificar que hay productos para procesar
+        if not productos_por_empresa and not productos_por_usuario:
+            return JsonResponse({'success': False, 'error': 'No hay productos seleccionados para procesar'})
+        
+        # Crear pedidos según el tipo de cuenta del comprador
+        pedidos_creados = []
+        
+        with transaction.atomic():
+            if account_type == 'empresa':
+                print("Creando pedidos para empresa compradora...")
+                
+                # Crear pedidos de empresa para productos de empresas
+                for empresa_id, grupo in productos_por_empresa.items():
+                    nuevo_pedido = pedido_empresa.objects.create(
+                        id_carrito_fk=carrito_empresa,
+                        numero_pedido=f"{numero_pedido}-EMP{empresa_id}",
+                        direccion_envio=data.get('direccionEntrega', ''),
+                        metodo_pago=data.get('metodoPago', ''),
+                        total_pedido=grupo['total'],
+                        notas_pedido=data.get('notasAdicionales', ''),
+                        comprobante_pago=comprobante_pago
+                    )
+                    
+                    # Crear detalles del pedido
+                    for producto in grupo['productos']:
+                        detalle_pedido_empresa.objects.create(
+                            id_pedido_fk=nuevo_pedido,
+                            id_fk_producto_sucursal_empresa=producto['producto_sucursal_obj'],
+                            cantidad_detalle_pedido=producto['cantidad'],
+                            precio_unitario_pedido=producto['precio'],
+                            subtotal_detalle_pedido=producto['subtotal']
+                        )
+                    
+                    pedidos_creados.append({
+                        'tipo': 'empresa',
+                        'id': nuevo_pedido.id_pedido_empresa,
+                        'vendedor': grupo['empresa_obj'].nombre_empresa,
+                        'total': float(grupo['total'])
+                    })
+                
+                # Crear pedidos de empresa para productos de usuarios
+                for usuario_id, grupo in productos_por_usuario.items():
+                    nuevo_pedido = pedido_empresa.objects.create(
+                        id_carrito_fk=carrito_empresa,
+                        numero_pedido=f"{numero_pedido}-USR{usuario_id}",
+                        direccion_envio=data.get('direccionEntrega', ''),
+                        metodo_pago=data.get('metodoPago', ''),
+                        total_pedido=grupo['total'],
+                        notas_pedido=data.get('notasAdicionales', ''),
+                        comprobante_pago=comprobante_pago
+                    )
+                    
+                    # Crear detalles del pedido
+                    for producto in grupo['productos']:
+                        detalle_pedido_empresa.objects.create(
+                            id_pedido_fk=nuevo_pedido,
+                            idproducto_fk_usuario=producto['producto_usuario_obj'],
+                            cantidad_detalle_pedido=producto['cantidad'],
+                            precio_unitario_pedido=producto['precio'],
+                            subtotal_detalle_pedido=producto['subtotal']
+                        )
+                    
+                    pedidos_creados.append({
+                        'tipo': 'empresa',
+                        'id': nuevo_pedido.id_pedido_empresa,
+                        'vendedor': grupo['usuario_obj'].nombre_usuario,
+                        'total': float(grupo['total'])
+                    })
+            
+            else:  # account_type == 'usuario'
+                print("Creando pedidos para usuario comprador...")
+                
+                # Crear pedidos de usuario para productos de empresas
+                for empresa_id, grupo in productos_por_empresa.items():
+                    nuevo_pedido = pedido_usuario.objects.create(
+                        id_carrito_fk=carrito_usuario,
+                        numero_pedido=f"{numero_pedido}-EMP{empresa_id}",
+                        direccion_envio=data.get('direccionEntrega', ''),
+                        metodo_pago=data.get('metodoPago', ''),
+                        total_pedido=grupo['total'],
+                        notas_pedido=data.get('notasAdicionales', ''),
+                        comprobante_pago=comprobante_pago
+                    )
+                    
+                    # Crear detalles del pedido
+                    for producto in grupo['productos']:
+                        detalle_pedido_usuario.objects.create(
+                            id_pedido_fk=nuevo_pedido,
+                            id_fk_producto_sucursal_empresa=producto['producto_sucursal_obj'],
+                            cantidad_detalle_pedido=producto['cantidad'],
+                            precio_unitario_pedido=producto['precio'],
+                            subtotal_detalle_pedido=producto['subtotal']
+                        )
+                    
+                    pedidos_creados.append({
+                        'tipo': 'usuario',
+                        'id': nuevo_pedido.id_pedido_usuario,
+                        'vendedor': grupo['empresa_obj'].nombre_empresa,
+                        'total': float(grupo['total'])
+                    })
+                
+                # Crear pedidos de usuario para productos de usuarios
+                for usuario_id, grupo in productos_por_usuario.items():
+                    nuevo_pedido = pedido_usuario.objects.create(
+                        id_carrito_fk=carrito_usuario,
+                        numero_pedido=f"{numero_pedido}-USR{usuario_id}",
+                        direccion_envio=data.get('direccionEntrega', ''),
+                        metodo_pago=data.get('metodoPago', ''),
+                        total_pedido=grupo['total'],
+                        notas_pedido=data.get('notasAdicionales', ''),
+                        comprobante_pago=comprobante_pago
+                    )
+                    
+                    # Crear detalles del pedido
+                    for producto in grupo['productos']:
+                        detalle_pedido_usuario.objects.create(
+                            id_pedido_fk=nuevo_pedido,
+                            idproducto_fk_usuario=producto['producto_usuario_obj'],
+                            cantidad_detalle_pedido=producto['cantidad'],
+                            precio_unitario_pedido=producto['precio'],
+                            subtotal_detalle_pedido=producto['subtotal']
+                        )
+                    
+                    pedidos_creados.append({
+                        'tipo': 'usuario',
+                        'id': nuevo_pedido.id_pedido_usuario,
+                        'vendedor': grupo['usuario_obj'].nombre_usuario,
+                        'total': float(grupo['total'])
+                    })
+            
+            # Verificar si todos los productos del carrito fueron procesados
+            print("Verificando si todos los productos fueron procesados...")
+            
+            # Obtener todos los productos del carrito
+            if account_type == 'empresa':
+                todos_productos_carrito = detalle_compra_producto_empresa.objects.filter(
+                    id_fk_carritocompra_empresa=carrito_obj
+                ).count()
+            else:
+                todos_productos_carrito = detalle_compra_producto_usuario.objects.filter(
+                    id_fk_carritocompra_usuario=carrito_obj
+                ).count()
+            
+            # Contar productos procesados en esta transacción
+            productos_procesados = sum(len(grupo['productos']) for grupo in productos_por_empresa.values()) + \
+                                 sum(len(grupo['productos']) for grupo in productos_por_usuario.values())
+            
+            print(f"Total productos en carrito: {todos_productos_carrito}")
+            print(f"Productos procesados en esta transacción: {productos_procesados}")
+            
+            # Determinar el nuevo estatus del carrito
+            if productos_procesados >= todos_productos_carrito:
+                # Todos los productos fueron procesados
+                nuevo_estatus = 'completado'
+                print("Marcando carrito como completado - todos los productos procesados")
+            else:
+                # Solo algunos productos fueron procesados
+                nuevo_estatus = 'pendiente'
+                print("Marcando carrito como pendiente - productos parcialmente procesados")
+            
+            # Actualizar el estatus del carrito
+            if account_type == 'empresa':
+                carrito_obj.estatuscarrito_prod_empresa = nuevo_estatus
+            else:
+                carrito_obj.estatuscarrito_prod_usuario = nuevo_estatus
+            carrito_obj.save()
+            
+            # Eliminar productos procesados del carrito
+            productos_eliminados = 0
+            
+            # Eliminar productos de empresas procesados
+            for empresa_id, grupo in productos_por_empresa.items():
+                for producto in grupo['productos']:
+                    if account_type == 'empresa':
+                        detalle_compra_producto_empresa.objects.filter(
+                            id_fk_carritocompra_empresa=carrito_obj,
+                            id_fk_producto_sucursal_empresa=producto['producto_sucursal_obj']
+                        ).delete()
+                    else:
+                        detalle_compra_producto_usuario.objects.filter(
+                            id_fk_carritocompra_usuario=carrito_obj,
+                            id_fk_producto_sucursal_empresa=producto['producto_sucursal_obj']
+                        ).delete()
+                    productos_eliminados += 1
+            
+            # Eliminar productos de usuarios procesados
+            for usuario_id, grupo in productos_por_usuario.items():
+                for producto in grupo['productos']:
+                    if account_type == 'empresa':
+                        detalle_compra_producto_empresa.objects.filter(
+                            id_fk_carritocompra_empresa=carrito_obj,
+                            idproducto_fk_usuario=producto['producto_usuario_obj']
+                        ).delete()
+                    else:
+                        detalle_compra_producto_usuario.objects.filter(
+                            id_fk_carritocompra_usuario=carrito_obj,
+                            idproducto_fk_usuario=producto['producto_usuario_obj']
+                        ).delete()
+                    productos_eliminados += 1
+            
+            print(f"Pedidos creados exitosamente: {len(pedidos_creados)}")
+            print(f"Productos eliminados del carrito: {productos_eliminados}")
+            
+            # Guardar datos en la sesión para mostrar en la página de confirmación
+            request.session['pedidos_confirmacion'] = pedidos_creados
+            request.session['datos_cliente_confirmacion'] = {
+                'nombre': data.get('nombre', ''),
+                'email': data.get('email', ''),
+                'telefono': data.get('telefono', ''),
+                'direccion_envio': data.get('direccionEntrega', ''),
+                'metodo_pago': data.get('metodoPago', ''),
+                'notas': data.get('notasAdicionales', '')
+            }
+            request.session['total_general_confirmacion'] = float(total_productos)
+            
+            # Redirigir a la página de confirmación
+            return JsonResponse({
+                'success': True,
+                'redirect_url': '/ecommerce/confirmacion_pedido/',
+                'message': f'Se crearon {len(pedidos_creados)} pedidos exitosamente'
+            })
+            
+    except Exception as e:
+        print(f"ERROR en procesar_pedido: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def confirmacion_pedido(request):
+    """Vista para mostrar la confirmación de pedido después de procesarlo exitosamente"""
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Obtener datos de la sesión (guardados después de procesar el pedido)
+        pedidos_data = request.session.get('pedidos_confirmacion')
+        datos_cliente = request.session.get('datos_cliente_confirmacion')
+        total_general = request.session.get('total_general_confirmacion')
+        
+        if not pedidos_data or not datos_cliente:
+            # Si no hay datos en la sesión, redirigir al carrito
+            return redirect('/ecommerce/carrito')
+            
+        # Resto de la lógica de confirmación_pedido aquí...
+        # Por ahora retornamos una respuesta básica
+        return render(request, 'ecommerce_app/confirmacion_pedido.html', {
+            'pedidos_data': pedidos_data,
+            'datos_cliente': datos_cliente,
+            'total_general': total_general
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en confirmacion_pedido: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+@require_login
+@require_login
+def mis_ventas(request):
+    """
+    Vista para mostrar las ventas realizadas por el usuario o empresa.
+    Muestra los pedidos donde vendieron productos con datos del comprador y comprobante.
+    """
+    try:
+        current_user = get_current_user(request)
+        logger.info(f"mis_ventas - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("mis_ventas - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"mis_ventas - account_type: {account_type}")
+        ventas_realizadas = []
+        
+        if account_type == 'usuario':
+            # current_user ya es el objeto usuario
+            
+            # Pedidos de usuarios que compraron productos de este usuario (solo pendientes)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Pedidos de empresas que compraron productos de este usuario (solo pendientes)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_usuario,
+                        'email_comprador': comprador.correo_usuario,
+                        'telefono_comprador': comprador.telefono_usuario,
+                        'tipo_comprador': 'usuario',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_usuario.objects.filter(
+                    id_producto_fk=detalle.idproducto_fk_usuario
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None
+                })
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_empresa,
+                        'email_comprador': comprador.correo_empresa,
+                        'telefono_comprador': 'No disponible',
+                        'tipo_comprador': 'empresa',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_usuario.objects.filter(
+                    id_producto_fk=detalle.idproducto_fk_usuario
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None
+                })
+            
+            # Convertir diccionario a lista
+            ventas_realizadas = list(pedidos_dict.values())
+                
+        elif account_type == 'empresa':
+            # current_user ya es el objeto empresa
+            current_empresa = current_user
+            
+            # Pedidos de usuarios que compraron productos de esta empresa (solo pendientes)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Pedidos de empresas que compraron productos de esta empresa (solo pendientes)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_usuario,
+                        'email_comprador': comprador.correo_usuario,
+                        'telefono_comprador': comprador.telefono_usuario,
+                        'tipo_comprador': 'usuario',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_empresa.objects.filter(
+                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None
+                })
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_empresa,
+                        'email_comprador': comprador.correo_empresa,
+                        'telefono_comprador': 'No disponible',
+                        'tipo_comprador': 'empresa',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_empresa.objects.filter(
+                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None
+                })
+            
+            # Convertir diccionario a lista
+            ventas_realizadas = list(pedidos_dict.values())
+        
+        # Ordenar por fecha más reciente
+        ventas_realizadas.sort(key=lambda x: x['fecha_pedido'], reverse=True)
+        
+        # Crear user_info para compatibilidad con el template y modal de sesiones
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+        
+        context = {
+            'current_user': current_user,
+            'user_info': user_info,
+            'account_type': account_type,
+            'ventas_realizadas': ventas_realizadas,
+            'total_ventas': len(ventas_realizadas)
+        }
+        
+        return render(request, 'ecommerce_app/mis_ventas.html', context)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en función mis_ventas: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return redirect('/ecommerce/index/')
+
+
+@require_login
+def mis_pedidos(request):
+    """Vista para mostrar el historial de pedidos completados del usuario"""
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        pedidos_historial = []
+        
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos de empresa (como comprador)
+            pedidos_empresa = pedido_empresa.objects.filter(
+                id_carrito_fk__id_empresa_fk=current_user
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_empresa:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'empresa'
+                })
+        
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos de usuario (como comprador)
+            pedidos_usuario = pedido_usuario.objects.filter(
+                id_carrito_fk__id_usuario_fk=current_user
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_usuario:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'usuario'
+                })
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'pedidos_historial': pedidos_historial,
+            'total_pedidos': len(pedidos_historial)
+        }
+        
+        return render(request, 'ecommerce_app/mis_pedidos.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función mis_pedidos: {str(e)}")
+        return redirect('/ecommerce/carrito')
+        
+        # Obtener los pedidos reales de la base de datos para mostrar información actualizada
+        pedidos_creados = []
+        
+        for pedido_info in pedidos_data:
+            if pedido_info['tipo'] == 'usuario':
+                try:
+                    pedido_obj = pedido_usuario.objects.get(id_pedido_usuario=pedido_info['id'])
+                    detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido_obj)
+                    
+                    detalles_list = []
+                    for detalle in detalles:
+                        if detalle.id_fk_producto_sucursal_empresa:
+                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        elif detalle.idproducto_fk_usuario:
+                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        else:
+                            nombre_producto = "Producto no disponible"
+                        
+                        detalles_list.append({
+                            'nombre_producto': nombre_producto,
+                            'cantidad': detalle.cantidad_detalle_pedido,
+                            'precio_unitario': float(detalle.precio_unitario_pedido),
+                            'subtotal': float(detalle.subtotal_detalle_pedido)
+                        })
+                    
+                    pedidos_creados.append({
+                        'numero_pedido': pedido_obj.numero_pedido,
+                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
+                        'estado_pedido': pedido_obj.estado_pedido,
+                        'total_pedido': float(pedido_obj.total_pedido),
+                        'vendedor_nombre': pedido_info['vendedor'],
+                        'detalles': detalles_list
+                    })
+                except pedido_usuario.DoesNotExist:
+                    continue
+                    
+            elif pedido_info['tipo'] == 'empresa':
+                try:
+                    pedido_obj = pedido_empresa.objects.get(id_pedido_empresa=pedido_info['id'])
+                    detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido_obj)
+                    
+                    detalles_list = []
+                    for detalle in detalles:
+                        if detalle.id_fk_producto_sucursal_empresa:
+                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        elif detalle.idproducto_fk_usuario:
+                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        else:
+                            nombre_producto = "Producto no disponible"
+                        
+                        detalles_list.append({
+                            'nombre_producto': nombre_producto,
+                            'cantidad': detalle.cantidad_detalle_pedido,
+                            'precio_unitario': float(detalle.precio_unitario_pedido),
+                            'subtotal': float(detalle.subtotal_detalle_pedido)
+                        })
+                    
+                    pedidos_creados.append({
+                        'numero_pedido': pedido_obj.numero_pedido,
+                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
+                        'estado_pedido': pedido_obj.estado_pedido,
+                        'total_pedido': float(pedido_obj.total_pedido),
+                        'vendedor_nombre': pedido_info['vendedor'],
+                        'detalles': detalles_list
+                    })
+                except pedido_empresa.DoesNotExist:
+                    continue
+        
+        # Limpiar datos de la sesión después de mostrarlos
+        if 'pedidos_confirmacion' in request.session:
+            del request.session['pedidos_confirmacion']
+        if 'datos_cliente_confirmacion' in request.session:
+            del request.session['datos_cliente_confirmacion']
+        if 'total_general_confirmacion' in request.session:
+            del request.session['total_general_confirmacion']
+        
+        context = {
+            'account_type': account_type,
+            'pedidos_creados': pedidos_creados,
+            'datos_cliente': datos_cliente,
+            'total_general': total_general
+        }
+        
+        return render(request, 'ecommerce_app/confirmacion_pedido.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función confirmacion_pedido: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+
+@require_login
+def confirmar_venta(request):
+    """
+    Vista para confirmar una venta cambiando el estado del pedido de 'pendiente' a 'confirmado'.
+    Solo acepta peticiones POST con AJAX.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'})
+    
+    try:
+        import json
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Leer datos JSON del cuerpo de la petición
+        try:
+            data = json.loads(request.body)
+            numero_pedido = data.get('numero_pedido')
+        except json.JSONDecodeError:
+            # Fallback a request.POST si no es JSON
+            numero_pedido = request.POST.get('numero_pedido')
+        
+        if not numero_pedido:
+            return JsonResponse({'success': False, 'message': 'Número de pedido requerido'})
+        
+        # Buscar el pedido según el tipo de cuenta
+        pedido_encontrado = None
+        
+        if account_type == 'usuario':
+            # Buscar en pedidos de usuarios donde el vendedor es el usuario actual
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_pedido_fk__numero_pedido=numero_pedido,
+                idproducto_fk_usuario__id_usuario_fk=current_user
+            ).select_related('id_pedido_fk').first()
+            
+            if detalles_usuario:
+                pedido_encontrado = detalles_usuario.id_pedido_fk
+            else:
+                # Buscar en pedidos de empresas donde el vendedor es el usuario actual
+                detalles_empresa = detalle_pedido_empresa.objects.filter(
+                    id_pedido_fk__numero_pedido=numero_pedido,
+                    idproducto_fk_usuario__id_usuario_fk=current_user
+                ).select_related('id_pedido_fk').first()
+                
+                if detalles_empresa:
+                    pedido_encontrado = detalles_empresa.id_pedido_fk
+        
+        elif account_type == 'empresa':
+            # Buscar en pedidos de usuarios donde el vendedor es la empresa actual
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_pedido_fk__numero_pedido=numero_pedido,
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_user
+            ).select_related('id_pedido_fk').first()
+            
+            if detalles_usuario:
+                pedido_encontrado = detalles_usuario.id_pedido_fk
+            else:
+                # Buscar en pedidos de empresas donde el vendedor es la empresa actual
+                detalles_empresa = detalle_pedido_empresa.objects.filter(
+                    id_pedido_fk__numero_pedido=numero_pedido,
+                    id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_user
+                ).select_related('id_pedido_fk').first()
+                
+                if detalles_empresa:
+                    pedido_encontrado = detalles_empresa.id_pedido_fk
+        
+        if not pedido_encontrado:
+            return JsonResponse({'success': False, 'message': 'Pedido no encontrado o no tienes permisos para confirmarlo'})
+        
+        # Verificar que el pedido esté en estado 'pendiente'
+        if pedido_encontrado.estado_pedido != 'pendiente':
+            return JsonResponse({
+                'success': False, 
+                'message': f'El pedido ya está en estado: {pedido_encontrado.estado_pedido}'
+            })
+        
+        # Cambiar el estado a 'confirmado'
+        pedido_encontrado.estado_pedido = 'confirmado'
+        pedido_encontrado.save()
+        
+        logger.info(f"Pedido {numero_pedido} confirmado por {account_type} {current_user}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Venta confirmada exitosamente',
+            'nuevo_estado': 'confirmado'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en función confirmar_venta: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})

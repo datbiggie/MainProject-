@@ -1,4 +1,5 @@
 {% load static %}
+  {% include 'ecommerce_app/barra_superior_index.html' %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -15,15 +16,32 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
     <link rel="stylesheet" href="{% static 'sucursal/css/main.css' %}">
-
-
-
-
-
-
-
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        .cart-container {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+        .cart-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .cart-card:hover {
+            transform: translateY(-2px);
+        }
+        .empty-cart-icon {
+            color: #6c757d;
+            opacity: 0.5;
+        }
+        .total-section {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
 
 
 
@@ -32,235 +50,155 @@
 
 
   </head>
-    <body>
+
+    <body class="cart-container">
 
   
-{% include 'ecommerce_app/barra_superior_index.html' %}
 
 
 
-<div class="container-xl">
-	<div class="card shadow-lg" style="margin-top: 6rem; margin-bottom: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
-		<div class="table-responsive">
-		<div class="table-wrapper">
-			<div class="table-title" style="margin: -30px -25px 10px !important;">
-				<div class="row">
-					<div class="col-sm-6">
-						<h2> <b>Carrito de Compra</b></h2>
-					</div>
-					
+<div class="container-lg">
+	<div class="card shadow mb-3" style="margin-top: 2rem; border-radius: 12px; border: none;">
+		<div class="card-header bg-primary text-white" style="border-radius: 12px 12px 0 0;">
+			<h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Carrito</h5>
+		</div>
+		<div class="card-body p-3">
+			{% if carrito_info %}
+			<div class="row">
+				<div class="col-md-3">
+					<strong>ID Carrito:</strong><br>
+					<span class="text-muted">#{{ carrito_info.id }}</span>
+				</div>
+				<div class="col-md-3">
+					<strong>Estatus:</strong><br>
+					<span class="badge bg-{% if carrito_info.estatus == 'activo' %}success{% else %}warning{% endif %}">
+						{{ carrito_info.estatus|capfirst }}
+					</span>
+				</div>
+				<div class="col-md-3">
+					<strong>Fecha de Creación:</strong><br>
+					<span class="text-muted">{{ carrito_info.fecha_creacion|date:"d/m/Y H:i" }}</span>
+				</div>
+				<div class="col-md-3">
+					<strong>Propietario:</strong><br>
+					<span class="text-muted">
+						<i class="fas fa-{% if carrito_info.propietario.tipo == 'empresa' %}building{% else %}user{% endif %} me-1"></i>
+						{{ carrito_info.propietario.nombre }}
+					</span><br>
+					<small class="text-muted">{{ carrito_info.propietario.email }}</small>
 				</div>
 			</div>
-			<table class="table table-striped table-hover">
-				<thead>
-					<tr>
-						<th>
-							<span class="custom-checkbox">
-								<input type="checkbox" id="selectAll">
-								<label for="selectAll"></label>
-							</span>
-						</th>
-						<th>Sucursal</th>
-						<th>Dirección</th>
-						<th>Telefono</th>
-						<th>Estado</th>
-						<th style="min-width:90px;">Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for sucursal in sqlsucursal %}
-					<tr>
-						<td>
-							<span class="custom-checkbox">
-								<input type="checkbox" id="checkbox{{ forloop.counter }}" name="options[]" value="{{ sucursal.id_sucursal }}">
-								<label for="checkbox{{ forloop.counter }}"></label>
-							</span>
-						</td>
-						<td>{{ sucursal.nombre_sucursal }}</td>
-						<td>{{ sucursal.direccion_sucursal }}</td>
-						<td>{{ sucursal.telefono_sucursal }}</td>
-						<td>{{ sucursal.estado_sucursal }}</td>
-						<td style="white-space: nowrap;">
-							<a href="#editEmployeeModal" class="edit" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" data-latitud="{{ sucursal.latitud_sucursal }}" data-longitud="{{ sucursal.longitud_sucursal }}" title="Editar" style="margin-right:2px;">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#1976d2" style="vertical-align:middle;width:20px;height:20px;">
-									<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-								</svg>
-							</a>
-							<a href="#deleteEmployeeModal" class="delete" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Eliminar" style="margin-right:2px;">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#d32f2f" style="vertical-align:middle;width:20px;height:20px;">
-									<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-								</svg>
-							</a>
-							<a href="#productosSucursalModal" class="productos-sucursal" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Productos asociados" style="margin-right:2px;">
-								<svg width="20" height="20" style="vertical-align:middle;color:#388e3c;"><use xlink:href="#box"></use></svg>
-							</a>
-							<a href="#serviciosSucursalModal" class="servicios-sucursal" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Servicios asociados">
-								<svg width="20" height="20" style="vertical-align:middle;color:#9c27b0;"><use xlink:href="#box"></use></svg>
-							</a>
-						</td>
-					</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-			<div class="clearfix">
-				<div class="hint-text">Showing <b>{{ sqlsucursal|length }}</b> out of <b>{{ total_sucursales }}</b> entries</div>
-				{% if paginator.num_pages > 1 %}
-				<ul class="pagination">
-					{% if sqlsucursal.has_previous %}
-						<li class="page-item"><a href="?page={{ sqlsucursal.previous_page_number }}" class="page-link">Previous</a></li>
-					{% else %}
-						<li class="page-item disabled"><a href="#" class="page-link">Previous</a></li>
-					{% endif %}
-					
-					{% for num in paginator.page_range %}
-						{% if num == sqlsucursal.number %}
-							<li class="page-item active"><a href="#" class="page-link">{{ num }}</a></li>
-						{% elif num > sqlsucursal.number|add:'-3' and num < sqlsucursal.number|add:'3' %}
-							<li class="page-item"><a href="?page={{ num }}" class="page-link">{{ num }}</a></li>
-						{% endif %}
-					{% endfor %}
-					
-					{% if sqlsucursal.has_next %}
-						<li class="page-item"><a href="?page={{ sqlsucursal.next_page_number }}" class="page-link">Next</a></li>
-					{% else %}
-						<li class="page-item disabled"><a href="#" class="page-link">Next</a></li>
-					{% endif %}
-				</ul>
-				{% endif %}
+			<div class="row mt-3">
+				<div class="col-12 text-end">
+					<button type="button" class="btn btn-primary btn-sm" onclick="verDetalleCarrito()">
+						<i class="fas fa-shopping-cart me-2"></i>Detalle
+					</button>
+				</div>
+			</div>
+			{% else %}
+			<div class="text-center py-4">
+				<i class="fas fa-shopping-cart empty-cart-icon" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+				<h6 class="text-muted mb-0">No existen carritos para este usuario</h6>
+				<p class="text-muted small mt-2">Aún no tienes productos en tu carrito de compras.</p>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+	
+	<!-- Botón de Mis Pedidos Pendientes - Siempre visible si hay pedidos pendientes -->
+	{% if pedidos_pendientes %}
+	<div class="container-lg mt-3">
+		<div class="card shadow" style="border-radius: 12px; border: none;">
+			<div class="card-body text-center p-4">
+				<div class="alert alert-warning mb-3" role="alert">
+					<i class="fas fa-exclamation-triangle me-2"></i>
+					<strong>¡Tienes pedidos pendientes!</strong>
+				</div>
+				<a href="{% url 'mis_pedidos' %}" class="btn btn-warning btn-lg">
+					<i class="fas fa-clock me-2"></i>Ver Mis Pedidos Pendientes
+				</a>
 			</div>
 		</div>
 	</div>
-	</div>        
+	{% endif %}
+     
 </div>
   
       
 
 
-<div class="container-xl">
-	<div class="card shadow-lg" style="margin-top: 6rem; margin-bottom: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;">
-		<div class="table-responsive">
-		<div class="table-wrapper">
-			<div class="table-title" style="margin: -30px -25px 10px !important;">
-				<div class="row">
-					<div class="col-sm-6">
-						<h2> <b>Carrito de Gestión de Servicio</b></h2>
-					</div>
-					
-				</div>
-			</div>
-			<table class="table table-striped table-hover">
-				<thead>
-					<tr>
-						<th>
-							<span class="custom-checkbox">
-								<input type="checkbox" id="selectAll">
-								<label for="selectAll"></label>
-							</span>
-						</th>
-						<th>Sucursal</th>
-						<th>Dirección</th>
-						<th>Telefono</th>
-						<th>Estado</th>
-						<th style="min-width:90px;">Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for sucursal in sqlsucursal %}
-					<tr>
-						<td>
-							<span class="custom-checkbox">
-								<input type="checkbox" id="checkbox{{ forloop.counter }}" name="options[]" value="{{ sucursal.id_sucursal }}">
-								<label for="checkbox{{ forloop.counter }}"></label>
-							</span>
-						</td>
-						<td>{{ sucursal.nombre_sucursal }}</td>
-						<td>{{ sucursal.direccion_sucursal }}</td>
-						<td>{{ sucursal.telefono_sucursal }}</td>
-						<td>{{ sucursal.estado_sucursal }}</td>
-						<td style="white-space: nowrap;">
-							<a href="#editEmployeeModal" class="edit" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" data-latitud="{{ sucursal.latitud_sucursal }}" data-longitud="{{ sucursal.longitud_sucursal }}" title="Editar" style="margin-right:2px;">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#1976d2" style="vertical-align:middle;width:20px;height:20px;">
-									<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-								</svg>
-							</a>
-							<a href="#deleteEmployeeModal" class="delete" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Eliminar" style="margin-right:2px;">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#d32f2f" style="vertical-align:middle;width:20px;height:20px;">
-									<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-								</svg>
-							</a>
-							<a href="#productosSucursalModal" class="productos-sucursal" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Productos asociados" style="margin-right:2px;">
-								<svg width="20" height="20" style="vertical-align:middle;color:#388e3c;"><use xlink:href="#box"></use></svg>
-							</a>
-							<a href="#serviciosSucursalModal" class="servicios-sucursal" data-bs-toggle="modal" data-id="{{ sucursal.id_sucursal }}" title="Servicios asociados">
-								<svg width="20" height="20" style="vertical-align:middle;color:#9c27b0;"><use xlink:href="#box"></use></svg>
-							</a>
-						</td>
-					</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-			<div class="clearfix">
-				<div class="hint-text">Showing <b>{{ sqlsucursal|length }}</b> out of <b>{{ total_sucursales }}</b> entries</div>
-				{% if paginator.num_pages > 1 %}
-				<ul class="pagination">
-					{% if sqlsucursal.has_previous %}
-						<li class="page-item"><a href="?page={{ sqlsucursal.previous_page_number }}" class="page-link">Previous</a></li>
-					{% else %}
-						<li class="page-item disabled"><a href="#" class="page-link">Previous</a></li>
-					{% endif %}
-					
-					{% for num in paginator.page_range %}
-						{% if num == sqlsucursal.number %}
-							<li class="page-item active"><a href="#" class="page-link">{{ num }}</a></li>
-						{% elif num > sqlsucursal.number|add:'-3' and num < sqlsucursal.number|add:'3' %}
-							<li class="page-item"><a href="?page={{ num }}" class="page-link">{{ num }}</a></li>
-						{% endif %}
-					{% endfor %}
-					
-					{% if sqlsucursal.has_next %}
-						<li class="page-item"><a href="?page={{ sqlsucursal.next_page_number }}" class="page-link">Next</a></li>
-					{% else %}
-						<li class="page-item disabled"><a href="#" class="page-link">Next</a></li>
-					{% endif %}
-				</ul>
-				{% endif %}
-			</div>
-		</div>
-	</div>
-	</div>        
-</div>
 
 
 
+<div class="mb-5"></div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     <script src="{% static 'index/js/jquery-1.11.0.min.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
     <script src="{% static 'index/js/plugins.js' %}"></script>
     <script src="{% static 'index/js/script.js' %}"></script>
     <script src="{% static 'index/js/rating-system.js' %}"></script>
+    
+    <script>
+        // Funciones para manejar el carrito
+        function increaseQuantity(itemId) {
+            const quantityInput = document.getElementById('quantity-' + itemId);
+            let currentValue = parseInt(quantityInput.value);
+            quantityInput.value = currentValue + 1;
+            // Aquí se puede agregar lógica para actualizar en el servidor
+        }
+        
+        function decreaseQuantity(itemId) {
+            const quantityInput = document.getElementById('quantity-' + itemId);
+            let currentValue = parseInt(quantityInput.value);
+            if (currentValue > 1) {
+                quantityInput.value = currentValue - 1;
+                // Aquí se puede agregar lógica para actualizar en el servidor
+            }
+        }
+        
+        function removeItem(itemId, type) {
+            if (confirm('¿Estás seguro de que deseas eliminar este elemento del carrito?')) {
+                // Aquí se puede agregar lógica para eliminar del servidor
+                console.log('Eliminando item:', itemId, 'tipo:', type);
+            }
+        }
+        
+        function clearCart() {
+            if (confirm('¿Estás seguro de que deseas limpiar todo el carrito?')) {
+                // Aquí se puede agregar lógica para limpiar el carrito en el servidor
+                console.log('Limpiando carrito');
+            }
+        }
+        
+        function proceedToCheckout() {
+            // Aquí se puede agregar lógica para proceder al checkout
+            console.log('Procediendo al checkout');
+        }
+        
+        function viewItem(itemId) {
+            // Aquí se puede agregar lógica para ver los detalles del producto
+            console.log('Viendo detalles del producto:', itemId);
+            // Ejemplo: redirigir a la página de detalles del producto
+            // window.location.href = '/ecommerce/producto/' + itemId;
+        }
+        
+        function verDetalleCarrito() {
+            // Redirigir a la página de detalle del carrito
+            console.log('Viendo detalle del carrito');
+            window.location.href = '/ecommerce/detalle_carrito/';
+        }
+        
+        // Manejar selección de todos los productos
+        // Comentado porque el elemento 'selectAllProducts' no existe en este template
+        /*
+        document.getElementById('selectAllProducts').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.product-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+        */
+    </script>
   </body>
 </html>

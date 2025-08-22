@@ -312,4 +312,166 @@ class imagen_servicio_usuario(models.Model):
     fecha_creacion_servicio_usuario = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Imagen {self.id_imagen_servicio_usuario} - {self.id_servicio_fk.nombre_servicio_usuario}"
+        return f"Imagen de {self.id_servicio_fk.nombre_servicio_usuario}"
+
+
+class carrito_compra_producto_usuario(models.Model):
+    ESTATUS_CHOICES = [
+        ('activo', 'Activo'),
+        ('pendiente', 'Pendiente'),
+    ]
+
+    id_carrito_prod_usuario = models.AutoField(primary_key=True)
+    estatuscarrito_prod_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='activo')
+    fecha_creacion_carrito_prod_usuario = models.DateTimeField(auto_now_add=True)
+    total_carrito_prod_usuario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='carritos_compra')
+
+    def __str__(self):
+        return f"Carrito {self.id_carrito_prod_usuario} - {self.id_usuario_fk.nombre_usuario}"
+
+
+class detalle_compra_producto_usuario(models.Model):
+    id_deta_carrito_prod_usuario = models.AutoField(primary_key=True)
+    cantidad_deta_carrito_prod_usuario = models.PositiveIntegerField(default=1)
+    precio_unit_deta_carrito_prod_usuario = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal_deta_carrito_prod_usuario = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_agregado_deta_carrito_prod_usuario = models.DateTimeField(auto_now_add=True)
+    id_fk_carritocompra_usuario = models.ForeignKey('carrito_compra_producto_usuario', on_delete=models.CASCADE, related_name='detalles')
+    idproducto_fk_usuario = models.ForeignKey('producto_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='detalles_carrito')
+    id_fk_producto_sucursal_empresa = models.ForeignKey('producto_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='detalles_carrito_usuario')
+
+    def __str__(self):
+        return f"Detalle {self.id_deta_carrito_prod_usuario} - Carrito {self.id_fk_carritocompra_usuario.id_carrito_prod_usuario}"
+
+
+class carrito_compra_producto_empresa(models.Model):
+    ESTATUS_CHOICES = [
+        ('activo', 'Activo'),
+        ('pendiente', 'Pendiente'),
+    ]
+
+    id_carrito_prod_empresa = models.AutoField(primary_key=True)
+    estatuscarrito_prod_empresa = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='activo')
+    fecha_creacion_carrito_prod_empresa = models.DateTimeField(auto_now_add=True)
+    total_carrito_prod_empresa = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='carritos_compra')
+
+    def __str__(self):
+        return f"Carrito {self.id_carrito_prod_empresa} - {self.id_empresa_fk.nombre_empresa}"
+
+
+class detalle_compra_producto_empresa(models.Model):
+    id_deta_carrito_prod_empresa = models.AutoField(primary_key=True)
+    cantidad_deta_carrito_prod_empresa = models.PositiveIntegerField(default=1)
+    precio_unit_deta_carrito_prod_empresa = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal_deta_carrito_prod_empresa = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_agregado_deta_carrito_prod_empresa = models.DateTimeField(auto_now_add=True)
+    id_fk_carritocompra_empresa = models.ForeignKey('carrito_compra_producto_empresa', on_delete=models.CASCADE, related_name='detalles')
+    idproducto_fk_usuario = models.ForeignKey('producto_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='detalles_carrito_empresa')
+    id_fk_producto_sucursal_empresa = models.ForeignKey('producto_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='detalles_carrito_empresa')
+
+    def __str__(self):
+        return f"Detalle {self.id_deta_carrito_prod_empresa} - Carrito {self.id_fk_carritocompra_empresa.id_carrito_prod_empresa}"
+
+
+# MODELOS DE PEDIDOS
+class pedido_usuario(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('confirmado', 'Confirmado'),
+        ('enviado', 'Enviado'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    METODO_PAGO_CHOICES = [
+        ('tarjeta', 'Tarjeta de Crédito/Débito'),
+        ('transferencia', 'Transferencia Bancaria'),
+        ('efectivo', 'Efectivo'),
+        ('paypal', 'PayPal'),
+    ]
+    
+    id_pedido_usuario = models.AutoField(primary_key=True)
+    id_carrito_fk = models.ForeignKey('carrito_compra_producto_usuario', on_delete=models.CASCADE, related_name='pedidos')
+    numero_pedido = models.CharField(max_length=20, unique=True)
+    fecha_pedido = models.DateTimeField(auto_now_add=True)
+    estado_pedido = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    total_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    direccion_envio = models.TextField()
+    metodo_pago = models.CharField(max_length=50, choices=METODO_PAGO_CHOICES)
+    comprobante_pago = models.ImageField(upload_to='comprobantes_pago/', null=True, blank=True)
+    notas_pedido = models.TextField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"Pedido {self.numero_pedido} - Usuario {self.id_carrito_fk.id_usuario_fk.nombre_usuario}"
+
+
+class detalle_pedido_usuario(models.Model):
+    id_detalle_pedido_usuario = models.AutoField(primary_key=True)
+    id_pedido_fk = models.ForeignKey('pedido_usuario', on_delete=models.CASCADE, related_name='detalles')
+    idproducto_fk_usuario = models.ForeignKey('producto_usuario', null=True, blank=True, on_delete=models.SET_NULL, related_name='detalles_pedido_usuario')
+    id_fk_producto_sucursal_empresa = models.ForeignKey('producto_sucursal', null=True, blank=True, on_delete=models.SET_NULL, related_name='detalles_pedido_usuario')
+    cantidad_detalle_pedido = models.PositiveIntegerField()
+    precio_unitario_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal_detalle_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if not (bool(self.idproducto_fk_usuario) ^ bool(self.id_fk_producto_sucursal_empresa)):
+            raise ValidationError('Debe especificar exactamente un tipo de producto')
+    
+    def __str__(self):
+        return f"Detalle {self.id_detalle_pedido_usuario} - Pedido {self.id_pedido_fk.numero_pedido}"
+
+
+class pedido_empresa(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('confirmado', 'Confirmado'),
+        ('enviado', 'Enviado'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    METODO_PAGO_CHOICES = [
+        ('tarjeta', 'Tarjeta de Crédito/Débito'),
+        ('transferencia', 'Transferencia Bancaria'),
+        ('efectivo', 'Efectivo'),
+        ('paypal', 'PayPal'),
+    ]
+    
+    id_pedido_empresa = models.AutoField(primary_key=True)
+    id_carrito_fk = models.ForeignKey('carrito_compra_producto_empresa', on_delete=models.CASCADE, related_name='pedidos')
+    numero_pedido = models.CharField(max_length=20, unique=True)
+    fecha_pedido = models.DateTimeField(auto_now_add=True)
+    estado_pedido = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    total_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    direccion_envio = models.TextField()
+    metodo_pago = models.CharField(max_length=50, choices=METODO_PAGO_CHOICES)
+    comprobante_pago = models.ImageField(upload_to='comprobantes_pago/', null=True, blank=True)
+    notas_pedido = models.TextField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"Pedido {self.numero_pedido} - Empresa {self.id_carrito_fk.id_empresa_fk.nombre_empresa}"
+
+
+class detalle_pedido_empresa(models.Model):
+    id_detalle_pedido_empresa = models.AutoField(primary_key=True)
+    id_pedido_fk = models.ForeignKey('pedido_empresa', on_delete=models.CASCADE, related_name='detalles')
+    idproducto_fk_usuario = models.ForeignKey('producto_usuario', null=True, blank=True, on_delete=models.SET_NULL, related_name='detalles_pedido_empresa')
+    id_fk_producto_sucursal_empresa = models.ForeignKey('producto_sucursal', null=True, blank=True, on_delete=models.SET_NULL, related_name='detalles_pedido_empresa')
+    cantidad_detalle_pedido = models.PositiveIntegerField()
+    precio_unitario_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal_detalle_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if not (bool(self.idproducto_fk_usuario) ^ bool(self.id_fk_producto_sucursal_empresa)):
+            raise ValidationError('Debe especificar exactamente un tipo de producto')
+    
+    def __str__(self):
+        return f"Detalle {self.id_detalle_pedido_empresa} - Pedido {self.id_pedido_fk.numero_pedido}"
+
+
+

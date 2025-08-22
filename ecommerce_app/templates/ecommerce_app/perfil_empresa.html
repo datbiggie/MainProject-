@@ -182,51 +182,52 @@
           <div class="col-md-12">
 
             <div class="product-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
-                  
-              <div class="col">
-                <div class="product-item">
-                  <figure>
-                    <a href="index.html" title="Product Title">
-                      <img src="{% static 'perfil_empresa/images/product-thumb-1.png' %}" alt="Product Thumbnail" class="tab-image">
-                    </a>
-                  </figure>
-                  <div class="d-flex flex-column text-center">
-                    <h3 class="fs-6 fw-normal">Whole Wheat Sandwich Bread</h3>
-                    <div>
-                      <div class="rating-container" data-product-id="1">
-                        <div class="stars-container">
-                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
+              {% if productos_recientes %}
+                {% for producto in productos_recientes %}
+                  <div class="col">
+                    <div class="product-item">
+                      <figure>
+                        <a href="#" title="{{ producto.nombre_producto_empresa }}">
+                          {% if producto.primera_imagen %}
+                            <img src="{{ producto.primera_imagen.ruta_imagen_producto_empresa.url }}" alt="{{ producto.nombre_producto_empresa }}" class="tab-image">
+                          {% else %}
+                            <img src="{% static 'perfil_empresa/images/product-thumb-1.png' %}" alt="{{ producto.nombre_producto_empresa }}" class="tab-image">
+                          {% endif %}
+                        </a>
+                      </figure>
+                      <div class="d-flex flex-column text-center">
+                        <h3 class="fs-6 fw-normal">{{ producto.nombre_producto_empresa }}</h3>
+                        <div>
+                          <div class="rating-container" data-product-id="{{ producto.id_producto_empresa }}">
+                            <div class="stars-container">
+                              <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
+                            </div>
+                            <span class="rating-text">(0)</span>
+                          </div>
                         </div>
-                        <span class="rating-text">(222)</span>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                      <del>$24.00</del>
-                      <span class="text-dark fw-semibold">$18.00</span>
-                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                    </div>
-                    <div class="button-area p-3 pt-0">
-                      <div class="row g-1 mt-2">
-                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
+                        <div class="d-flex justify-content-center align-items-center gap-2">
+                          <span class="text-dark fw-semibold">${{ producto.precio_producto_empresa }}</span>
+                        </div>
+                        <div class="button-area p-3 pt-0">
+                          <div class="row g-1 mt-2">
+                            <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
+                            <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
+                            <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
+                {% endfor %}
+              {% else %}
+                <div class="col-12">
+                  <p class="text-center text-muted">No hay productos agregados recientemente.</p>
                 </div>
-              </div>
-
-           
-
-          
-
-         
-        
-              
+              {% endif %}
             </div>
             <!-- / product-grid -->
 
@@ -261,51 +262,52 @@
           <div class="col-md-12">
 
             <div class="product-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
-                  
-              <div class="col">
-                <div class="product-item">
-                  <figure>
-                    <a href="index.html" title="Product Title">
-                      <img src="{% static 'perfil_empresa/images/product-thumb-1.png' %}" alt="Product Thumbnail" class="tab-image">
-                    </a>
-                  </figure>
-                  <div class="d-flex flex-column text-center">
-                    <h3 class="fs-6 fw-normal">Whole Wheat Sandwich Bread</h3>
-                    <div>
-                      <div class="rating-container" data-product-id="1">
-                        <div class="stars-container">
-                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
+              {% if servicios_recientes %}
+                {% for servicio in servicios_recientes %}
+                  <div class="col">
+                    <div class="product-item">
+                      <figure>
+                        <a href="#" title="{{ servicio.nombre_servicio_empresa }}">
+                          {% if servicio.primera_imagen %}
+                            <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}" alt="{{ servicio.nombre_servicio_empresa }}" class="tab-image">
+                          {% else %}
+                            <img src="{% static 'perfil_empresa/images/product-thumb-1.png' %}" alt="{{ servicio.nombre_servicio_empresa }}" class="tab-image">
+                          {% endif %}
+                        </a>
+                      </figure>
+                      <div class="d-flex flex-column text-center">
+                        <h3 class="fs-6 fw-normal">{{ servicio.nombre_servicio_empresa }}</h3>
+                        <div>
+                          <div class="rating-container" data-product-id="{{ servicio.id_servicio_empresa }}">
+                            <div class="stars-container">
+                              <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
+                              <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
+                            </div>
+                            <span class="rating-text">(0)</span>
+                          </div>
                         </div>
-                        <span class="rating-text">(222)</span>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                      <del>$24.00</del>
-                      <span class="text-dark fw-semibold">$18.00</span>
-                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                    </div>
-                    <div class="button-area p-3 pt-0">
-                      <div class="row g-1 mt-2">
-                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
+                        <div class="d-flex justify-content-center align-items-center gap-2">
+                          <span class="text-dark fw-semibold">${{ servicio.precio_servicio_empresa }}</span>
+                        </div>
+                        <div class="button-area p-3 pt-0">
+                          <div class="row g-1 mt-2">
+                            <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
+                            <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
+                            <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
+                {% endfor %}
+              {% else %}
+                <div class="col-12">
+                  <p class="text-center text-muted">No hay servicios agregados recientemente.</p>
                 </div>
-              </div>
-
-           
-
-          
-
-         
-        
-              
+              {% endif %}
             </div>
             <!-- / product-grid -->
 

@@ -60,6 +60,17 @@ urlpatterns = [
     path('perfil_sucursales_asociadas/', views.perfil_sucursales_asociadas, name='perfil_sucursales_asociadas'),
     path('perfil_productos/', views.perfil_productos, name='perfil_productos'),
     path('perfil_servicios/', views.perfil_servicios, name='perfil_servicios'),
+    path('detalle_carrito/', views.detalle_carrito, name='detalle_carrito'),
+    path('agregar_al_carrito/', views.agregar_al_carrito, name='agregar_al_carrito'),
+    path('eliminar_del_carrito/', views.eliminar_del_carrito, name='eliminar_del_carrito'),
+    path('actualizar_cantidad_carrito/', views.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),
+    path('pedido/', views.pedido, name='pedido'),
+    path('procesar_pedido/', views.procesar_pedido, name='procesar_pedido'),
+    path('confirmacion_pedido/', views.confirmacion_pedido, name='confirmacion_pedido'),
+    path('mis_pedidos/', views.mis_pedidos, name='mis_pedidos'),
+    path('mis_ventas/', views.mis_ventas, name='mis_ventas'),
+    path('confirmar_venta/', views.confirmar_venta, name='confirmar_venta'),
+
 
 
 

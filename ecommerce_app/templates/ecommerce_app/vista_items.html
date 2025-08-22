@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
     
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
     <style>
       .thumbnail-container {
         max-height: 400px;
@@ -167,6 +170,28 @@
                     <div class="col-6">
                       <small class="text-muted">Stock disponible:</small>
                       <div class="fw-semibold">{{ item.sucursal.stock }} unidades</div>
+                      <!-- Input de cantidad -->
+                      <div class="mt-3 mb-3">
+                        <label for="cantidad" class="form-label fw-bold small mb-1">Cantidad</label>
+                        <div class="input-group" style="max-width: 140px;">
+                          <button class="btn btn-outline-secondary btn-sm" type="button" onclick="decrementarCantidad()">
+                            <i class="fas fa-minus"></i>
+                          </button>
+                          <input type="number" class="form-control form-control-sm text-center" id="cantidad" value="1" min="1" max="{{ item.sucursal.stock|default:999 }}" style="width: 60px;">
+                          <button class="btn btn-outline-secondary btn-sm" type="button" onclick="incrementarCantidad()">
+                            <i class="fas fa-plus"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <!-- Botones de acción -->
+                      <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-sm" type="button" onclick="agregarAlCarritoConCantidad('{{ item.id }}', '{{ item.tipo_propietario }}')">
+                          <i class="fas fa-shopping-cart me-1"></i>Agregar al carrito
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" type="button" onclick="agregarAFavoritos('{{ item.id }}', '{{ item.tipo_propietario }}')">
+                          <i class="fas fa-heart me-1"></i>Agregar a favoritos
+                        </button>
+                      </div>
                     </div>
                   {% endif %}
                   {% if item.sucursal.condicion %}
@@ -234,16 +259,15 @@
             </div>
           {% endif %}
 
-          <!-- Botones de acción -->
-          <div class="d-grid gap-2">
-            <button class="btn btn-primary btn-lg" type="button">
-              <i class="fas fa-shopping-cart me-2"></i>
-              {% if item.tipo == 'producto' %}Agregar al carrito{% else %}Solicitar servicio{% endif %}
-            </button>
-            <button class="btn btn-outline-secondary" type="button">
-              <i class="fas fa-heart me-2"></i>Agregar a favoritos
-            </button>
-          </div>
+          <!-- Botones de acción solo para servicios -->
+          {% if item.tipo == 'servicio' %}
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary btn-lg" type="button" onclick="solicitarServicio('{{ item.id }}', '{{ item.tipo_propietario }}')">
+                <i class="fas fa-concierge-bell me-2"></i>
+                Solicitar servicio
+              </button>
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -270,8 +294,217 @@
     // Agregar clase active al thumbnail seleccionado
     thumbnailElement.classList.add('active');
   }
+
+  function agregarAlCarrito(productoId, tipoPropietario) {
+    // Crear objeto con los datos del producto
+    const data = {
+      producto_id: productoId,
+      tipo_propietario: tipoPropietario,
+      csrfmiddlewaretoken: '{{ csrf_token }}'
+    };
+
+    // Realizar petición AJAX
+    fetch('{% url "agregar_al_carrito" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: new URLSearchParams(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        Swal.fire({
+          title: '¡Éxito!',
+          text: data.message,
+          icon: 'success',
+          confirmButtonText: 'Continuar',
+          confirmButtonColor: '#10b981'
+        });
+      } else {
+        if (data.message === 'Usuario no autenticado') {
+          Swal.fire({
+            title: 'Sesión requerida',
+            text: 'Debes iniciar sesión para agregar productos al carrito',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Iniciar sesión',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3b82f6'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.href = '{% url "iniciar_sesion" %}';
+            }
+          });
+        } else if (data.stock_insuficiente) {
+          // Manejar específicamente errores de stock insuficiente
+          Swal.fire({
+            title: 'Stock insuficiente',
+            text: data.message,
+            icon: 'warning',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#f59e0b'
+          });
+        } else {
+          Swal.fire({
+            title: 'Error',
+            text: data.message,
+            icon: 'error',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#ef4444'
+          });
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Ocurrió un error al agregar el producto al carrito',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444'
+      });
+    });
+  }
+
+  function solicitarServicio(itemId, tipoPropietario) {
+    Swal.fire({
+      title: 'Solicitar Servicio',
+      text: 'Esta funcionalidad estará disponible próximamente',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#3b82f6'
+    });
+  }
+
+  // Funciones para manejar la cantidad
+  function incrementarCantidad() {
+    const cantidadInput = document.getElementById('cantidad');
+    const maxStock = parseInt(cantidadInput.getAttribute('max'));
+    const currentValue = parseInt(cantidadInput.value);
+    
+    if (currentValue < maxStock) {
+      cantidadInput.value = currentValue + 1;
+    }
+  }
+
+  function decrementarCantidad() {
+    const cantidadInput = document.getElementById('cantidad');
+    const currentValue = parseInt(cantidadInput.value);
+    
+    if (currentValue > 1) {
+      cantidadInput.value = currentValue - 1;
+    }
+  }
+
+  // Función para agregar al carrito con cantidad
+  function agregarAlCarritoConCantidad(productoId, tipoPropietario) {
+    const cantidadInput = document.getElementById('cantidad');
+    const cantidad = cantidadInput ? parseInt(cantidadInput.value) : 1;
+    const stockDisponible = cantidadInput ? parseInt(cantidadInput.getAttribute('max')) : 999;
+    
+    // Validar que la cantidad no exceda el stock disponible
+    if (cantidad > stockDisponible) {
+      Swal.fire({
+        title: 'Cantidad no disponible',
+        text: `La cantidad solicitada (${cantidad}) excede el stock disponible (${stockDisponible} unidades)`,
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#f59e0b'
+      });
+      return;
+    }
+    
+    // Crear objeto con los datos del producto incluyendo cantidad
+    const data = {
+      producto_id: productoId,
+      tipo_propietario: tipoPropietario,
+      cantidad: cantidad,
+      csrfmiddlewaretoken: '{{ csrf_token }}'
+    };
+
+    // Realizar petición AJAX
+    fetch('{% url "agregar_al_carrito" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: new URLSearchParams(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        Swal.fire({
+          title: '¡Éxito!',
+          text: data.message,
+          icon: 'success',
+          confirmButtonText: 'Continuar',
+          confirmButtonColor: '#10b981'
+        });
+      } else {
+        if (data.message === 'Usuario no autenticado') {
+          Swal.fire({
+            title: 'Sesión requerida',
+            text: 'Debes iniciar sesión para agregar productos al carrito',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Iniciar sesión',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3b82f6'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.href = '{% url "iniciar_sesion" %}';
+            }
+          });
+        } else if (data.stock_insuficiente) {
+          // Manejar específicamente errores de stock insuficiente
+          Swal.fire({
+            title: 'Stock insuficiente',
+            text: data.message,
+            icon: 'warning',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#f59e0b'
+          });
+        } else {
+          Swal.fire({
+            title: 'Error',
+            text: data.message,
+            icon: 'error',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#ef4444'
+          });
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Ocurrió un error al agregar el producto al carrito',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444'
+      });
+    });
+  }
+
+  // Función para agregar a favoritos
+  function agregarAFavoritos(itemId, tipoPropietario) {
+    Swal.fire({
+      title: 'Agregar a Favoritos',
+      text: 'Esta funcionalidad estará disponible próximamente',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#3b82f6'
+    });
+  }
 </script>
 
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -55,7 +55,7 @@
           {% endif %}
         </div>
         <div class="col-md-10">
-    <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ usuario.nombre_usuario|default:'Nombre del Usuario' }} {{ usuario.apellido_usuario|default:'' }}</h1>
+    <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ usuario.nombre_usuario|default:'Nombre del Usuario' }}</h1>
     
         </div>
       </div>
@@ -72,7 +72,7 @@
         <div class="card-body p-0">
           <h5 class="fw-bold mb-2">Información Personal</h5>
           <ul class="list-unstyled small text-start mb-2" style="min-width:180px;">
-            <li><strong style="color:#111;">Nombre:</strong> <span style="color:#111;">{{ usuario.nombre_usuario|default:'-' }} {{ usuario.apellido_usuario|default:'' }}</span></li>
+            <li><strong style="color:#111;">Nombre:</strong> <span style="color:#111;">{{ usuario.nombre_usuario|default:'-' }}</span></li>
             <li><strong style="color:#111;">Rol:</strong> <span style="color:#111;">{{ usuario.rol_usuario|default:'-' }}</span></li>
             <li><strong style="color:#111;">Email:</strong> <span style="color:#111;">{{ usuario.correo_usuario|default:'-' }}</span></li>
             <li><strong style="color:#111;">Teléfono:</strong> <span style="color:#111;">{{ usuario.telefono_usuario|default:'-' }}</span></li>
