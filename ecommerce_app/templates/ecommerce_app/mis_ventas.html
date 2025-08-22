@@ -71,10 +71,26 @@
             max-width: 200px;
             border-radius: 8px;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.2s ease;
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
         .payment-proof:hover {
             transform: scale(1.05);
+        }
+        
+        /* Prevenir conflictos con librerías de lightbox */
+        .payment-proof.modal-trigger {
+            pointer-events: auto;
+        }
+        
+        /* Estabilizar el modal */
+        .modal-body img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
         }
     </style>
 </head>
@@ -341,6 +357,28 @@
     <script src="{% static 'index/js/rating-system.js' %}"></script>
     
     <script>
+        // Prevenir conflictos con Chocolat lightbox en imágenes de comprobantes
+        document.addEventListener('DOMContentLoaded', function() {
+            // Excluir imágenes de comprobantes de Chocolat
+            const paymentProofImages = document.querySelectorAll('.payment-proof');
+            paymentProofImages.forEach(function(img) {
+                img.classList.add('modal-trigger');
+                // Prevenir que Chocolat procese estas imágenes
+                img.setAttribute('data-chocolat-exclude', 'true');
+            });
+            
+            // Reinicializar Chocolat excluyendo las imágenes de comprobantes
+            if (typeof Chocolat !== 'undefined') {
+                const imageLinks = document.querySelectorAll('.image-link:not([data-chocolat-exclude])');
+                if (imageLinks.length > 0) {
+                    Chocolat(imageLinks, {
+                        imageSize: 'contain',
+                        loop: true,
+                    });
+                }
+            }
+        });
+        
         // Inicializar tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -385,6 +423,38 @@
                 alert('Funcionalidad de rechazo pendiente de implementar para la venta #' + numeroPedido);
             }
         }
+        
+        // Manejar modales de comprobantes de pago
+        document.addEventListener('DOMContentLoaded', function() {
+            const paymentModals = document.querySelectorAll('[id^="paymentModal"]');
+            
+            paymentModals.forEach(function(modal) {
+                modal.addEventListener('show.bs.modal', function() {
+                    // Estabilizar la imagen cuando se abre el modal
+                    const modalImg = this.querySelector('.modal-body img');
+                    if (modalImg) {
+                        modalImg.style.opacity = '0';
+                        modalImg.onload = function() {
+                            this.style.transition = 'opacity 0.3s ease';
+                            this.style.opacity = '1';
+                        };
+                        // Si la imagen ya está cargada
+                        if (modalImg.complete) {
+                            modalImg.style.opacity = '1';
+                        }
+                    }
+                });
+                
+                modal.addEventListener('hidden.bs.modal', function() {
+                    // Limpiar estilos cuando se cierra el modal
+                    const modalImg = this.querySelector('.modal-body img');
+                    if (modalImg) {
+                        modalImg.style.opacity = '';
+                        modalImg.style.transition = '';
+                    }
+                });
+            });
+        })
     </script>
 </body>
 </html>

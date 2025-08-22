@@ -83,7 +83,7 @@ function actualizarCantidad(productoId, nuevaCantidad) {
     });
 }
 
-function eliminarDetalle(productoId) {
+function eliminarDetalle(detalleId) {
     Swal.fire({
         title: '¿Estás seguro?',
         text: '¿Deseas eliminar este producto del carrito?',
@@ -103,7 +103,7 @@ function eliminarDetalle(productoId) {
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify({
-                producto_id: productoId
+                detalle_id: detalleId
             })
         })
             .then(response => response.json())
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners para botones de eliminar
     document.querySelectorAll('.btn-eliminar').forEach(function(button) {
         button.addEventListener('click', function() {
-            const detalleId = this.getAttribute('data-producto-id');
+            const detalleId = this.getAttribute('data-detalle-id');
             eliminarDetalle(detalleId);
         });
     });

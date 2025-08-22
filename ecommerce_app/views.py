@@ -3606,7 +3606,7 @@ def carrito(request):
                     sucursal_info = producto_sucursal.id_sucursal_fk
                     
                     productos_carrito.append({
-                        'id': producto.id_producto_empresa,
+                        'id': producto_sucursal.id_producto_sucursal,
                         'nombre': producto.nombre_producto_empresa,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
                         'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
@@ -3682,7 +3682,7 @@ def carrito(request):
                     sucursal_info = producto_sucursal.id_sucursal_fk
                     
                     productos_carrito.append({
-                        'id': producto.id_producto_empresa,
+                        'id': producto_sucursal.id_producto_sucursal,
                         'nombre': producto.nombre_producto_empresa,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
                         'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
@@ -3706,6 +3706,7 @@ def carrito(request):
                     
                     productos_carrito.append({
                         'id': producto.id_producto_usuario,
+                        'detalle_id': detalle.id_deta_carrito_prod_usuario,
                         'nombre': producto.nombre_producto_usuario,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
                         'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
@@ -3841,7 +3842,7 @@ def vista_items(request):
                     }
                     
                     item_data = {
-                        'id': producto.id_producto_empresa,
+                        'id': producto_sucursal_obj.id_producto_sucursal,  # Usar ID del producto_sucursal
                         'nombre': producto.nombre_producto_empresa,
                         'descripcion': producto.descripcion_producto_empresa,
                         'marca': producto.marca_producto_empresa,
@@ -3875,18 +3876,24 @@ def vista_items(request):
                                 'estatus': producto_sucursal_obj.estatus_producto_sucursal
                             }
                         
-                        item_data = {
-                            'id': producto.id_producto_empresa,
-                            'nombre': producto.nombre_producto_empresa,
-                            'descripcion': producto.descripcion_producto_empresa,
-                            'tipo_propietario': 'empresa',
-                            'marca': producto.marca_producto_empresa,
-                            'modelo': producto.modelo_producto_empresa,
-                            'caracteristicas': producto.caracteristicas_generales_empresa,
-                            'tipo': 'producto',
-                            'empresa': producto.id_empresa_fk.nombre_empresa,
-                            'sucursal': sucursal_info
-                        }
+                        # Solo permitir agregar al carrito si existe producto_sucursal
+                        if producto_sucursal_obj:
+                            item_data = {
+                                'id': producto_sucursal_obj.id_producto_sucursal,  # Usar ID del producto_sucursal
+                                'nombre': producto.nombre_producto_empresa,
+                                'descripcion': producto.descripcion_producto_empresa,
+                                'tipo_propietario': 'empresa',
+                                'marca': producto.marca_producto_empresa,
+                                'modelo': producto.modelo_producto_empresa,
+                                'caracteristicas': producto.caracteristicas_generales_empresa,
+                                'tipo': 'producto',
+                                'empresa': producto.id_empresa_fk.nombre_empresa,
+                                'sucursal': sucursal_info
+                            }
+                        else:
+                            # Si no hay producto_sucursal, no se puede agregar al carrito
+                            print(f"DEBUG: Producto {producto.nombre_producto_empresa} no tiene sucursal asociada")
+                            return redirect('/ecommerce/index/')
                     except producto_empresa.DoesNotExist:
                         print(f"DEBUG: No se encontró producto_empresa con id: {item_id}")
                         return redirect('/ecommerce/index/')
@@ -4728,6 +4735,7 @@ def detalle_carrito(request):
                     
                     productos_carrito.append({
                         'id': producto.id_producto_empresa,
+                        'detalle_id': detalle.id_deta_carrito_prod_empresa,
                         'nombre': producto.nombre_producto_empresa,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
                         'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
@@ -4752,6 +4760,7 @@ def detalle_carrito(request):
                     
                     productos_carrito.append({
                         'id': producto.id_producto_usuario,
+                        'detalle_id': detalle.id_deta_carrito_prod_empresa,
                         'nombre': producto.nombre_producto_usuario,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
                         'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
@@ -4802,6 +4811,7 @@ def detalle_carrito(request):
                     
                     productos_carrito.append({
                         'id': producto.id_producto_empresa,
+                        'detalle_id': detalle.id_deta_carrito_prod_usuario,
                         'nombre': producto.nombre_producto_empresa,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
                         'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
@@ -4825,6 +4835,7 @@ def detalle_carrito(request):
                     
                     productos_carrito.append({
                         'id': producto.id_producto_usuario,
+                        'detalle_id': detalle.id_deta_carrito_prod_usuario,
                         'nombre': producto.nombre_producto_usuario,
                         'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
                         'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
@@ -4882,7 +4893,7 @@ def detalle_carrito(request):
 @csrf_exempt
 @require_POST
 def agregar_al_carrito(request):
-    """Vista para agregar productos al carrito"""
+    """Vista para agregar productos al carrito - Permite a cualquier usuario agregar productos de cualquier tipo"""
     try:
         # Verificar autenticación
         if not is_user_authenticated(request):
@@ -4911,6 +4922,50 @@ def agregar_al_carrito(request):
         
         account_type = request.session.get('account_type', 'usuario')
         
+        # Validar y obtener información del producto
+        producto_info = None
+        if tipo_producto == 'empresa':
+            try:
+                producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=producto_id)
+                producto_info = {
+                    'objeto': producto_sucursal_obj,
+                    'precio': producto_sucursal_obj.precio_producto_sucursal,
+                    'stock': producto_sucursal_obj.stock_producto_sucursal,
+                    'tipo': 'empresa'
+                }
+            except producto_sucursal.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Producto de empresa no encontrado'
+                }, status=404)
+        elif tipo_producto == 'usuario':
+            try:
+                producto_usuario_obj = producto_usuario.objects.get(id_producto_usuario=producto_id)
+                producto_info = {
+                    'objeto': producto_usuario_obj,
+                    'precio': producto_usuario_obj.precio_producto_usuario,
+                    'stock': producto_usuario_obj.stock_producto_usuario,
+                    'tipo': 'usuario'
+                }
+            except producto_usuario.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Producto de usuario no encontrado'
+                }, status=404)
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Tipo de producto no válido'
+            }, status=400)
+        
+        # Validar stock disponible
+        if cantidad > producto_info['stock']:
+            return JsonResponse({
+                'success': False,
+                'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({producto_info["stock"]} unidades)',
+                'stock_insuficiente': True
+            }, status=400)
+        
         # Lógica para empresas
         if account_type == 'empresa':
             # Buscar carrito existente (activo o pendiente)
@@ -4929,110 +4984,80 @@ def agregar_al_carrito(request):
                 )
                 created = True
             
-            # Obtener el producto y su precio
-            if tipo_producto == 'empresa':
-                try:
-                    producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=producto_id)
-                    precio = producto_sucursal_obj.precio_producto_sucursal
-                    stock_disponible = producto_sucursal_obj.stock_producto_sucursal
-                    
-                    # Validar stock disponible
-                    if cantidad > stock_disponible:
+            # Agregar producto al carrito de empresa
+            if producto_info['tipo'] == 'empresa':
+                # Verificar si ya existe en el carrito
+                detalle_existente = detalle_compra_producto_empresa.objects.filter(
+                    id_fk_carritocompra_empresa=carrito,
+                    id_fk_producto_sucursal_empresa=producto_info['objeto']
+                ).first()
+                
+                if detalle_existente:
+                    # Validar stock con cantidad existente en carrito
+                    nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_empresa + cantidad
+                    if nueva_cantidad_total > producto_info['stock']:
                         return JsonResponse({
                             'success': False,
-                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({producto_info["stock"]} unidades)',
                             'stock_insuficiente': True
                         }, status=400)
                     
-                    # Verificar si ya existe en el carrito
-                    detalle_existente = detalle_compra_producto_empresa.objects.filter(
+                    # Actualizar cantidad
+                    detalle_existente.cantidad_deta_carrito_prod_empresa += cantidad
+                    detalle_existente.subtotal_deta_carrito_prod_empresa = (
+                        detalle_existente.cantidad_deta_carrito_prod_empresa * producto_info['precio']
+                    )
+                    detalle_existente.save()
+                else:
+                    # Crear nuevo detalle
+                    detalle_compra_producto_empresa.objects.create(
                         id_fk_carritocompra_empresa=carrito,
-                        id_fk_producto_sucursal_empresa=producto_sucursal_obj
-                    ).first()
-                    
-                    if detalle_existente:
-                        # Validar stock con cantidad existente en carrito
-                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_empresa + cantidad
-                        if nueva_cantidad_total > stock_disponible:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
-                                'stock_insuficiente': True
-                            }, status=400)
-                        
-                        # Actualizar cantidad
-                        detalle_existente.cantidad_deta_carrito_prod_empresa += cantidad
-                        detalle_existente.subtotal_deta_carrito_prod_empresa = (
-                            detalle_existente.cantidad_deta_carrito_prod_empresa * precio
-                        )
-                        detalle_existente.save()
-                    else:
-                        # Crear nuevo detalle
-                        detalle_compra_producto_empresa.objects.create(
-                            id_fk_carritocompra_empresa=carrito,
-                            id_fk_producto_sucursal_empresa=producto_sucursal_obj,
-                            cantidad_deta_carrito_prod_empresa=cantidad,
-                            precio_unit_deta_carrito_prod_empresa=precio,
-                            subtotal_deta_carrito_prod_empresa=cantidad * precio
-                        )
-                        
-                except producto_sucursal.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto de empresa no encontrado'
-                    }, status=404)
-                    
-            elif tipo_producto == 'usuario':
-                try:
-                    producto_usuario_obj = producto_usuario.objects.get(id_producto_usuario=producto_id)
-                    precio = producto_usuario_obj.precio_producto_usuario
-                    stock_disponible = producto_usuario_obj.stock_producto_usuario
-                    
-                    # Validar stock disponible
-                    if cantidad > stock_disponible:
+                        id_fk_producto_sucursal_empresa=producto_info['objeto'],
+                        cantidad_deta_carrito_prod_empresa=cantidad,
+                        precio_unit_deta_carrito_prod_empresa=producto_info['precio'],
+                        subtotal_deta_carrito_prod_empresa=cantidad * producto_info['precio']
+                    )
+            
+            elif producto_info['tipo'] == 'usuario':
+                # Verificar si ya existe en el carrito
+                detalle_existente = detalle_compra_producto_empresa.objects.filter(
+                    id_fk_carritocompra_empresa=carrito,
+                    idproducto_fk_usuario=producto_info['objeto']
+                ).first()
+                
+                if detalle_existente:
+                    # Validar stock con cantidad existente en carrito
+                    nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_empresa + cantidad
+                    if nueva_cantidad_total > producto_info['stock']:
                         return JsonResponse({
                             'success': False,
-                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({producto_info["stock"]} unidades)',
                             'stock_insuficiente': True
                         }, status=400)
                     
-                    # Verificar si ya existe en el carrito
-                    detalle_existente = detalle_compra_producto_empresa.objects.filter(
+                    # Actualizar cantidad
+                    detalle_existente.cantidad_deta_carrito_prod_empresa += cantidad
+                    detalle_existente.subtotal_deta_carrito_prod_empresa = (
+                        detalle_existente.cantidad_deta_carrito_prod_empresa * producto_info['precio']
+                    )
+                    detalle_existente.save()
+                else:
+                    # Crear nuevo detalle
+                    detalle_compra_producto_empresa.objects.create(
                         id_fk_carritocompra_empresa=carrito,
-                        idproducto_fk_usuario=producto_usuario_obj
-                    ).first()
-                    
-                    if detalle_existente:
-                        # Validar stock con cantidad existente en carrito
-                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_empresa + cantidad
-                        if nueva_cantidad_total > stock_disponible:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
-                                'stock_insuficiente': True
-                            }, status=400)
-                        
-                        # Actualizar cantidad
-                        detalle_existente.cantidad_deta_carrito_prod_empresa += cantidad
-                        detalle_existente.subtotal_deta_carrito_prod_empresa = (
-                            detalle_existente.cantidad_deta_carrito_prod_empresa * precio
-                        )
-                        detalle_existente.save()
-                    else:
-                        # Crear nuevo detalle
-                        detalle_compra_producto_empresa.objects.create(
-                            id_fk_carritocompra_empresa=carrito,
-                            idproducto_fk_usuario=producto_usuario_obj,
-                            cantidad_deta_carrito_prod_empresa=cantidad,
-                            precio_unit_deta_carrito_prod_empresa=precio,
-                            subtotal_deta_carrito_prod_empresa=cantidad * precio
-                        )
-                        
-                except producto_usuario.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto de usuario no encontrado'
-                    }, status=404)
+                        idproducto_fk_usuario=producto_info['objeto'],
+                        cantidad_deta_carrito_prod_empresa=cantidad,
+                        precio_unit_deta_carrito_prod_empresa=producto_info['precio'],
+                        subtotal_deta_carrito_prod_empresa=cantidad * producto_info['precio']
+                    )
+            
+            # Actualizar total del carrito
+            total = sum(
+                detalle.subtotal_deta_carrito_prod_empresa 
+                for detalle in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_empresa = total
+            carrito.save()
         
         # Lógica para usuarios
         else:
@@ -5052,126 +5077,80 @@ def agregar_al_carrito(request):
                 )
                 created = True
             
-            # Obtener el producto y su precio
-            if tipo_producto == 'empresa':
-                try:
-                    producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=producto_id)
-                    precio = producto_sucursal_obj.precio_producto_sucursal
-                    stock_disponible = producto_sucursal_obj.stock_producto_sucursal
-                    
-                    # Validar stock disponible
-                    if cantidad > stock_disponible:
+            # Agregar producto al carrito de usuario
+            if producto_info['tipo'] == 'empresa':
+                # Verificar si ya existe en el carrito
+                detalle_existente = detalle_compra_producto_usuario.objects.filter(
+                    id_fk_carritocompra_usuario=carrito,
+                    id_fk_producto_sucursal_empresa=producto_info['objeto']
+                ).first()
+                
+                if detalle_existente:
+                    # Validar stock con cantidad existente en carrito
+                    nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_usuario + cantidad
+                    if nueva_cantidad_total > producto_info['stock']:
                         return JsonResponse({
                             'success': False,
-                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({producto_info["stock"]} unidades)',
                             'stock_insuficiente': True
                         }, status=400)
                     
-                    # Verificar si ya existe en el carrito
-                    detalle_existente = detalle_compra_producto_usuario.objects.filter(
+                    # Actualizar cantidad
+                    detalle_existente.cantidad_deta_carrito_prod_usuario += cantidad
+                    detalle_existente.subtotal_deta_carrito_prod_usuario = (
+                        detalle_existente.cantidad_deta_carrito_prod_usuario * producto_info['precio']
+                    )
+                    detalle_existente.save()
+                else:
+                    # Crear nuevo detalle
+                    detalle_compra_producto_usuario.objects.create(
                         id_fk_carritocompra_usuario=carrito,
-                        id_fk_producto_sucursal_empresa=producto_sucursal_obj
-                    ).first()
-                    
-                    if detalle_existente:
-                        # Validar stock con cantidad existente en carrito
-                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_usuario + cantidad
-                        if nueva_cantidad_total > stock_disponible:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
-                                'stock_insuficiente': True
-                            }, status=400)
-                        
-                        # Actualizar cantidad
-                        detalle_existente.cantidad_deta_carrito_prod_usuario += cantidad
-                        detalle_existente.subtotal_deta_carrito_prod_usuario = (
-                            detalle_existente.cantidad_deta_carrito_prod_usuario * precio
-                        )
-                        detalle_existente.save()
-                    else:
-                        # Crear nuevo detalle
-                        detalle_compra_producto_usuario.objects.create(
-                            id_fk_carritocompra_usuario=carrito,
-                            id_fk_producto_sucursal_empresa=producto_sucursal_obj,
-                            cantidad_deta_carrito_prod_usuario=cantidad,
-                            precio_unit_deta_carrito_prod_usuario=precio,
-                            subtotal_deta_carrito_prod_usuario=cantidad * precio
-                        )
-                        
-                except producto_sucursal.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto de empresa no encontrado'
-                    }, status=404)
-                    
-            elif tipo_producto == 'usuario':
-                try:
-                    producto_usuario_obj = producto_usuario.objects.get(id_producto_usuario=producto_id)
-                    precio = producto_usuario_obj.precio_producto_usuario
-                    stock_disponible = producto_usuario_obj.stock_producto_usuario
-                    
-                    # Validar stock disponible
-                    if cantidad > stock_disponible:
+                        id_fk_producto_sucursal_empresa=producto_info['objeto'],
+                        cantidad_deta_carrito_prod_usuario=cantidad,
+                        precio_unit_deta_carrito_prod_usuario=producto_info['precio'],
+                        subtotal_deta_carrito_prod_usuario=cantidad * producto_info['precio']
+                    )
+            
+            elif producto_info['tipo'] == 'usuario':
+                # Verificar si ya existe en el carrito
+                detalle_existente = detalle_compra_producto_usuario.objects.filter(
+                    id_fk_carritocompra_usuario=carrito,
+                    idproducto_fk_usuario=producto_info['objeto']
+                ).first()
+                
+                if detalle_existente:
+                    # Validar stock con cantidad existente en carrito
+                    nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_usuario + cantidad
+                    if nueva_cantidad_total > producto_info['stock']:
                         return JsonResponse({
                             'success': False,
-                            'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
+                            'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({producto_info["stock"]} unidades)',
                             'stock_insuficiente': True
                         }, status=400)
                     
-                    # Verificar si ya existe en el carrito
-                    detalle_existente = detalle_compra_producto_usuario.objects.filter(
+                    # Actualizar cantidad
+                    detalle_existente.cantidad_deta_carrito_prod_usuario += cantidad
+                    detalle_existente.subtotal_deta_carrito_prod_usuario = (
+                        detalle_existente.cantidad_deta_carrito_prod_usuario * producto_info['precio']
+                    )
+                    detalle_existente.save()
+                else:
+                    # Crear nuevo detalle
+                    detalle_compra_producto_usuario.objects.create(
                         id_fk_carritocompra_usuario=carrito,
-                        idproducto_fk_usuario=producto_usuario_obj
-                    ).first()
-                    
-                    if detalle_existente:
-                        # Validar stock con cantidad existente en carrito
-                        nueva_cantidad_total = detalle_existente.cantidad_deta_carrito_prod_usuario + cantidad
-                        if nueva_cantidad_total > stock_disponible:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f'La cantidad total ({nueva_cantidad_total}) excedería el stock disponible ({stock_disponible} unidades)',
-                                'stock_insuficiente': True
-                            }, status=400)
-                        
-                        # Actualizar cantidad
-                        detalle_existente.cantidad_deta_carrito_prod_usuario += cantidad
-                        detalle_existente.subtotal_deta_carrito_prod_usuario = (
-                            detalle_existente.cantidad_deta_carrito_prod_usuario * precio
-                        )
-                        detalle_existente.save()
-                    else:
-                        # Crear nuevo detalle
-                        detalle_compra_producto_usuario.objects.create(
-                            id_fk_carritocompra_usuario=carrito,
-                            idproducto_fk_usuario=producto_usuario_obj,
-                            cantidad_deta_carrito_prod_usuario=cantidad,
-                            precio_unit_deta_carrito_prod_usuario=precio,
-                            subtotal_deta_carrito_prod_usuario=cantidad * precio
-                        )
-                        
-                except producto_usuario.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto de usuario no encontrado'
-                    }, status=404)
-        
-        # Actualizar total del carrito
-        if account_type == 'empresa':
-            total = sum(
-                detalle.subtotal_deta_carrito_prod_empresa 
-                for detalle in carrito.detalles.all()
-            )
-            carrito.total_carrito_prod_empresa = total
-        else:
+                        idproducto_fk_usuario=producto_info['objeto'],
+                        cantidad_deta_carrito_prod_usuario=cantidad,
+                        precio_unit_deta_carrito_prod_usuario=producto_info['precio'],
+                        subtotal_deta_carrito_prod_usuario=cantidad * producto_info['precio']
+                    )
+            
+            # Actualizar total del carrito
             total = sum(
                 detalle.subtotal_deta_carrito_prod_usuario 
                 for detalle in carrito.detalles.all()
             )
             carrito.total_carrito_prod_usuario = total
-        
-        carrito.save()
+            carrito.save()
         
         return JsonResponse({
             'success': True,
@@ -5183,7 +5162,7 @@ def agregar_al_carrito(request):
         logger.error(f"Error al agregar producto al carrito: {str(e)}")
         return JsonResponse({
             'success': False,
-            'message': 'Error interno del servidor'
+            'message': f'Error interno del servidor: {str(e)}'
         }, status=500)
 
 @require_POST
@@ -5347,12 +5326,15 @@ def eliminar_del_carrito(request):
     
     try:
         data = json.loads(request.body)
-        producto_id = data.get('producto_id')
+        detalle_id = data.get('detalle_id')
         
-        if not producto_id:
+        # Log de depuración
+        print(f"[DEBUG] eliminar_del_carrito - detalle_id recibido: {detalle_id}")
+        
+        if not detalle_id:
             return JsonResponse({
                 'success': False,
-                'message': 'ID del producto es requerido'
+                'message': 'ID del detalle es requerido'
             }, status=400)
         
         # Obtener el usuario actual del sistema personalizado
@@ -5372,44 +5354,28 @@ def eliminar_del_carrito(request):
                     'message': 'No se encontró el carrito'
                 }, status=404)
             
-            # Buscar el detalle del carrito para el producto específico
+            # Buscar y eliminar el detalle directamente por su ID
             try:
                 detalle = detalle_compra_producto_empresa.objects.get(
-                    id_fk_carritocompra_empresa=carrito,
-                    id_fk_producto_sucursal_empresa_id=producto_id
+                    id_deta_carrito_prod_empresa=detalle_id,
+                    id_fk_carritocompra_empresa=carrito
                 )
                 detalle.delete()
-                
-                # Recalcular el total del carrito
-                total = sum(
-                    d.subtotal_deta_carrito_prod_empresa 
-                    for d in carrito.detalles.all()
-                )
-                carrito.total_carrito_prod_empresa = total
-                carrito.save()
+                print(f"[DEBUG] Detalle de empresa eliminado exitosamente: {detalle_id}")
                 
             except detalle_compra_producto_empresa.DoesNotExist:
-                # Intentar buscar por producto de usuario
-                try:
-                    detalle = detalle_compra_producto_empresa.objects.get(
-                        id_fk_carritocompra_empresa=carrito,
-                        idproducto_fk_usuario_id=producto_id
-                    )
-                    detalle.delete()
-                    
-                    # Recalcular el total del carrito
-                    total = sum(
-                        d.subtotal_deta_carrito_prod_empresa 
-                        for d in carrito.detalles.all()
-                    )
-                    carrito.total_carrito_prod_empresa = total
-                    carrito.save()
-                    
-                except detalle_compra_producto_empresa.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto no encontrado en el carrito'
-                    }, status=404)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Detalle no encontrado en el carrito'
+                }, status=404)
+            
+            # Recalcular el total del carrito
+            total = sum(
+                d.subtotal_deta_carrito_prod_empresa 
+                for d in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_empresa = total
+            carrito.save()
         
         else:  # account_type == 'usuario'
             # Buscar el carrito de usuario
@@ -5418,50 +5384,35 @@ def eliminar_del_carrito(request):
                     id_usuario_fk=current_user,
                     estatuscarrito_prod_usuario='activo'
                 )
+                print(f"[DEBUG] Carrito de usuario encontrado: {carrito.id_carrito_prod_usuario}")
             except carrito_compra_producto_usuario.DoesNotExist:
                 return JsonResponse({
                     'success': False,
                     'message': 'No se encontró el carrito'
                 }, status=404)
             
-            # Buscar el detalle del carrito para el producto específico
+            # Buscar y eliminar el detalle directamente por su ID
             try:
                 detalle = detalle_compra_producto_usuario.objects.get(
-                    id_fk_carritocompra_usuario=carrito,
-                    idproducto_fk_usuario_id=producto_id
+                    id_deta_carrito_prod_usuario=detalle_id,
+                    id_fk_carritocompra_usuario=carrito
                 )
                 detalle.delete()
-                
-                # Recalcular el total del carrito
-                total = sum(
-                    d.subtotal_deta_carrito_prod_usuario 
-                    for d in carrito.detalles.all()
-                )
-                carrito.total_carrito_prod_usuario = total
-                carrito.save()
+                print(f"[DEBUG] Detalle de usuario eliminado exitosamente: {detalle_id}")
                 
             except detalle_compra_producto_usuario.DoesNotExist:
-                # Intentar buscar por producto de sucursal
-                try:
-                    detalle = detalle_compra_producto_usuario.objects.get(
-                        id_fk_carritocompra_usuario=carrito,
-                        id_fk_producto_sucursal_empresa_id=producto_id
-                    )
-                    detalle.delete()
-                    
-                    # Recalcular el total del carrito
-                    total = sum(
-                        d.subtotal_deta_carrito_prod_usuario 
-                        for d in carrito.detalles.all()
-                    )
-                    carrito.total_carrito_prod_usuario = total
-                    carrito.save()
-                    
-                except detalle_compra_producto_usuario.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto no encontrado en el carrito'
-                    }, status=404)
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Detalle no encontrado en el carrito'
+                }, status=404)
+            
+            # Recalcular el total del carrito
+            total = sum(
+                d.subtotal_deta_carrito_prod_usuario 
+                for d in carrito.detalles.all()
+            )
+            carrito.total_carrito_prod_usuario = total
+            carrito.save()
         
         return JsonResponse({
             'success': True,
