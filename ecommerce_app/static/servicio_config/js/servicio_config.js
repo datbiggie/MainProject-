@@ -34,7 +34,7 @@ function filtrarProductos() {
                                     <i class="lni lni-pencil"></i> Editar
                                 </button>
                                 <button class="btn btn-delete" data-id="${servicio.id_servicio_empresa}" data-nombre="${servicio.nombre_servicio_empresa}">
-                                    <i class="lni lni-trash"></i> Eliminar
+                                    <i class="lni lni-trash-can"></i> Eliminar
                                 </button>
                             </div>
                         </div>

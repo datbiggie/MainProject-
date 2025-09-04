@@ -521,28 +521,49 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
                             }
                             
                             const servicioHTML = `
-                            <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
-                                <div class="single-featuer" style="max-width: 240px; min-width: 180px; width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.7rem 0.5rem 0.7rem; margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,0.07);">
-                                    <img class="shape" src="/static/servicio_config/images/features/shape.svg" alt="#" style="max-width: 32px;">
-                                    <img class="shape2" src="/static/servicio_config/images/features/shape2.svg" alt="#" style="max-width: 32px;">
-                                    <span class="serial" style="font-size: 0.95rem;">${servicio.serial || ''}</span>
-                                    <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
-                                        ${servicio.imagen_url && servicio.imagen_url !== '' ? `<img src="${servicio.imagen_url}" alt="Imagen del servicio" class="img-servicio-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">` : `<i class=\"lni lni-microphone\" style=\"font-size: 2rem; color: #b0b0b0;\"></i>`}
+                            <div class="product-card animate-card" data-nombre="${servicioNombre ? servicioNombre.toLowerCase() : ''}">
+                                <div class="modern-product-wrapper">
+                                    <!-- Número de Servicio -->
+                                    <div class="product-number">${servicio.serial || ''}</div>
+                                    <!-- Contenedor de Imagen Mejorado -->
+                                    <div class="product-image-container">
+                                        ${servicio.imagen_url && servicio.imagen_url !== '' ? 
+                                            `<img src="${servicio.imagen_url}" alt="${servicioNombre || 'Imagen del servicio'}" class="product-image loaded" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><i class="lni lni-package product-image-fallback" style="display: none;"></i>` : 
+                                            `<i class="lni lni-package product-image-fallback"></i>`
+                                        }
                                     </div>
-                                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">${servicioNombre || ''}</h3>
-                                    <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                                        <button href="#EditServiceModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
+                                    <!-- Información del Servicio -->
+                                    <div class="product-content">
+                                        <h3 class="product-title">${servicioNombre || ''}</h3>
+                                        <div class="product-meta">
+                                            <span class="product-type">${userType === 'empresa' ? 'Empresa' : 'Usuario'}</span>
+                                        </div>
+                                        ${userType === 'empresa' ? `
+                                        <div class="product-branches">
+                                            <strong>Sucursales asignadas:</strong>
+                                            ${servicio.sucursales_asignadas && servicio.sucursales_asignadas.length > 0 ? 
+                                                `<ul class="branches-list">
+                                                    ${servicio.sucursales_asignadas.map(sucursal => `<li>${sucursal.nombre}</li>`).join('')}
+                                                </ul>` : 
+                                                '<span class="no-branches">Sin sucursales asignadas</span>'
+                                            }
+                                        </div>` : ''}
+                                    </div>
+                                    <!-- Acciones del Servicio -->
+                                    <div class="product-actions">
+                                        <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
                                                 data-id="${servicioId}"
                                                 data-nombre="${servicioNombre || ''}"
-                                                data-categoria="${servicio.categoria_servicio || ''}"
                                                 data-descripcion="${servicioDescripcion || ''}"
                                                 data-caracteristicas="${servicioCaracteristicas || ''}"
+                                                data-categoria="${servicio.categoria || ''}"
                                                 data-imagen="${servicio.imagen_url || ''}"
-                                                data-user-type="${userType}"${additionalAttributes}>
-                                            <i class="lni lni-pencil"></i> Editar
+                                                data-user-type="${userType}"${additionalAttributes}
+                                                data-tooltip="Editar servicio">
+                                            <i class="lni lni-pencil"></i>
                                         </button>
-                                        <button class="btn btn-delete" data-id="${servicioId}" data-nombre="${servicioNombre}" data-user-type="${userType}">
-                                            <i class="lni lni-trash"></i> Eliminar
+                                        <button class="action-btn btn-delete" data-id="${servicioId}" data-nombre="${servicioNombre}" data-user-type="${userType}" data-tooltip="Eliminar servicio">
+                                            <i class="lni lni-trash-can"></i>
                                         </button>
                                     </div>
                                 </div>

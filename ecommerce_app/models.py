@@ -268,6 +268,8 @@ class producto_usuario(models.Model):
     precio_producto_usuario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     condicion_producto_usuario = models.CharField(max_length=10, choices=CONDICION_CHOICES, default='Nuevo')
     estatus_producto_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
+    latitud_entrega_producto = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    longitud_entrega_producto = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     fecha_creacion_producto_usuario = models.DateTimeField(auto_now_add=True)
     id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='productos')
     id_categoria_prod_fk = models.ForeignKey('categoria_producto_usuario', on_delete=models.SET_NULL, null=True, related_name='productos')
@@ -335,6 +337,7 @@ class detalle_compra_producto_usuario(models.Model):
     id_deta_carrito_prod_usuario = models.AutoField(primary_key=True)
     cantidad_deta_carrito_prod_usuario = models.PositiveIntegerField(default=1)
     precio_unit_deta_carrito_prod_usuario = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_original_deta_carrito_prod_usuario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     subtotal_deta_carrito_prod_usuario = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_agregado_deta_carrito_prod_usuario = models.DateTimeField(auto_now_add=True)
     id_fk_carritocompra_usuario = models.ForeignKey('carrito_compra_producto_usuario', on_delete=models.CASCADE, related_name='detalles')
@@ -365,6 +368,7 @@ class detalle_compra_producto_empresa(models.Model):
     id_deta_carrito_prod_empresa = models.AutoField(primary_key=True)
     cantidad_deta_carrito_prod_empresa = models.PositiveIntegerField(default=1)
     precio_unit_deta_carrito_prod_empresa = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_original_deta_carrito_prod_empresa = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     subtotal_deta_carrito_prod_empresa = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_agregado_deta_carrito_prod_empresa = models.DateTimeField(auto_now_add=True)
     id_fk_carritocompra_empresa = models.ForeignKey('carrito_compra_producto_empresa', on_delete=models.CASCADE, related_name='detalles')
@@ -402,6 +406,7 @@ class pedido_usuario(models.Model):
     metodo_pago = models.CharField(max_length=50, choices=METODO_PAGO_CHOICES)
     comprobante_pago = models.ImageField(upload_to='comprobantes_pago/', null=True, blank=True)
     notas_pedido = models.TextField(null=True, blank=True)
+    comentario_rechazo = models.TextField(null=True, blank=True, help_text='Comentario explicando el motivo del rechazo del pedido')
     
     def __str__(self):
         return f"Pedido {self.numero_pedido} - Usuario {self.id_carrito_fk.id_usuario_fk.nombre_usuario}"
@@ -451,6 +456,7 @@ class pedido_empresa(models.Model):
     metodo_pago = models.CharField(max_length=50, choices=METODO_PAGO_CHOICES)
     comprobante_pago = models.ImageField(upload_to='comprobantes_pago/', null=True, blank=True)
     notas_pedido = models.TextField(null=True, blank=True)
+    comentario_rechazo = models.TextField(null=True, blank=True, help_text='Comentario explicando el motivo del rechazo del pedido')
     
     def __str__(self):
         return f"Pedido {self.numero_pedido} - Empresa {self.id_carrito_fk.id_empresa_fk.nombre_empresa}"
@@ -471,7 +477,128 @@ class detalle_pedido_empresa(models.Model):
             raise ValidationError('Debe especificar exactamente un tipo de producto')
     
     def __str__(self):
-        return f"Detalle {self.id_detalle_pedido_empresa} - Pedido {self.id_pedido_fk.numero_pedido}"
+        return f"Detalle Pedido {self.id_detalle_pedido_empresa} - Pedido {self.id_pedido_fk.numero_pedido}"
+
+
+class solicitud_servicio_usuario(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('cotizada', 'Cotizada'),
+        ('aceptada', 'Aceptada'),
+        ('pagada', 'Pagada'),
+        ('completada', 'Completada'),
+        ('rechazada', 'Rechazada'),
+    ]
+    
+    id_solicitud_servicio_usuario = models.AutoField(primary_key=True)
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_requerida = models.DateField()
+    direccion = models.TextField()
+    descripcion_detallada = models.TextField()
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Foreign Keys
+    id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='solicitudes_servicio')
+    id_servicio_usuario_fk = models.ForeignKey('servicio_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='solicitudes')
+    id_servicio_sucursal_fk = models.ForeignKey('servicio_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='solicitudes_usuario')
+    
+    def __str__(self):
+        return f"Solicitud {self.id_solicitud_servicio_usuario} - {self.estado}"
+
+
+class solicitud_servicio_empresa(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('cotizada', 'Cotizada'),
+        ('aceptada', 'Aceptada'),
+        ('pagada', 'Pagada'),
+        ('completada', 'Completada'),
+        ('rechazada', 'Rechazada'),
+    ]
+    
+    id_solicitud_servicio_empresa = models.AutoField(primary_key=True)
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_requerida = models.DateField()
+    direccion = models.TextField()
+    descripcion_detallada = models.TextField()
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Foreign Keys
+    id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='solicitudes_servicio')
+    id_servicio_usuario_fk = models.ForeignKey('servicio_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='solicitudes_empresa')
+    id_servicio_sucursal_fk = models.ForeignKey('servicio_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='solicitudes_empresa')
+    
+    def __str__(self):
+        return f"Solicitud {self.id_solicitud_servicio_empresa} - {self.estado}"
+
+
+class notificacion_usuario(models.Model):
+    TIPOS_NOTIFICACION = [
+        ('pedido_confirmado', 'Pedido Confirmado'),
+        ('pedido_rechazado', 'Pedido Rechazado'),
+        ('pedido_enviado', 'Pedido Enviado'),
+        ('pedido_entregado', 'Pedido Entregado'),
+        ('servicio_cotizado', 'Servicio Cotizado'),
+        ('servicio_aceptado', 'Servicio Aceptado'),
+        ('servicio_completado', 'Servicio Completado'),
+    ]
+    
+    ESTADOS_NOTIFICACION = [
+        ('no_leida', 'No Leída'),
+        ('leida', 'Leída'),
+    ]
+    
+    id_notificacion_usuario = models.AutoField(primary_key=True)
+    tipo_notificacion = models.CharField(max_length=20, choices=TIPOS_NOTIFICACION)
+    titulo = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    estado = models.CharField(max_length=10, choices=ESTADOS_NOTIFICACION, default='no_leida')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_leida = models.DateTimeField(null=True, blank=True)
+    
+    # Relaciones
+    id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='notificaciones')
+    id_pedido_usuario_fk = models.ForeignKey('pedido_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='notificaciones')
+    id_solicitud_servicio_usuario_fk = models.ForeignKey('solicitud_servicio_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='notificaciones')
+    
+    def __str__(self):
+        return f"Notificación {self.id_notificacion_usuario} - {self.titulo} - Usuario {self.id_usuario_fk.nombre_usuario}"
+
+
+class notificacion_empresa(models.Model):
+    TIPOS_NOTIFICACION = [
+        ('venta_pendiente', 'Venta Pendiente'),
+        ('venta_confirmada', 'Venta Confirmada'),
+        ('venta_rechazada', 'Venta Rechazada'),
+        ('nuevo_pedido', 'Nuevo Pedido'),
+        ('solicitud_servicio', 'Nueva Solicitud de Servicio'),
+        ('servicio_pagado', 'Servicio Pagado'),
+    ]
+    
+    ESTADOS_NOTIFICACION = [
+        ('no_leida', 'No Leída'),
+        ('leida', 'Leída'),
+    ]
+    
+    id_notificacion_empresa = models.AutoField(primary_key=True)
+    tipo_notificacion = models.CharField(max_length=20, choices=TIPOS_NOTIFICACION)
+    titulo = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    estado = models.CharField(max_length=10, choices=ESTADOS_NOTIFICACION, default='no_leida')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_leida = models.DateTimeField(null=True, blank=True)
+    
+    # Relaciones
+    id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='notificaciones')
+    id_pedido_empresa_fk = models.ForeignKey('pedido_empresa', on_delete=models.CASCADE, null=True, blank=True, related_name='notificaciones')
+    id_solicitud_servicio_empresa_fk = models.ForeignKey('solicitud_servicio_empresa', on_delete=models.CASCADE, null=True, blank=True, related_name='notificaciones')
+    
+    def __str__(self):
+        return f"Notificación {self.id_notificacion_empresa} - {self.titulo} - Empresa {self.id_empresa_fk.nombre_empresa}"
 
 
 

@@ -37,37 +37,63 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Obtener valores según el tipo de producto
                         const productoId = esEmpresa ? producto.id_producto_empresa : producto.id_producto_usuario;
                         const productoNombre = esEmpresa ? producto.nombre_producto_empresa : producto.nombre_producto_usuario;
-                        const productoMarca = esEmpresa ? producto.marca_producto_empresa : producto.marca_producto_usuario;
-                        const productoModelo = esEmpresa ? producto.modelo_producto_empresa : producto.modelo_producto_usuario;
                         const productoDescripcion = esEmpresa ? producto.descripcion_producto_empresa : producto.descripcion_producto_usuario;
                         const productoCaracteristicas = esEmpresa ? producto.caracteristicas_generales_empresa : producto.caracteristicas_generales_usuario;
+                        const productoMarca = esEmpresa ? producto.marca_producto_empresa : producto.marca_producto_usuario;
+                        const productoModelo = esEmpresa ? producto.modelo_producto_empresa : producto.modelo_producto_usuario;
                         const userType = esEmpresa ? 'empresa' : 'persona';
                         
                         const productoHTML = `
-                        <div class=\"col-lg-4 col-md-6 col-12 wow fadeInUp\" data-wow-delay=\".2s\">
-                            <div class=\"single-featuer\" style=\"max-width: 240px; min-width: 180px; width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.7rem 0.5rem 0.7rem; margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,0.07);\">
-                                <img class=\"shape\" src=\"/static/producto_sucursal/images/features/shape.svg\" alt=\"#\" style=\"max-width: 32px;\">
-                                <img class=\"shape2\" src=\"/static/producto_sucursal/images/features/shape2.svg\" alt=\"#\" style=\"max-width: 32px;\">
-                                <span class=\"serial\" style=\"font-size: 0.95rem;\">${producto.serial}</span>
-                                <div style=\"display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;\">
-                                    ${producto.imagen_url ? `<img src=\"${producto.imagen_url}\" alt=\"Imagen del producto\" class=\"img-producto-hover\" style=\"width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;\">` : `<i class=\"lni lni-microphone\" style=\"font-size: 2rem; color: #b0b0b0;\"></i>`}
+                        <div class="product-card animate-card" data-nombre="${productoNombre.toLowerCase()}">
+                            <div class="modern-product-wrapper">
+                                <!-- Número de Producto -->
+                                <div class="product-number">${producto.serial || ''}</div>
+                                <!-- Contenedor de Imagen Mejorado -->
+                                <div class="product-image-container">
+                                    ${producto.imagen_url ? 
+                                        `<img src="${producto.imagen_url}" 
+                                             alt="${productoNombre}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>` : 
+                                        `<i class="lni lni-package product-image-fallback"></i>`
+                                    }
                                 </div>
-                                <h3 style=\"font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;\">${productoNombre}</h3>
-                                <div class=\"feature-buttons\" style=\"display: flex; justify-content: center; gap: 0.3rem;\">
-                                    <button href=\"#EditProductModal\" class=\"btn btn-edit\" data-bs-toggle=\"modal\" data-bs-target=\"#EditProductModal\"
-                                            data-id=\"${productoId}\"
-                                            data-nombre=\"${productoNombre}\"
-                                            data-marca=\"${productoMarca || ''}\"
-                                            data-modelo=\"${productoModelo || ''}\"
-                                            data-categoria=\"${producto.categoria_producto || ''}\"
-                                            data-descripcion=\"${productoDescripcion || ''}\"
-                                            data-caracteristicas=\"${productoCaracteristicas || ''}\"
-                                            data-imagen=\"${producto.imagen_url || ''}\"
-                                            data-user-type=\"${userType}\">
-                                        <i class=\"lni lni-pencil\"></i> Editar
+                                <!-- Contenido del Producto -->
+                                <div class="product-content">
+                                    <h3 class="product-title">${productoNombre}</h3>
+                                    <div class="product-meta">
+                                        <span class="product-type">${esEmpresa ? 'Empresa' : 'Usuario'}</span>
+                                    </div>
+                                    ${esEmpresa ? `
+                                    <div class="product-branches">
+                                        <strong>Sucursales asignadas:</strong>
+                                        ${producto.sucursales_asignadas && producto.sucursales_asignadas.length > 0 ? 
+                                            `<ul class="branches-list">
+                                                ${producto.sucursales_asignadas.map(sucursal => `<li>${sucursal.nombre}</li>`).join('')}
+                                            </ul>` : 
+                                            '<span class="no-branches">Sin sucursales asignadas</span>'
+                                        }
+                                    </div>` : ''}
+                                </div>
+                                <!-- Acciones del Producto -->
+                                <div class="product-actions">
+                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                                            data-id="${productoId}"
+                                            data-nombre="${productoNombre}"
+                                            data-descripcion="${productoDescripcion || ''}"
+                                            data-caracteristicas="${productoCaracteristicas || ''}"
+                                            data-marca="${productoMarca || ''}"
+                                            data-modelo="${productoModelo || ''}"
+                                            data-categoria="${producto.categoria || ''}"
+                                            data-imagen="${producto.imagen_url || ''}"
+                                            data-user-type="${userType}"
+                                            data-tooltip="Editar producto">
+                                        <i class="lni lni-pencil"></i>
                                     </button>
-                                    <button class=\"btn btn-delete\" data-id=\"${productoId}\" data-nombre=\"${productoNombre}\" data-user-type=\"${userType}\">
-                                        <i class=\"lni lni-trash\"></i> Eliminar
+                                    <button class="action-btn btn-delete" data-id="${productoId}" data-nombre="${productoNombre}" data-user-type="${userType}" data-tooltip="Eliminar producto">
+                                        <i class="lni lni-trash-can"></i>
                                     </button>
                                 </div>
                             </div>

@@ -3498,13 +3498,13 @@ select.form-control {
 }
 
 .btn-primary {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
+    background-color: #007bff;
+    border-color: #007bff;
 }
 
 .btn-primary:hover {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: #0056b3;
+    border-color: #0056b3;
 }
 
 .btn-secondary {

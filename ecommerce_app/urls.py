@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .views import *
+from .views import iniciar_sesion
 urlpatterns = [
    
     path('iniciar_sesion/', iniciar_sesion, name='iniciar_sesion'),
@@ -44,6 +45,8 @@ urlpatterns = [
     path('api/obtener_imagenes_servicio/', views.api_obtener_imagenes_servicio, name='api_obtener_imagenes_servicio'),
     path('api/eliminar_imagen_producto/', views.api_eliminar_imagen_producto, name='api_eliminar_imagen_producto'),
     path('api/eliminar_imagen_servicio/', views.api_eliminar_imagen_servicio, name='api_eliminar_imagen_servicio'),
+    path('api/obtener_filtros_busqueda/', views.api_obtener_filtros_busqueda, name='api_obtener_filtros_busqueda'),
+    path('api/obtener_conteos_filtros/', views.api_obtener_conteos_filtros, name='api_obtener_conteos_filtros'),
     path('perfil_empresa/', views.perfil_empresa, name='perfil_empresa'),
     path('cambiar_logo_empresa/', views.cambiar_logo_empresa, name='cambiar_logo_empresa'),
     path('perfil_usuario/', views.perfil_usuario, name='perfil_usuario'),
@@ -68,10 +71,26 @@ urlpatterns = [
     path('procesar_pedido/', views.procesar_pedido, name='procesar_pedido'),
     path('confirmacion_pedido/', views.confirmacion_pedido, name='confirmacion_pedido'),
     path('mis_pedidos/', views.mis_pedidos, name='mis_pedidos'),
-    path('mis_ventas/', views.mis_ventas, name='mis_ventas'),
+    path('pedidos_pendientes/', views.pedidos_pendientes, name='pedidos_pendientes'),
+    path('pedidos_confirmados/', views.pedidos_confirmados, name='pedidos_confirmados'),
+    path('pedidos_rechazados/', views.pedidos_rechazados, name='pedidos_rechazados'),
+    path('ventas_pendientes/', views.ventas_pendientes, name='ventas_pendientes'),
+    path('ventas_confirmadas/', views.ventas_confirmadas, name='ventas_confirmadas'),
+    path('ventas_rechazadas/', views.ventas_rechazadas, name='ventas_rechazadas'),
     path('confirmar_venta/', views.confirmar_venta, name='confirmar_venta'),
-
-
-
-
+    path('rechazar_venta/', views.rechazar_venta, name='rechazar_venta'),
+    path('favoritos/', views.favoritos, name='favoritos'),
+    path('productos_sucursal/', views.productos_sucursal, name='productos_sucursal'),
+    path('editar_producto_sucursal/', views.editar_producto_sucursal, name='editar_producto_sucursal'),
+    path('eliminar_producto_sucursal/', views.eliminar_producto_sucursal, name='eliminar_producto_sucursal'),
+    path('servicios_sucursal/', views.servicios_sucursal, name='servicios_sucursal'),
+    path('editar_servicio_sucursal/', views.editar_servicio_sucursal, name='editar_servicio_sucursal'),
+    path('eliminar_servicio_sucursal/', views.eliminar_servicio_sucursal, name='eliminar_servicio_sucursal'),
+    path('solicitud_servicio/', views.solicitud_servicio, name='solicitud_servicio'),
+    path('gestion_servicio/', views.gestion_servicio, name='gestion_servicio'),
+    path('actualizar_estado_servicio_usuario/', views.actualizar_estado_servicio_usuario, name='actualizar_estado_servicio_usuario'),
+    path('actualizar_estado_servicio_empresa/', views.actualizar_estado_servicio_empresa, name='actualizar_estado_servicio_empresa'),
+    path('marcar_notificacion_leida/', views.marcar_notificacion_leida_vista, name='marcar_notificacion_leida_vista'),
+    path('obtener_notificaciones/', views.obtener_notificaciones_usuario, name='obtener_notificaciones_usuario'),
+    path('notificaciones/', views.notificaciones, name='notificaciones'),
 ]

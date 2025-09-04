@@ -25,22 +25,51 @@ function canUserEditCategory(categoria, userInfo) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== FILTRADO.JS INICIADO ===');
     const busquedaInput = document.getElementById('busqueda');
     const filtroEstatus = document.getElementById('filtroEstatus');
-    const contenedorCategorias = document.querySelector('.d-flex.flex-wrap.justify-content-center.gap-3.w-100');
+    const contenedorCategorias = document.querySelector('.category-grid');
+    
+    console.log('Elementos encontrados:');
+    console.log('- busquedaInput:', busquedaInput);
+    console.log('- filtroEstatus:', filtroEstatus);
+    console.log('- contenedorCategorias:', contenedorCategorias);
     
     // Función para filtrar categorías usando la API del servidor
     function filtrarCategorias() {
-        const textoBusqueda = busquedaInput.value.trim();
-        const estatusFiltro = filtroEstatus.value;
+        console.log('=== EJECUTANDO FILTRADO ===');
+        // Verificar que el contenedor existe
+        if (!contenedorCategorias) {
+            console.error('Contenedor de categorías no encontrado');
+            return;
+        }
+        
+        const textoBusqueda = busquedaInput ? busquedaInput.value.trim() : '';
+        const estatusFiltro = filtroEstatus ? filtroEstatus.value : '';
+        
+        console.log('Parámetros de filtrado:');
+        console.log('- textoBusqueda:', textoBusqueda);
+        console.log('- estatusFiltro:', estatusFiltro);
         
         // Construir URL con parámetros de filtro
         const url = `/ecommerce/api/filtrar_categorias_producto/?nombre=${encodeURIComponent(textoBusqueda)}&estatus=${encodeURIComponent(estatusFiltro)}`;
+        console.log('URL de la API:', url);
         
         // Realizar la solicitud a la API
-        fetch(url)
-            .then(response => response.json())
+        fetch(url, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': window.CSRF_TOKEN
+            }
+        })
+            .then(response => {
+                console.log('Respuesta de la API:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Datos recibidos de la API:', data);
                 if (data.success) {
                     // Limpiar el contenedor
                     contenedorCategorias.innerHTML = '';
@@ -62,41 +91,46 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Verificar permisos para mostrar botones
                         const canEdit = canUserEditCategory(categoria, window.USER_INFO);
-                        const editButtons = canEdit ? `
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-primary btn-edit btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\'")}', '${(descripcion || '').replace(/'/g, "\'")}', '${(estatus || '').replace(/'/g, "\'")}')">
-                                    <i class="lni lni-pencil"></i> Editar
+                        const actionButtons = canEdit ? `
+                                <button class="action-btn btn-edit" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${(descripcion || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${(estatus || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}')" data-tooltip="Editar categoría">
+                                    <i class="lni lni-pencil"></i>
                                 </button>
-                                <button class="btn btn-danger btn-delete btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="confirmarEliminacion('${id}')">
-                                    <i class="lni lni-trash"></i> Eliminar
+                                <button class="action-btn btn-delete" onclick="confirmarEliminacion('${id}')" data-tooltip="Eliminar categoría">
+                                    <i class="lni lni-trash-can"></i>
                                 </button>
-                            </div>
                         ` : '<small class="text-muted">Sin permisos</small>';
 
                         const categoriaHTML = `
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card h-100 shadow-sm" style="border-radius: 1rem; border: none; transition: transform 0.2s;">
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title fw-bold mb-2" style="color: #2c3e50;">${nombre}</h5>
-                                    <p class="card-text text-muted mb-3 flex-grow-1">${descripcion}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="badge ${estatus === 'Activo' ? 'bg-success' : 'bg-secondary'}" style="font-size: 0.85rem;">${estatus}</span>
-                                        ${editButtons}
-                                    </div>
+                        <div class="category-card animate-card" data-nombre="${(nombre || '').toLowerCase()}" data-estatus="${(estatus || '').toLowerCase()}" data-type="${isEmpresa ? 'empresa' : 'usuario'}">
+                            <div class="category-icon">
+                                <i class="lni lni-cog"></i>
+                            </div>
+                            <div class="category-content">
+                                <h3 class="category-title">${nombre}</h3>
+                                <div class="category-meta">
+                                    <span class="status-badge ${estatus === 'Activo' ? 'status-active' : 'status-inactive'}">${estatus === 'Activo' ? '✅ Activa' : '⏸️ Inactiva'}</span>
+                                    <span class="category-type">${isEmpresa ? '🏢 Empresa' : '👤 Usuario'}</span>
                                 </div>
                             </div>
+                            <div class="category-actions">
+                                 ${actionButtons}
+                             </div>
                         </div>
                         `;
                         contenedorCategorias.innerHTML += categoriaHTML;
                     });
                 } else {
                     console.error('Error al filtrar categorías:', data.message);
-                    contenedorCategorias.innerHTML = '<div class="text-center w-100 py-4"><p>Error al cargar las categorías.</p></div>';
+                    if (contenedorCategorias) {
+                        contenedorCategorias.innerHTML = '<div class="text-center w-100 py-4"><p>Error al cargar las categorías.</p></div>';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error en la solicitud:', error);
-                contenedorCategorias.innerHTML = '<div class="text-center w-100 py-4"><p>Error al cargar las categorías.</p></div>';
+                if (contenedorCategorias) {
+                    contenedorCategorias.innerHTML = '<div class="text-center w-100 py-4"><p>Error al cargar las categorías.</p></div>';
+                }
             });
     }
     

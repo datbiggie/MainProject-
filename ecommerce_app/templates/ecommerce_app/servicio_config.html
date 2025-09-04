@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <title>Vista Servicio</title>
+    <title>Vista Servicios</title>
     <meta name="description" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="shortcut icon" type="image/x-icon" href="{% static 'servicio_config/images/favicon.svg' %}" />
@@ -17,18 +17,8 @@
     <link rel="stylesheet" href="{% static 'servicio_config/css/tiny-slider.css' %}" />
     <link rel="stylesheet" href="{% static 'servicio_config/css/glightbox.min.css' %}" />
     <link rel="stylesheet" href="{% static 'servicio_config/css/main.css' %}" />
-    
-    <!-- Bootstrap 5 CSS -->
-   
-    
-    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="{% static 'servicio_config/css/servicio_config.css' %}" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    
-    <!-- Bootstrap 5 JS -->
-    
     
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
@@ -42,68 +32,180 @@
    
     
     <!-- Start Features Area -->
-    <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
-        <div class="card shadow-lg productos-bg-main border-0" style="border-radius: 1.2rem; padding: 2.2rem 1.5rem 2.2rem 1.5rem; box-shadow: 0 6px 32px rgba(44,62,80,0.10);">
-            <h3 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Gestión de Servicio</h3>
-            <div class="search-section mb-4 w-100 d-flex justify-content-center" style="max-width: 700px; margin-left:auto; margin-right:auto;">
-              <div class="card shadow-sm productos-bg-search" style="border-radius: 1rem; max-width: 1100px; margin: 0 auto;">
-                <div class="card-body py-3 px-4">
-                  <div class="row g-2 align-items-center flex-wrap justify-content-center" style="max-width:100%; margin:0 auto;">
-                    <div class="col-lg-8 col-md-8 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
-                      <input type="text" id="busqueda-producto" class="form-control productos-input" placeholder="Buscar servicio por nombre..." style="min-width:320px; max-width: 520px; width:100%;">
-                    </div>
-                    <div class="col-lg-4 col-md-4 col-12 d-flex align-items-center justify-content-center mb-2 mb-lg-0">
-                      <a href="{% url 'servicio_funcion' %}" class="btn btn-sm d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
-                        <i class="lni lni-plus me-1"></i> Agregar Servicio
-                      </a>
-                    </div>
-                  </div>
-
-
-                    </div>
-                    
-                  </div>
-                  
-                </div>
-                 <div class="row" id="contenedor-productos">
-                {% for servicio in servicio_all %}
-                <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
-                    <!-- Start Single Feature -->
-                    <div class="single-featuer" style="max-width: 240px; min-width: 180px; width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.7rem 0.5rem 0.7rem; margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,0.07);">
-                        <img class="shape" src="{% static 'servicio_config/images/features/shape.svg' %}" alt="#" style="max-width: 32px;">
-                        <img class="shape2" src="{% static 'servicio_config/images/features/shape2.svg' %}" alt="#" style="max-width: 32px;">
-                        <span class="serial" style="font-size: 0.95rem;">{{ forloop.counter }}</span>
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
-                            {% if servicio.primera_imagen %}
-                                {% if user_info.tipo == 'empresa' %}
-                                    <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}" alt="Imagen del servicio" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
-                                {% else %}
-                                    <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_usuario.url }}" alt="Imagen del servicio" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
-                                {% endif %}
-                            {% else %}
-                                <i class="lni lni-cog" style="font-size: 2rem; color: #b0b0b0;"></i>
-                            {% endif %}
+    <div class="container-fluid">
+        <div class="floating-header">
+            <h1 class="page-title">Gestión de Servicios</h1>
+            <p class="page-subtitle">Administra y organiza tus servicios de manera eficiente</p>
+        </div>
+        
+        <!-- Contenedor Principal -->
+        <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
+            <div class="glass-card">
+                <!-- Sección de Búsqueda y Filtros -->
+                <div class="search-container">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <div class="position-relative">
+                                <input type="text" id="busqueda-producto" class="modern-input w-100" placeholder="Buscar servicio por nombre..." data-tooltip="Busca servicios por nombre o descripción">
+                            </div>
                         </div>
+                        <div class="col-md-3">
+                            <!-- Espacio para filtros adicionales si se necesitan -->
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'servicio_funcion' %}" class="modern-btn btn-primary-modern w-100">
+                                <i class="lni lni-plus"></i>
+                                Nuevo Servicio
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <!-- Grid de Servicios -->
+                <div class="product-grid" id="contenedor-productos">
+
+
+                {% for servicio in servicio_all %}
+                    <!-- Tarjeta de Servicio Moderna -->
+                    <div class="product-card animate-card" data-nombre="{% if user_info.tipo == 'empresa' %}{{ servicio.nombre_servicio_empresa|lower }}{% else %}{{ servicio.nombre_servicio_usuario|lower }}{% endif %}" >
+                        <div class="modern-product-wrapper">
+                            <!-- Número de Servicio -->
+                            <div class="product-number">{{ forloop.counter }}</div>
+                            <!-- Contenedor de Imagen Mejorado -->
+                            <div class="product-image-container">
+                                {% if user_info.tipo == 'empresa' %}
+                                    {% if servicio.primera_imagen %}
+                                        <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}" 
+                                             alt="{{ servicio.nombre_servicio_empresa }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% else %}
+                                        <i class="lni lni-package product-image-fallback"></i>
+                                    {% endif %}
+                                {% elif user_info.tipo == 'sucursal' %}
+                                    {% if servicio.primera_imagen_sucursal %}
+                                        <img src="{{ servicio.primera_imagen_sucursal.ruta_imagen_servicio_sucursal.url }}" 
+                                             alt="{{ servicio.nombre_servicio_sucursal }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% else %}
+                                        <i class="lni lni-package product-image-fallback"></i>
+                                    {% endif %}
+                                {% else %}
+                                    {% if servicio.primera_imagen %}
+                                        <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_usuario.url }}" 
+                                             alt="{{ servicio.nombre_servicio_usuario }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% else %}
+                                        <i class="lni lni-package product-image-fallback"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
                         {% if user_info.tipo == 'empresa' %}
-                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ servicio.nombre_servicio_empresa }}</h3>
-                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                                <button href="#EditServiceModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
+                            <!-- Información del Servicio para Empresa -->
+                            <div class="product-content">
+                                <h3 class="product-title">{{ servicio.nombre_servicio_empresa }}</h3>
+                                <div class="product-meta">
+                                    <span class="product-type">Empresa</span>
+                                </div>
+                                <div class="product-branches">
+                                    <strong>Sucursales asignadas:</strong>
+                                    {% if servicio.sucursales_asignadas %}
+                                        <ul class="branches-list">
+                                            {% for sucursal in servicio.sucursales_asignadas %}
+                                                <li>{{ sucursal.nombre_sucursal }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <span class="no-branches">Sin sucursales asignadas</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones del Servicio -->
+                            <div class="product-actions">
+                                <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
                                         data-id="{{ servicio.id_servicio_empresa }}"
                                         data-nombre="{{ servicio.nombre_servicio_empresa }}"
                                         data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa|default:'' }}"
                                         data-descripcion="{{ servicio.descripcion_servicio_empresa|default:'' }}"
+                                        data-caracteristicas="{{ servicio.caracteristicas_generales_servicio_empresa|default:'' }}"
+                                        data-precio="{{ servicio.precio_servicio_empresa|default:'' }}"
+                                        data-estado="{{ servicio.estado_servicio_empresa|default:'' }}"
+                                        data-disponibilidad="{{ servicio.disponibilidad_servicio_empresa|default:'' }}"
+                                        data-duracion="{{ servicio.duracion_servicio_empresa|default:'' }}"
+                                        data-ubicacion="{{ servicio.ubicacion_servicio_empresa|default:'' }}"
+                                        data-requisitos="{{ servicio.requisitos_servicio_empresa|default:'' }}"
+                                        data-garantia="{{ servicio.garantia_servicio_empresa|default:'' }}"
+                                        data-politicas="{{ servicio.politicas_cancelacion_servicio_empresa|default:'' }}"
+                                        data-contacto="{{ servicio.contacto_servicio_empresa|default:'' }}"
+                                        data-horarios="{{ servicio.horarios_atencion_servicio_empresa|default:'' }}"
+                                        data-metodos-pago="{{ servicio.metodos_pago_servicio_empresa|default:'' }}"
+                                        data-descuentos="{{ servicio.descuentos_promociones_servicio_empresa|default:'' }}"
+                                        data-capacidad="{{ servicio.capacidad_maxima_servicio_empresa|default:'' }}"
+                                        data-equipamiento="{{ servicio.equipamiento_necesario_servicio_empresa|default:'' }}"
+                                        data-certificaciones="{{ servicio.certificaciones_servicio_empresa|default:'' }}"
+                                        data-experiencia="{{ servicio.experiencia_requerida_servicio_empresa|default:'' }}"
+                                        data-idiomas="{{ servicio.idiomas_servicio_empresa|default:'' }}"
+                                        data-nivel="{{ servicio.nivel_servicio_empresa|default:'' }}"
+                                        data-publico="{{ servicio.publico_objetivo_servicio_empresa|default:'' }}"
+                                        data-incluye="{{ servicio.incluye_servicio_empresa|default:'' }}"
+                                        data-no-incluye="{{ servicio.no_incluye_servicio_empresa|default:'' }}"
+                                        data-observaciones="{{ servicio.observaciones_servicio_empresa|default:'' }}"
                                         data-imagen="{% if servicio.primera_imagen %}{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}{% endif %}"
-                                        data-user-type="{{ user_info.tipo }}">
-                                    <i class="lni lni-pencil"></i> Editar
+                                        data-user-type="{{ user_info.tipo }}"
+                                        data-tooltip="Editar servicio">
+                                    <i class="lni lni-pencil"></i>
                                 </button>
-                                <button class="btn btn-delete" data-id="{{ servicio.id_servicio_empresa }}" data-nombre="{{ servicio.nombre_servicio_empresa }}" data-user-type="{{ user_info.tipo }}">
-                                    <i class="lni lni-trash"></i> Eliminar
+                                <button class="action-btn btn-delete" data-id="{{ servicio.id_servicio_empresa }}" data-nombre="{{ servicio.nombre_servicio_empresa }}" data-tooltip="Eliminar servicio">
+                                    <i class="lni lni-trash-can"></i>
+                                </button>
+                            </div>
+                        {% elif user_info.tipo == 'sucursal' %}
+                            <!-- Información del Servicio para Sucursal -->
+                            <div class="product-content">
+                                <h3 class="product-title">{{ servicio.nombre_servicio_sucursal }}</h3>
+                                <div class="product-meta">
+                                    <span class="product-type">Sucursal</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones del Servicio -->
+                            <div class="product-actions">
+                                <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
+                                        data-id="{{ servicio.id_servicio_sucursal }}"
+                                        data-nombre="{{ servicio.nombre_servicio_sucursal }}"
+                                        data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_sucursal|default:'' }}"
+                                        data-descripcion="{{ servicio.descripcion_servicio_sucursal|default:'' }}"
+                                        data-precio="{{ servicio.precio_servicio_sucursal|default:'0' }}"
+                                        data-estatus="{{ servicio.estatus_servicio_sucursal|default:'Activo' }}"
+                                        data-imagen="{% if servicio.primera_imagen_sucursal %}{{ servicio.primera_imagen_sucursal.ruta_imagen_servicio_sucursal.url }}{% endif %}"
+                                        data-user-type="{{ user_info.tipo }}"
+                                        data-tooltip="Editar servicio">
+                                    <i class="lni lni-pencil"></i>
+                                </button>
+                                <button class="action-btn btn-delete" data-id="{{ servicio.id_servicio_sucursal }}" data-nombre="{{ servicio.nombre_servicio_sucursal }}" data-tooltip="Eliminar servicio">
+                                    <i class="lni lni-trash-can"></i>
                                 </button>
                             </div>
                         {% else %}
-                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ servicio.nombre_servicio_usuario }}</h3>
-                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                                <button href="#EditServiceModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
+                            <!-- Información del Servicio para Usuario -->
+                            <div class="product-content">
+                                <h3 class="product-title">{{ servicio.nombre_servicio_usuario }}</h3>
+                                <div class="product-meta">
+                                    <span class="product-type">Usuario</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones del Servicio -->
+                            <div class="product-actions">
+                                <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditServiceModal"
                                         data-id="{{ servicio.id_servicio_usuario }}"
                                         data-nombre="{{ servicio.nombre_servicio_usuario }}"
                                         data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario|default:'' }}"
@@ -111,27 +213,24 @@
                                         data-precio="{{ servicio.precio_servicio_usuario|default:'0' }}"
                                         data-estatus="{{ servicio.estatus_servicio_usuario|default:'Activo' }}"
                                         data-imagen="{% if servicio.primera_imagen %}{{ servicio.primera_imagen.ruta_imagen_servicio_usuario.url }}{% endif %}"
-                                        data-user-type="{{ user_info.tipo }}">
-                                    <i class="lni lni-pencil"></i> Editar
+                                        data-user-type="{{ user_info.tipo }}"
+                                        data-tooltip="Editar servicio">
+                                    <i class="lni lni-pencil"></i>
                                 </button>
-                                <button class="btn btn-delete" data-id="{{ servicio.id_servicio_usuario }}" data-nombre="{{ servicio.nombre_servicio_usuario }}" data-user-type="{{ user_info.tipo }}">
-                                    <i class="lni lni-trash"></i> Eliminar
+                                <button class="action-btn btn-delete" data-id="{{ servicio.id_servicio_usuario }}" data-nombre="{{ servicio.nombre_servicio_usuario }}" data-tooltip="Eliminar servicio">
+                                    <i class="lni lni-trash-can"></i>
                                 </button>
                             </div>
                         {% endif %}
+                        </div>
                     </div>
-                    <!-- End Single Feature -->
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-              </div>
-              
-            </div>
-           
         </div>
     <!-- /End Features Area -->
 
-    <!-- Modal de Edición de Producto ------->
+    <!-- Modal de Edición de Servicio ------->
     <div id="EditServiceModal" class="modal fade">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
@@ -142,11 +241,11 @@
                     {% else %}
                         <input type="hidden" name="id_servicio_usuario" id="edit_id_servicio_usuario">
                     {% endif %}
-                    <div class="modal-header">
+                    <div class="modal-header modern-modal-header">
                         <h4 class="modal-title">Editar Servicio</h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close modern-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body modern-modal-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -177,6 +276,10 @@
                                     {% else %}
                                         <textarea class="form-control enhanced-input" name="descripcion_servicio_usuario" id="edit_descripcion_servicio" style="height: 80px;"></textarea>
                                     {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label>Características Generales</label>
+                                    <textarea class="form-control enhanced-input" name="caracteristicas_generales" id="edit_caracteristicas" style="height: 80px;" required></textarea>
                                 </div>
                                 
                                 <!-- Campos adicionales solo para usuarios con rol 'persona' -->

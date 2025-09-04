@@ -14,6 +14,9 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
             // Detectar el tipo de usuario desde el contenedor principal
             const userTypeElement = document.querySelector('[data-user-type]');
             const userType = userTypeElement?.getAttribute('data-user-type') || 'empresa';
+                
+
+                
             
             console.log('=== DEBUG ELIMINACIÓN PRODUCTO ===');
             console.log('ID Producto:', idProducto);
@@ -91,16 +94,27 @@ function confirmarEliminacionProducto(idProducto, nombreProducto) {
     });
 }
 
-// Función para cargar imágenes existentes del producto
-function cargarImagenesExistentes(idProducto, userType = 'empresa') {
+// Función para cargar imágenes existentes del producto con retry automático
+function cargarImagenesExistentes(idProducto, userType = 'empresa', intentos = 0) {
     const container = document.getElementById('current_images_container');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ Container current_images_container no encontrado');
+        return;
+    }
     
     // Debug: Verificar parámetros recibidos
-    console.log('🔍 cargarImagenesExistentes - idProducto:', idProducto, 'userType:', userType);
+    console.log('🔍 cargarImagenesExistentes - idProducto:', idProducto, 'userType:', userType, 'intento:', intentos + 1);
     
-    // Mostrar loading
-    container.innerHTML = '<div class="col-12"><p>Cargando imágenes...</p></div>';
+    // Validar que tenemos un ID válido
+    if (!idProducto || idProducto === 'undefined' || idProducto === 'null') {
+        console.error('❌ ID de producto inválido:', idProducto);
+        container.innerHTML = '<div class="col-12"><p class="text-danger">Error: ID de producto inválido.</p></div>';
+        return;
+    }
+    
+    // Mostrar loading con indicador de intento
+    const loadingText = intentos > 0 ? `Reintentando cargar imágenes... (${intentos + 1}/3)` : 'Cargando imágenes...';
+    container.innerHTML = `<div class="col-12"><p>${loadingText}</p></div>`;
     
     // Determinar el parámetro correcto según el tipo de usuario
     let urlParam;
@@ -116,18 +130,74 @@ function cargarImagenesExistentes(idProducto, userType = 'empresa') {
         console.log('🔍 Usando parámetro para empresa (fallback):', urlParam);
     }
     
-    fetch(`/ecommerce/api/obtener_imagenes_producto/?${urlParam}`)
-        .then(response => response.json())
+    const url = `/ecommerce/api/obtener_imagenes_producto/?${urlParam}`;
+    console.log('🌐 Haciendo fetch a:', url);
+    
+    // Configurar timeout para la petición
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+    
+    fetch(url, {
+        signal: controller.signal,
+        headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
+    })
+        .then(response => {
+            clearTimeout(timeoutId);
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response ok:', response.ok);
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('📦 Data recibida:', data);
+            
             if (data.success) {
+                console.log('✅ Éxito - Mostrando imágenes:', data.imagenes.length);
                 mostrarImagenesExistentes(data.imagenes, userType);
             } else {
-                container.innerHTML = '<div class="col-12"><p class="text-muted">No se pudieron cargar las imágenes.</p></div>';
+                console.log('❌ Error en data.success:', data.error || 'Sin mensaje de error');
+                
+                // Retry automático si es el primer o segundo intento
+                if (intentos < 2) {
+                    console.log(`🔄 Reintentando en 1 segundo... (intento ${intentos + 2}/3)`);
+                    setTimeout(() => {
+                        cargarImagenesExistentes(idProducto, userType, intentos + 1);
+                    }, 1000);
+                } else {
+                    container.innerHTML = '<div class="col-12"><p class="text-muted">No se pudieron cargar las imágenes después de 3 intentos.</p></div>';
+                }
             }
         })
         .catch(error => {
-            console.error('Error al cargar imágenes:', error);
-            container.innerHTML = '<div class="col-12"><p class="text-danger">Error al cargar las imágenes.</p></div>';
+            clearTimeout(timeoutId);
+            console.error('💥 Error completo al cargar imágenes:', error);
+            console.error('💥 Error stack:', error.stack);
+            console.error('💥 Error name:', error.name);
+            
+            // Retry automático si es el primer o segundo intento y no es un error de abort
+            if (intentos < 2 && error.name !== 'AbortError') {
+                console.log(`🔄 Reintentando en 2 segundos... (intento ${intentos + 2}/3)`);
+                setTimeout(() => {
+                    cargarImagenesExistentes(idProducto, userType, intentos + 1);
+                }, 2000);
+            } else {
+                let errorMsg = 'Error al cargar las imágenes.';
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Timeout: La carga de imágenes tardó demasiado.';
+                } else if (intentos >= 2) {
+                    errorMsg = 'Error al cargar las imágenes después de 3 intentos.';
+                }
+                
+                container.innerHTML = `<div class="col-12"><p class="text-danger">${errorMsg}</p><button class="btn btn-sm btn-outline-primary mt-2" onclick="cargarImagenesExistentes('${idProducto}', '${userType}', 0)">Reintentar</button></div>`;
+            }
         });
 }
 
@@ -312,20 +382,47 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Cargar los datos en los campos del modal
             try {
-                // Determinar el tipo de usuario desde el current_images_container
-                const userTypeElement = document.getElementById('current_images_container');
-                const userType = userTypeElement?.getAttribute('data-user-type') || 'empresa';
+                // Función para detectar el tipo de usuario de manera robusta
+                function detectarTipoUsuario() {
+                    // Método 1: Desde el current_images_container
+                    const userTypeElement = document.getElementById('current_images_container');
+                    console.log('🔍 Elemento current_images_container:', userTypeElement);
+                    
+                    if (userTypeElement) {
+                        const rawUserType = userTypeElement.getAttribute('data-user-type');
+                        console.log('🔍 Valor RAW de data-user-type:', rawUserType);
+                        
+                        if (rawUserType && rawUserType.trim()) {
+                            console.log('✅ Tipo de usuario detectado desde data-user-type:', rawUserType.trim());
+                            return rawUserType.trim();
+                        }
+                    }
+                    
+                    // Método 2: Detectar desde los campos del formulario
+                    const stockField = document.getElementById('edit_stock');
+                    const precioField = document.getElementById('edit_precio');
+                    const condicionField = document.getElementById('edit_condicion');
+                    
+                    if (stockField || precioField || condicionField) {
+                        console.log('✅ Campos de usuario persona detectados, usando tipo: persona');
+                        return 'persona';
+                    }
+                    
+                    // Método 3: Detectar desde el ID del producto en el botón
+                    if (id && (button.getAttribute('data-id') || '').includes('usuario')) {
+                        console.log('✅ ID contiene "usuario", usando tipo: persona');
+                        return 'persona';
+                    }
+                    
+                    // Método 4: Fallback por defecto
+                    console.log('⚠️ No se pudo detectar el tipo de usuario, usando fallback: empresa');
+                    return 'empresa';
+                }
                 
-                // Debug del tipo de usuario detectado
-                console.log("🔍 userType DETECTADO:", userType);
+                const userType = detectarTipoUsuario();
+                console.log('🔍 userType FINAL:', userType);
                 
-                
-                console.log('=== DEBUG TIPO DE USUARIO ===');
-                console.log('Elemento con data-user-type:', userTypeElement);
-                console.log('Valor raw de data-user-type:', userTypeElement?.getAttribute('data-user-type'));
                 console.log('Tipo de usuario detectado:', userType);
-                console.log('Comparación con empresa:', userType === 'empresa');
-                console.log('Comparación con persona:', userType === 'persona');
                 
                 // Asignar ID según el tipo de usuario
                 if (userType === 'empresa') {

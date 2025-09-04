@@ -1,14 +1,14 @@
 // Variables globales para manejar los datos del carrito
 let productosUsuario = [];
-let productosEmpresa = [];
+let productosSucursal = [];
 let totalUsuario = 0;
-let totalEmpresa = 0;
+let totalSucursal = 0;
 
 // Inicializar datos del carrito desde el contexto de Django
 document.addEventListener('DOMContentLoaded', function() {
     // Cargar datos del carrito y calcular totales
     if (window.productosCarritoData) {
-        calculateVendorTotals();
+        calculateSucursalTotals();
     }
     
     // Mostrar/ocultar sección de comprobante según método de pago para cada vendedor
@@ -109,20 +109,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Validar que hay productos en el carrito
-            if (productosUsuario.length === 0 && productosEmpresa.length === 0) {
-                alert('No hay productos en el carrito para procesar.');
-                return;
-            }
-            
-            // Confirmar antes de enviar
-            let mensaje = 'Se procesarán los siguientes pedidos:\n\n';
-            if (productosUsuario.length > 0) {
-                mensaje += `• Pedido de Usuarios: ${productosUsuario.length} productos - Total: $${totalUsuario.toFixed(2)}\n`;
-            }
-            if (productosEmpresa.length > 0) {
-                mensaje += `• Pedido de Empresas: ${productosEmpresa.length} productos - Total: $${totalEmpresa.toFixed(2)}\n`;
-            }
-            mensaje += '\n¿Desea continuar?';
+                // Validar que hay productos en el carrito
+                if (productosUsuario.length === 0 && productosSucursal.length === 0) {
+                    alert('No hay productos en el carrito para procesar.');
+                    return;
+                }
+                // Confirmar antes de enviar
+                let mensaje = 'Se procesarán los siguientes pedidos:\n\n';
+                if (productosUsuario.length > 0) {
+                    mensaje += `• Pedido de Usuarios: ${productosUsuario.length} productos - Total: $${totalUsuario.toFixed(2)}\n`;
+                }
+                if (productosSucursal.length > 0) {
+                    mensaje += `• Pedido de Sucursal: ${productosSucursal.length} productos - Total: $${totalSucursal.toFixed(2)}\n`;
+                }
+                mensaje += '\n¿Desea continuar?';
             
             if (confirm(mensaje)) {
                 // Mostrar indicador de carga
@@ -244,8 +244,13 @@ function procesarPedidoIndividual(vendorId, vendorType, vendorName, metodoPago, 
         formData.append('notas_pedido', mainForm.querySelector('[name="notas_pedido"]')?.value || '');
     }
     
-    // Agregar vendedores seleccionados (solo este vendedor)
-    const vendedoresSeleccionados = [`${vendorType}_${vendorId}`];
+    // Agregar usuario vendedor seleccionado (solo este usuario)
+    let vendedoresSeleccionados;
+    if (vendorType === 'usuario') {
+        vendedoresSeleccionados = [`usuario_${vendorId}`];
+    } else {
+        vendedoresSeleccionados = [`sucursal_${vendorId}`];
+    }
     formData.append('vendedores_seleccionados', JSON.stringify(vendedoresSeleccionados));
     formData.append('finalizar_todos', 'false');
     
@@ -331,20 +336,20 @@ function procesarPedidoIndividual(vendorId, vendorType, vendorName, metodoPago, 
 // Función para inicializar los datos del carrito (llamada desde el template)
 function initializeCartData(productosUsuarioData, productosEmpresaData, totalUsuarioData, totalEmpresaData) {
     productosUsuario = productosUsuarioData || [];
-    productosEmpresa = productosEmpresaData || [];
+    productosSucursal = productosEmpresaData || [];
     totalUsuario = totalUsuarioData || 0;
-    totalEmpresa = totalEmpresaData || 0;
+    totalSucursal = totalEmpresaData || 0;
     
     // Llenar campos ocultos con los datos
     const productosUsuarioField = document.getElementById('productos_usuario');
-    const productosEmpresaField = document.getElementById('productos_empresa');
+    const productosSucursalField = document.getElementById('productos_sucursal');
     const totalUsuarioField = document.getElementById('total_usuario');
-    const totalEmpresaField = document.getElementById('total_empresa');
+    const totalSucursalField = document.getElementById('total_sucursal');
     
     if (productosUsuarioField) productosUsuarioField.value = JSON.stringify(productosUsuario);
-    if (productosEmpresaField) productosEmpresaField.value = JSON.stringify(productosEmpresa);
+    if (productosSucursalField) productosSucursalField.value = JSON.stringify(productosSucursal);
     if (totalUsuarioField) totalUsuarioField.value = totalUsuario;
-    if (totalEmpresaField) totalEmpresaField.value = totalEmpresa;
+    if (totalSucursalField) totalSucursalField.value = totalSucursal;
 }
 
 // Función para procesar datos del carrito desde Django template
@@ -364,41 +369,41 @@ function formatCurrency(amount) {
 // Variable global para el total del carrito
 window.totalCarrito = 0;
 
-// Función para calcular totales por vendedor
-function calculateVendorTotals() {
-    console.log('Calculando totales por vendedor...');
+// Función para calcular totales por sucursal
+function calculateSucursalTotals() {
+    console.log('Calculando totales por sucursal...');
     
-    if (!window.productosCarritoData || !window.productosCarritoData.productos_por_vendedor) {
+    if (!window.productosCarritoData || !window.productosCarritoData.productos_por_sucursal) {
         console.log('No hay datos de productos disponibles');
         return;
     }
     
-    const productosPorVendedor = window.productosCarritoData.productos_por_vendedor;
-    console.log('Datos de productos:', productosPorVendedor);
+    const productosPorSucursal = window.productosCarritoData.productos_por_sucursal;
+    console.log('Datos de productos:', productosPorSucursal);
     
-    // Calcular totales por vendedor
-    for (const [tipoVendedor, productos] of Object.entries(productosPorVendedor)) {
+    // Calcular totales por sucursal
+    for (const [sucursalKey, productos] of Object.entries(productosPorSucursal)) {
         if (productos && productos.length > 0) {
             const primerProducto = productos[0];
-            const vendedorId = primerProducto.vendedor_id;
+            const sucursalId = primerProducto.sucursal_id;
             
-            // Calcular total para este vendedor
-            let totalVendedor = 0;
+            // Calcular total para esta sucursal
+            let totalSucursal = 0;
             productos.forEach(producto => {
                 const subtotal = parseFloat(producto.subtotal) || 0;
-                totalVendedor += subtotal;
+                totalSucursal += subtotal;
                 console.log(`Producto: ${producto.nombre}, Subtotal: $${subtotal}`);
             });
             
-            console.log(`Total para vendedor ${vendedorId}: $${totalVendedor.toFixed(2)}`);
+            console.log(`Total para sucursal ${sucursalId}: $${totalSucursal.toFixed(2)}`);
             
             // Actualizar el elemento en el DOM
-            const totalElement = document.querySelector(`.vendor-total-${vendedorId}`);
+            const totalElement = document.querySelector(`.sucursal-total-${sucursalId}`);
             if (totalElement) {
-                totalElement.textContent = totalVendedor.toFixed(2);
-                console.log(`Actualizado total para vendedor ${vendedorId}: $${totalVendedor.toFixed(2)}`);
+                totalElement.textContent = totalSucursal.toFixed(2);
+                console.log(`Actualizado total para sucursal ${sucursalId}: $${totalSucursal.toFixed(2)}`);
             } else {
-                console.log(`No se encontró elemento .vendor-total-${vendedorId}`);
+                console.log(`No se encontró elemento .sucursal-total-${sucursalId}`);
             }
         }
     }

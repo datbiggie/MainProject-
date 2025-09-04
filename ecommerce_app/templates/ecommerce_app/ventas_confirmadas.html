@@ -4,7 +4,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Mis Ventas</title>
+    <title>Ventas Confirmadas</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,6 +19,8 @@
     <link rel="stylesheet" href="{% static 'sucursal/css/main.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     
     <style>
         .sales-container {
@@ -40,7 +42,7 @@
             opacity: 0.5;
         }
         .sale-header {
-            background: linear-gradient(45deg, #007bff, #0056b3);
+            background: linear-gradient(45deg, #28a745, #20c997);
             color: white;
             border-radius: 12px 12px 0 0;
         }
@@ -67,30 +69,21 @@
             padding: 1rem;
             margin-bottom: 1rem;
         }
-        .payment-proof {
-            max-width: 200px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            will-change: transform;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-        }
-        .payment-proof:hover {
-            transform: scale(1.05);
-        }
-        
-        /* Prevenir conflictos con librerías de lightbox */
-        .payment-proof.modal-trigger {
-            pointer-events: auto;
-        }
-        
-        /* Estabilizar el modal */
+        /* Estilos para modales */
         .modal-body img {
             max-width: 100%;
             height: auto;
             display: block;
             margin: 0 auto;
+        }
+        .confirmed-badge {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
         }
     </style>
 </head>
@@ -102,11 +95,11 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h2 class="mb-1"><i class="fas fa-chart-line me-2"></i>Mis Ventas</h2>
-                        <p class="text-muted mb-0">Historial completo de tus ventas realizadas</p>
+                        <h2 class="mb-1"><i class="fas fa-check-circle me-2 text-success"></i>Ventas Confirmadas</h2>
+                        <p class="text-muted mb-0">Ventas que han sido confirmadas y procesadas exitosamente</p>
                     </div>
                     <div>
-                        <span class="badge bg-success fs-6">{{ total_ventas }} venta{{ total_ventas|pluralize }}</span>
+                        <span class="badge bg-success fs-6">{{ total_ventas }} venta{{ total_ventas|pluralize }} confirmada{{ total_ventas|pluralize }}</span>
                     </div>
                 </div>
             </div>
@@ -139,8 +132,8 @@
         </div>
 
         <!-- Sales List -->
-        {% if ventas_realizadas %}
-            {% for venta in ventas_realizadas %}
+        {% if ventas_confirmadas %}
+            {% for venta in ventas_confirmadas %}
             <div class="card sale-card mb-4">
                 <div class="card-header sale-header">
                     <div class="row align-items-center">
@@ -151,8 +144,8 @@
                             </h6>
                         </div>
                         <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge bg-{% if venta.estado_pedido == 'pendiente' %}warning{% elif venta.estado_pedido == 'confirmado' %}info{% elif venta.estado_pedido == 'enviado' %}primary{% elif venta.estado_pedido == 'entregado' %}success{% else %}danger{% endif %}">
-                                {{ venta.estado_pedido|capfirst }}
+                            <span class="badge status-badge bg-success">
+                                <i class="fas fa-check-circle me-1"></i>Confirmada
                             </span>
                         </div>
                     </div>
@@ -177,6 +170,18 @@
                             <span class="badge bg-info">{{ venta.tipo_comprador|capfirst }}</span>
                         </div>
                     </div>
+
+                    <!-- Fecha de confirmación -->
+                    {% if venta.fecha_confirmacion %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-success" role="alert">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Venta confirmada el:</strong> {{ venta.fecha_confirmacion|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- Buyer Information -->
                     <div class="buyer-info">
@@ -221,29 +226,9 @@
                         <div class="col-12">
                             <strong>Comprobante de Pago:</strong><br>
                             <div class="mt-2">
-                                <img src="{{ venta.comprobante_pago.url }}" alt="Comprobante de Pago" class="payment-proof img-fluid" data-bs-toggle="modal" data-bs-target="#paymentModal{{ forloop.counter }}">
-                                <p class="text-muted small mt-1">Haz clic en la imagen para verla en tamaño completo</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Payment Modal -->
-                    <div class="modal fade" id="paymentModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="paymentModalLabel{{ forloop.counter }}" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="paymentModalLabel{{ forloop.counter }}">Comprobante de Pago - Venta #{{ venta.numero_pedido }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body text-center">
-                                    <img src="{{ venta.comprobante_pago.url }}" alt="Comprobante de Pago" class="img-fluid">
-                                </div>
-                                <div class="modal-footer">
-                                    <a href="{{ venta.comprobante_pago.url }}" download class="btn btn-primary">
-                                        <i class="fas fa-download me-2"></i>Descargar
-                                    </a>
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                </div>
+                                <button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#paymentModal{{ forloop.counter }}">
+                                    <i class="fas fa-file-image me-2"></i>Ver comprobante
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -290,31 +275,12 @@
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
+                    <!-- Status Badge -->
                     <div class="row mt-4">
                         <div class="col-12 text-center">
-                            {% if venta.estado_pedido == 'pendiente' %}
-                                <button type="button" class="btn btn-success btn-lg me-3" onclick="confirmarVenta('{{ venta.numero_pedido }}')"
-                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Confirmar que has recibido el pago y procesar la venta">
-                                    <i class="fas fa-check-circle me-2"></i>Confirmar Venta
-                                </button>
-                                <button type="button" class="btn btn-danger btn-lg" onclick="rechazarVenta('{{ venta.numero_pedido }}')"
-                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Rechazar esta venta por problemas con el pago o producto">
-                                    <i class="fas fa-times-circle me-2"></i>Rechazar Venta
-                                </button>
-                            {% elif venta.estado_pedido == 'confirmado' %}
-                                <span class="badge bg-success fs-6 p-3">
-                                    <i class="fas fa-check-circle me-2"></i>Venta Confirmada
-                                </span>
-                            {% elif venta.estado_pedido == 'rechazado' %}
-                                <span class="badge bg-danger fs-6 p-3">
-                                    <i class="fas fa-times-circle me-2"></i>Venta Rechazada
-                                </span>
-                            {% else %}
-                                <span class="badge bg-info fs-6 p-3">
-                                    <i class="fas fa-info-circle me-2"></i>Estado: {{ venta.estado_pedido|capfirst }}
-                                </span>
-                            {% endif %}
+                            <span class="confirmed-badge">
+                                <i class="fas fa-check-circle me-2"></i>Venta Confirmada y Procesada
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -324,11 +290,11 @@
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">
                 <div class="card-body text-center py-5">
-                    <i class="fas fa-chart-line empty-sales-icon" style="font-size: 4rem; margin-bottom: 1rem;"></i>
-                    <h4 class="text-muted mb-3">No tienes ventas aún</h4>
-                    <p class="text-muted mb-4">Cuando alguien compre tus productos, aparecerán aquí todas tus ventas.</p>
-                    <a href="/ecommerce/vista_items/" class="btn btn-success">
-                        <i class="fas fa-plus me-2"></i>Publicar Productos
+                    <i class="fas fa-check-circle empty-sales-icon" style="font-size: 4rem; margin-bottom: 1rem; color: #28a745;"></i>
+                    <h4 class="text-muted mb-3">No tienes ventas confirmadas</h4>
+                    <p class="text-muted mb-4">Cuando confirmes tus ventas pendientes, aparecerán aquí.</p>
+                    <a href="/ecommerce/ventas_pendientes/" class="btn btn-success">
+                        <i class="fas fa-clock me-2"></i>Ver Ventas Pendientes
                     </a>
                 </div>
             </div>
@@ -337,8 +303,8 @@
         <!-- Navigation Buttons -->
         <div class="row mt-4">
             <div class="col-12 text-center">
-                <a href="/ecommerce/mis_pedidos/" class="btn btn-outline-primary me-3">
-                    <i class="fas fa-history me-2"></i>Mis Pedidos
+                <a href="/ecommerce/ventas_pendientes/" class="btn btn-outline-warning me-3">
+                    <i class="fas fa-clock me-2"></i>Ventas Pendientes
                 </a>
                 <a href="/ecommerce/vista_items/" class="btn btn-primary">
                     <i class="fas fa-store me-2"></i>Ver Productos
@@ -349,6 +315,31 @@
 
     <div class="mb-5"></div>
 
+    <!-- Modales de comprobante, renderizados fuera del bucle -->
+    {% for venta in ventas_confirmadas %}
+        {% if venta.comprobante_pago %}
+        <div class="modal fade" id="paymentModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="paymentModalLabel{{ forloop.counter }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="paymentModalLabel{{ forloop.counter }}">Comprobante de Pago - Venta #{{ venta.numero_pedido }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="{{ venta.comprobante_pago.url }}" alt="Comprobante de Pago" class="img-fluid rounded shadow">
+                    </div>
+                    <div class="modal-footer">
+                        <a href="{{ venta.comprobante_pago.url }}" download class="btn btn-success">
+                            <i class="fas fa-download me-2"></i>Descargar
+                        </a>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
     <script src="{% static 'index/js/jquery-1.11.0.min.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
@@ -356,20 +347,14 @@
     <script src="{% static 'index/js/script.js' %}"></script>
     <script src="{% static 'index/js/rating-system.js' %}"></script>
     
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    
     <script>
-        // Prevenir conflictos con Chocolat lightbox en imágenes de comprobantes
         document.addEventListener('DOMContentLoaded', function() {
-            // Excluir imágenes de comprobantes de Chocolat
-            const paymentProofImages = document.querySelectorAll('.payment-proof');
-            paymentProofImages.forEach(function(img) {
-                img.classList.add('modal-trigger');
-                // Prevenir que Chocolat procese estas imágenes
-                img.setAttribute('data-chocolat-exclude', 'true');
-            });
-            
-            // Reinicializar Chocolat excluyendo las imágenes de comprobantes
+            // Inicializar Chocolat para las imágenes de productos
             if (typeof Chocolat !== 'undefined') {
-                const imageLinks = document.querySelectorAll('.image-link:not([data-chocolat-exclude])');
+                const imageLinks = document.querySelectorAll('.image-link');
                 if (imageLinks.length > 0) {
                     Chocolat(imageLinks, {
                         imageSize: 'contain',
@@ -378,51 +363,6 @@
                 }
             }
         });
-        
-        // Inicializar tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
-        
-        // Función para confirmar venta
-        function confirmarVenta(numeroPedido) {
-            if (confirm('¿Estás seguro de que quieres confirmar esta venta? Esta acción no se puede deshacer.')) {
-                // Realizar llamada AJAX para confirmar la venta
-                fetch('/ecommerce/confirmar_venta/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        'numero_pedido': numeroPedido
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Venta confirmada exitosamente. La página se actualizará.');
-                        // Recargar la página para mostrar los cambios
-                        window.location.reload();
-                    } else {
-                        alert('Error al confirmar la venta: ' + (data.error || 'Error desconocido'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error de conexión al confirmar la venta.');
-                });
-            }
-        }
-        
-        // Función para rechazar venta
-        function rechazarVenta(numeroPedido) {
-            if (confirm('¿Estás seguro de que quieres rechazar esta venta? Esta acción no se puede deshacer.')) {
-                // Aquí se implementará la funcionalidad de rechazo
-                alert('Funcionalidad de rechazo pendiente de implementar para la venta #' + numeroPedido);
-            }
-        }
         
         // Manejar modales de comprobantes de pago
         document.addEventListener('DOMContentLoaded', function() {

@@ -105,6 +105,31 @@
                   </select>
                 </div>
               </div>
+
+              <!-- Sección de ubicación para punto de encuentro -->
+              <div class="row">
+                <div class="col-md-12 form-group mb-5">
+                  <label class="col-form-label">Posible Punto de Encuentro del Producto</label>
+                  <p class="text-muted small mb-3">Selecciona la ubicación donde podrías entregar este producto</p>
+                  
+                  <div class="map-container">
+                    <div class="search-container" style="margin-bottom: 10px;">
+                      <div style="margin-left: 10px;">
+                        <div id="locationStatus" style="color: #2196F3; font-size: 14px; font-weight: 500;">
+                          <span id="locationIcon">⏳</span> Inicializando mapa...
+                        </div>
+                        <button type="button" onclick="retryLocation()" style="margin-top: 5px; background-color: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: none;" id="retryButton">
+                          🔄 Reintentar ubicación
+                        </button>
+                      </div>
+                    </div>
+                    <div id="producto_map" style="height: 300px; width: 100%; border-radius: 8px; border: 2px solid #ced4da;"></div>
+                    <!-- Campos ocultos para latitud y longitud -->
+                    <input type="hidden" id="latitud_entrega" name="latitud_entrega_producto">
+                    <input type="hidden" id="longitud_entrega" name="longitud_entrega_producto">
+                  </div>
+                </div>
+              </div>
               {% endif %}
 
               <div class="row">
@@ -177,6 +202,10 @@
   <script src="{% static 'producto/js/jquery.validate.min.js' %}"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="{% static 'producto/js/main.js' %}"></script>
+  {% if user_info.tipo == 'persona' %}
+  <script src="{% static 'producto/js/producto_maps.js' %}"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initProductoMap" async defer></script>
+  {% endif %}
 
   </body>
 </html>

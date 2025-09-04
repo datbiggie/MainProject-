@@ -22,6 +22,82 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Estilos mejorados para el botón Ver Mapa */
+      #btnGenerarLocalizacion {
+        position: relative;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+      
+      #btnGenerarLocalizacion::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+        z-index: 1;
+      }
+      
+      #btnGenerarLocalizacion:active::before {
+        width: 300px;
+        height: 300px;
+      }
+      
+      #btnGenerarLocalizacion:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25) !important;
+      }
+      
+      /* Animación de pulso para el ícono */
+      @keyframes mapPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+      
+      #btnGenerarLocalizacion:hover .fas {
+        animation: mapPulse 1.5s infinite;
+      }
+      
+      /* Responsive design */
+      @media (max-width: 768px) {
+        #btnGenerarLocalizacion {
+          padding: 10px 16px !important;
+          font-size: 0.9em;
+        }
+      }
+      
+      /* Mejora para el estado de carga */
+      .btn-loading {
+        position: relative;
+      }
+      
+      .btn-loading::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        animation: shimmer 1.5s infinite;
+      }
+      
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    </style>
   </head>
     <body>
 
@@ -40,46 +116,78 @@
         </div>
         <div class="card-body p-0">
           <h5 class="fw-bold mb-2">Filtrar por</h5>
-          <div class="text-start mb-3">
+          <form id="filtros-form" class="text-start mb-3">
+            <input type="hidden" name="query" value="{{ query }}">
+            
+            <!-- Condición -->
             <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Condición</div>
-            <div class="d-flex flex-column gap-2 ps-2">
-              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
-                <span>Nuevo</span>
-                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
-              </a>
-              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
-                <span>Usado</span>
-                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">369</span>
-              </a>
+            <div class="d-flex flex-column gap-2 ps-2 mb-3">
+              <label class="d-flex justify-content-between align-items-center filter-checkbox px-1">
+                <div class="d-flex align-items-center">
+                  <input type="radio" name="condicion" value="Nuevo" class="me-2" {% if request.GET.condicion == 'Nuevo' %}checked{% endif %}>
+                  <span>Nuevo</span>
+                </div>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3 condicion-count" data-condicion="Nuevo" style="min-width: 48px; text-align: right;">-</span>
+              </label>
+              <label class="d-flex justify-content-between align-items-center filter-checkbox px-1">
+                <div class="d-flex align-items-center">
+                  <input type="radio" name="condicion" value="Usado" class="me-2" {% if request.GET.condicion == 'Usado' %}checked{% endif %}>
+                  <span>Usado</span>
+                </div>
+                <span class="badge bg-light text-dark border flex-shrink-0 ms-3 condicion-count" data-condicion="Usado" style="min-width: 48px; text-align: right;">-</span>
+              </label>
+              <label class="d-flex justify-content-between align-items-center filter-checkbox px-1">
+                <div class="d-flex align-items-center">
+                  <input type="radio" name="condicion" value="" class="me-2" {% if not request.GET.condicion %}checked{% endif %}>
+                  <span>Todas</span>
+                </div>
+              </label>
             </div>
-            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Marca</div>
-            <div class="d-flex flex-column gap-2 ps-2">
-              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
-                <span>Lenovo</span>
-                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
-              </a>
-             
-            </div>
-            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Modelo</div>
-            <div class="d-flex flex-column gap-2 ps-2">
-              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
-                <span>Ideapad3</span>
-                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
-              </a>
+            
 
+            
+            <!-- Rango de Precio -->
+            <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Precio</div>
+            <div class="mb-3">
+              <div class="row g-2">
+                <div class="col-6">
+                  <input type="number" name="precio_min" class="form-control form-control-sm" placeholder="Mín" value="{{ request.GET.precio_min }}">
+                </div>
+                <div class="col-6">
+                  <input type="number" name="precio_max" class="form-control form-control-sm" placeholder="Máx" value="{{ request.GET.precio_max }}">
+                </div>
+              </div>
             </div>
+            
+            <!-- Localización -->
             <div class="fw-semibold mb-2" style="font-size:1rem; color:#111; font-weight:700;">Localización</div>
-            <div class="d-flex flex-column gap-2 ps-2">
-              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
-                <span>Rango menor a 2KM</span>
-                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">366</span>
-              </a>
-              <a href="#" class="text-decoration-none d-flex justify-content-between align-items-center filter-link px-1">
-                <span>Rango mayor a 2KM</span>
-                <span class="badge bg-light text-dark border flex-shrink-0 ms-3" style="min-width: 48px; text-align: right;">369</span>
-              </a>
+            <div class="mb-3">
+              <div class="row g-2">
+                <div class="col-12">
+                  <select name="rango_km" class="form-select form-select-sm">
+                    <option value="">Sin filtro de distancia</option>
+                    <option value="1" {% if request.GET.rango_km == '1' %}selected{% endif %}>Menos de 1 KM</option>
+                    <option value="2" {% if request.GET.rango_km == '2' %}selected{% endif %}>Menos de 2 KM</option>
+                    <option value="5" {% if request.GET.rango_km == '5' %}selected{% endif %}>Menos de 5 KM</option>
+                    <option value="10" {% if request.GET.rango_km == '10' %}selected{% endif %}>Menos de 10 KM</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" id="obtener-ubicacion" class="btn btn-outline-primary btn-sm mt-2 w-100">
+                <i class="fas fa-map-marker-alt me-1"></i>Usar mi ubicación
+              </button>
             </div>
-          </div>
+            
+            <!-- Botones -->
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-search me-1"></i>Aplicar Filtros
+              </button>
+              <button type="button" id="limpiar-filtros" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-times me-1"></i>Limpiar
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -100,9 +208,33 @@
             </div>
           {% endif %}
         </div>
-        <a href="#" id="btnGenerarLocalizacion" class="btn btn-primary" style="background-color: #007bff; border-color: #007bff; font-weight: 500;" onclick="generarLocalizacion()">
-           <i class="fas fa-map text-warning me-2"></i>Productos Cercanos
-         </a>
+        <div class="d-flex gap-2">
+          <a href="#" id="btnGenerarLocalizacion" class="btn btn-primary position-relative overflow-hidden" 
+             style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
+                    border: none; 
+                    font-weight: 600; 
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    text-decoration: none;
+                    transform: translateY(0);"
+             onclick="generarLocalizacion()"
+             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0, 123, 255, 0.4)'"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 123, 255, 0.3)'">
+             <i class="fas fa-map-marked-alt text-white me-2" style="font-size: 1.1em;"></i>
+             <span style="position: relative; z-index: 2;">Ver en Mapa</span>
+             <div class="position-absolute top-0 start-0 w-100 h-100" 
+                  style="background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+                         opacity: 0;
+                         transition: opacity 0.3s ease;"
+                  onmouseover="this.style.opacity='1'"
+                  onmouseout="this.style.opacity='0'"></div>
+           </a>
+          <button id="btnCercaDeMi" class="btn btn-outline-primary" style="border-color: #007bff; color: #007bff; font-weight: 500;" onclick="ordenarPorDistancia()">
+             <i class="fas fa-location-arrow me-2"></i>Cerca de mí
+           </button>
+        </div>
       </div>
 
       <!-- Resultados de Empresas -->
@@ -188,7 +320,10 @@
           
           {% if resultados %}
             {% for item in resultados %}
-              <div class="ml-horizontal-card mb-3">
+              <div class="ml-horizontal-card mb-3" 
+                   {% if item.latitud and item.longitud %}
+                   data-lat="{{ item.latitud }}" data-lng="{{ item.longitud }}"
+                   {% endif %}>
                 {% if item.imagen %}
                   <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.origen }}" class="text-decoration-none" onclick="console.log('Click en imagen: id={{ item.id }}, tipo={{ item.tipo }}, origen={{ item.origen }}')">
                     <img src="{{ item.imagen }}" class="ml-horizontal-card-img" alt="{{ item.nombre }}" style="cursor: pointer;">
@@ -224,6 +359,9 @@
                     </div>
                     <div>
                       <span class="badge {% if item.tipo == 'producto' %}bg-primary{% else %}bg-success{% endif %} rounded-pill">{{ item.tipo|title }}</span>
+                      {% if item.empresa_nombre %}
+                        <span class="badge bg-warning rounded-pill ms-1">{{ item.empresa_nombre }}</span>
+                      {% endif %}
                       <span class="badge bg-secondary rounded-pill ms-1">{{ item.sucursal }}</span>
                       {% if item.tipo == 'producto' and item.stock %}
                         <span class="badge bg-info rounded-pill ms-1">Stock: {{ item.stock }}</span>
@@ -236,6 +374,64 @@
                 </div>
               </div>
             {% endfor %}
+            
+            <!-- Controles de Paginación -->
+            {% if paginator.num_pages > 1 %}
+              <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Navegación de páginas">
+                  <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                      <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" aria-label="Primera">
+                          <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                      </li>
+                      <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Anterior">
+                          <span aria-hidden="true">&laquo;</span>
+                        </a>
+                      </li>
+                    {% endif %}
+                    
+                    {% for num in paginator.page_range %}
+                      {% if page_obj.number == num %}
+                        <li class="page-item active">
+                          <span class="page-link">{{ num }}</span>
+                        </li>
+                      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                          <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                        </li>
+                      {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                      <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Siguiente">
+                          <span aria-hidden="true">&raquo;</span>
+                        </a>
+                      </li>
+                      <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ paginator.num_pages }}" aria-label="Última">
+                          <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                      </li>
+                    {% endif %}
+                  </ul>
+                </nav>
+              </div>
+              
+              <!-- Información de paginación -->
+               <div class="text-center mt-3">
+                 <div class="pagination-info">
+                   <small class="text-muted">
+                     <i class="fas fa-info-circle me-1"></i>
+                     Mostrando {{ page_obj.start_index }} - {{ page_obj.end_index }} de {{ total_resultados }} resultados
+                     (Página {{ page_obj.number }} de {{ paginator.num_pages }})
+                   </small>
+                 </div>
+               </div>
+            {% endif %}
           {% else %}
             <div class="alert alert-info">
               {% if query %}
@@ -474,28 +670,431 @@
     <script src="{% static 'index/js/rating-system.js' %}"></script>
     
     <script>
+    // Variables globales para almacenar datos de filtros
+    let filtrosData = {
+        marcas: [],
+        modelos: [],
+        categorias_producto: [],
+        categorias_servicio: [],
+        rangos_precio: []
+    };
+    
+    let conteosData = {};
+    let ubicacionUsuario = null;
+    
+    // Cargar datos de filtros al cargar la página
+    $(document).ready(function() {
+        cargarDatosFiltros();
+        cargarConteosFiltros();
+        
+        // Manejar envío del formulario
+        $('#filtros-form').on('submit', function(e) {
+            e.preventDefault();
+            aplicarFiltros();
+        });
+        
+        // Manejar botón limpiar filtros
+        $('#limpiar-filtros').on('click', function() {
+            limpiarFiltros();
+        });
+        
+        // Manejar botón de ubicación
+        $('#obtener-ubicacion').on('click', function() {
+            obtenerUbicacion();
+        });
+        
+        // Manejar cambios en los filtros para actualizar conteos
+        $('#filtros-form input, #filtros-form select').on('change', function() {
+            cargarConteosFiltros();
+        });
+    });
+    
+    // Función para cargar datos de filtros desde la API
+    function cargarDatosFiltros() {
+        $.ajax({
+            url: '/api/obtener-filtros-busqueda/',
+            method: 'GET',
+            success: function(data) {
+                filtrosData = data;
+                poblarSelectores();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error al cargar filtros:', error);
+            }
+        });
+    }
+    
+    // Función para cargar conteos de filtros
+    function cargarConteosFiltros() {
+        const formData = new FormData($('#filtros-form')[0]);
+        const params = new URLSearchParams(formData).toString();
+        
+        $.ajax({
+            url: '/api/obtener-conteos-filtros/?' + params,
+            method: 'GET',
+            success: function(data) {
+                conteosData = data;
+                actualizarConteos();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error al cargar conteos:', error);
+            }
+        });
+    }
+    
+    // Función para poblar los selectores con datos
+    function poblarSelectores() {
+        // Poblar marcas
+        const marcaSelect = $('#marca-select');
+        marcaSelect.empty().append('<option value="">Todas las marcas</option>');
+        filtrosData.marcas.forEach(function(marca) {
+            const selected = marca === '{{ request.GET.marca }}' ? 'selected' : '';
+            marcaSelect.append(`<option value="${marca}" ${selected}>${marca}</option>`);
+        });
+        
+        // Poblar modelos
+        const modeloSelect = $('#modelo-select');
+        modeloSelect.empty().append('<option value="">Todos los modelos</option>');
+        filtrosData.modelos.forEach(function(modelo) {
+            const selected = modelo === '{{ request.GET.modelo }}' ? 'selected' : '';
+            modeloSelect.append(`<option value="${modelo}" ${selected}>${modelo}</option>`);
+        });
+        
+        // Poblar categorías de producto
+        const categoriaProductoSelect = $('#categoria-producto-select');
+        categoriaProductoSelect.empty().append('<option value="">Todas las categorías</option>');
+        filtrosData.categorias_producto.forEach(function(categoria) {
+            const selected = categoria === '{{ request.GET.categoria_producto }}' ? 'selected' : '';
+            categoriaProductoSelect.append(`<option value="${categoria}" ${selected}>${categoria}</option>`);
+        });
+        
+        // Poblar categorías de servicio
+        const categoriaServicioSelect = $('#categoria-servicio-select');
+        categoriaServicioSelect.empty().append('<option value="">Todas las categorías</option>');
+        filtrosData.categorias_servicio.forEach(function(categoria) {
+            const selected = categoria === '{{ request.GET.categoria_servicio }}' ? 'selected' : '';
+            categoriaServicioSelect.append(`<option value="${categoria}" ${selected}>${categoria}</option>`);
+        });
+    }
+    
+    // Función para actualizar conteos en los badges
+    function actualizarConteos() {
+        // Actualizar conteos de condición
+        $('.condicion-count').each(function() {
+            const condicion = $(this).data('condicion');
+            const count = conteosData.condiciones && conteosData.condiciones[condicion] ? conteosData.condiciones[condicion] : 0;
+            $(this).text(count);
+        });
+    }
+    
+    // Función para aplicar filtros
+    function aplicarFiltros() {
+        const formData = new FormData($('#filtros-form')[0]);
+        
+        // Agregar ubicación si está disponible
+        if (ubicacionUsuario) {
+            formData.append('latitud', ubicacionUsuario.lat);
+            formData.append('longitud', ubicacionUsuario.lng);
+        }
+        
+        // Construir URL con parámetros
+        const params = new URLSearchParams(formData);
+        const currentUrl = window.location.pathname;
+        window.location.href = currentUrl + '?' + params.toString();
+    }
+    
+    // Función para limpiar filtros
+    function limpiarFiltros() {
+        const query = '{{ query|escapejs }}';
+        if (query) {
+            window.location.href = window.location.pathname + '?query=' + encodeURIComponent(query);
+        } else {
+            window.location.href = window.location.pathname;
+        }
+    }
+    
+    // Función para obtener ubicación del usuario
+    function obtenerUbicacion() {
+        const btn = $('#obtener-ubicacion');
+        const originalText = btn.html();
+        
+        btn.html('<i class="fas fa-spinner fa-spin me-1"></i>Obteniendo ubicación...');
+        btn.prop('disabled', true);
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    ubicacionUsuario = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    btn.html('<i class="fas fa-check me-1"></i>Ubicación obtenida');
+                    btn.removeClass('btn-outline-primary').addClass('btn-success');
+                    
+                    // Restaurar botón después de 2 segundos
+                    setTimeout(function() {
+                        btn.html(originalText);
+                        btn.removeClass('btn-success').addClass('btn-outline-primary');
+                        btn.prop('disabled', false);
+                    }, 2000);
+                },
+                function(error) {
+                    btn.html('<i class="fas fa-exclamation-triangle me-1"></i>Error al obtener ubicación');
+                    btn.removeClass('btn-outline-primary').addClass('btn-danger');
+                    
+                    // Restaurar botón después de 3 segundos
+                    setTimeout(function() {
+                        btn.html(originalText);
+                        btn.removeClass('btn-danger').addClass('btn-outline-primary');
+                        btn.prop('disabled', false);
+                    }, 3000);
+                    
+                    console.error('Error de geolocalización:', error);
+                }
+            );
+        } else {
+            btn.html('<i class="fas fa-exclamation-triangle me-1"></i>Geolocalización no disponible');
+            btn.removeClass('btn-outline-primary').addClass('btn-warning');
+            
+            setTimeout(function() {
+                btn.html(originalText);
+                btn.removeClass('btn-warning').addClass('btn-outline-primary');
+                btn.prop('disabled', false);
+            }, 3000);
+        }
+    }
+    
     // Debug: Mostrar información de los items en la consola
     console.log('Items disponibles en la búsqueda:');
-  
+    
+    // Función para calcular distancia usando fórmula de Haversine
+    function calcularDistancia(lat1, lng1, lat2, lng2) {
+        const R = 6371; // Radio de la Tierra en kilómetros
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distancia = R * c;
+        return Math.round(distancia * 10) / 10; // Redondear a 1 decimal
+    }
+
+    // Función para ordenar resultados por distancia (ahora en el backend)
+    function ordenarPorDistancia() {
+        if (navigator.geolocation) {
+            const btn = document.querySelector('button[onclick="ordenarPorDistancia()"]');
+            const originalText = btn.innerHTML;
+            
+            // Mostrar estado de carga
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Obteniendo ubicación...';
+            btn.disabled = true;
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    
+                    // Crear nueva URL con coordenadas del usuario
+                    const currentUrl = new URL(window.location);
+                    currentUrl.searchParams.set('latitud', userLat);
+                    currentUrl.searchParams.set('longitud', userLng);
+                    currentUrl.searchParams.set('rango_km', '50'); // Rango por defecto de 50km
+                    
+                    // Mostrar mensaje de procesamiento
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Ordenando por distancia...';
+                    
+                    // Redirigir a la nueva URL para que el backend ordene los resultados
+                    window.location.href = currentUrl.toString();
+                },
+                function(error) {
+                    // Error al obtener ubicación
+                    btn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Error de ubicación';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-danger');
+                    
+                    // Restaurar botón después de 3 segundos
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('btn-danger');
+                        btn.classList.add('btn-outline-primary');
+                        btn.disabled = false;
+                    }, 3000);
+                    
+                    console.error('Error de geolocalización:', error);
+                    alert('No se pudo obtener tu ubicación. Verifica que tengas los permisos de geolocalización activados.');
+                }
+            );
+        } else {
+            alert('Tu navegador no soporta geolocalización.');
+        }
+    }
     
     function generarLocalizacion() {
+        const btn = document.getElementById('btnGenerarLocalizacion');
+        const originalContent = btn.innerHTML;
+        
+        // Agregar clase de carga y mostrar estado
+        btn.classList.add('btn-loading');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin text-white me-2"></i><span>Obteniendo ubicación...</span>';
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.8';
+        btn.style.transform = 'scale(0.98)';
+        
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 const query = "{{ query|escapejs }}";
-                window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query) + "&lat=" + lat + "&lng=" + lng;
+                
+                // Mostrar éxito brevemente
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '<i class="fas fa-check text-white me-2"></i><span>¡Ubicación obtenida!</span>';
+                btn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                btn.style.transform = 'scale(1)';
+                
+                setTimeout(() => {
+                    window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query) + "&lat=" + lat + "&lng=" + lng;
+                }, 800);
+                
             }, function(error) {
-                // Si no se puede obtener la ubicación, ir sin coordenadas
-                const query = "{{ query|escapejs }}";
-                window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query);
+                // Mostrar error y luego continuar sin coordenadas
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle text-white me-2"></i><span>Sin ubicación</span>';
+                btn.style.background = 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)';
+                btn.style.transform = 'scale(1)';
+                
+                setTimeout(() => {
+                    const query = "{{ query|escapejs }}";
+                    window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query);
+                }, 1200);
+            }, {
+                timeout: 10000,
+                enableHighAccuracy: true,
+                maximumAge: 300000
             });
         } else {
             // Si geolocalización no está disponible, ir sin coordenadas
-            const query = "{{ query|escapejs }}";
-            window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query);
+            btn.classList.remove('btn-loading');
+            btn.innerHTML = '<i class="fas fa-info-circle text-white me-2"></i><span>Sin geolocalización</span>';
+            btn.style.background = 'linear-gradient(135deg, #6c757d 0%, #495057 100%)';
+            btn.style.transform = 'scale(1)';
+            
+            setTimeout(() => {
+                const query = "{{ query|escapejs }}";
+                window.location.href = "{% url 'localizacion' %}?query=" + encodeURIComponent(query);
+            }, 1200);
         }
     }
+    
+    // Función para mostrar badges de distancia cuando los resultados vienen del backend
+    function mostrarBadgesDistancia() {
+        // Esta función se ejecuta cuando la página se carga con coordenadas del usuario
+        const urlParams = new URLSearchParams(window.location.search);
+        const userLat = urlParams.get('latitud');
+        const userLng = urlParams.get('longitud');
+        
+        if (userLat && userLng) {
+            const resultItems = document.querySelectorAll('.ml-horizontal-card');
+            
+            resultItems.forEach(item => {
+                const itemLat = item.getAttribute('data-lat');
+                const itemLng = item.getAttribute('data-lng');
+                
+                if (itemLat && itemLng && itemLat !== 'None' && itemLng !== 'None') {
+                    // Calcular distancia
+                    const distance = calcularDistancia(
+                        parseFloat(userLat), 
+                        parseFloat(userLng), 
+                        parseFloat(itemLat), 
+                        parseFloat(itemLng)
+                    );
+                    
+                    // Crear badge de distancia
+                    const distanceBadge = document.createElement('span');
+                    distanceBadge.className = 'badge distance-badge';
+                    distanceBadge.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${distance} km`;
+                    
+                    // Agregar el badge al contenedor de la tarjeta
+                    item.appendChild(distanceBadge);
+                }
+            });
+            
+            // Actualizar el botón para mostrar que está ordenado por distancia
+            const btn = document.querySelector('button[onclick="ordenarPorDistancia()"]');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>Ordenado por distancia';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+            }
+        }
+    }
+    
+    // Ejecutar al cargar la página
+    document.addEventListener('DOMContentLoaded', mostrarBadgesDistancia);
     </script>
+    
+    <style>
+    .ml-horizontal-card {
+        position: relative;
+    }
+    
+    .distance-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        background-color: #dc3545 !important;
+        color: white !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    /* Estilos para la paginación */
+    .pagination {
+        margin-bottom: 0;
+    }
+    
+    .pagination .page-link {
+        color: #007bff;
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+        margin: 0 2px;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .pagination .page-link:hover {
+        color: #0056b3;
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+    }
+    
+    .pagination .page-item:first-child .page-link,
+    .pagination .page-item:last-child .page-link {
+        font-weight: 600;
+    }
+    
+    /* Información de paginación */
+    .pagination-info {
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        display: inline-block;
+    }
+    </style>
   </body>
 </html>

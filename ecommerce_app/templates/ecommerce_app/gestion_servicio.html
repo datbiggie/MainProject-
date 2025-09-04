@@ -1,0 +1,161 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Solicitar Servicio</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+</head>
+<body>
+
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<div class="container-lg">
+    <div class="card shadow mb-3" style="margin-top: 2rem; border-radius: 12px; border: none;">
+        <div class="card-header bg-primary text-white" style="border-radius: 12px 12px 0 0;">
+            <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Gestión de Servicios</h5>
+        </div>
+        <div class="card-body p-3">
+            {% if solicitudes %}
+            <!-- Información del usuario -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <strong>Usuario:</strong><br>
+                    <span class="text-muted">
+                        <i class="fas fa-{% if user_info.tipo == 'empresa' %}building{% else %}user{% endif %} me-1"></i>
+                        {{ user_info.nombre }}
+                    </span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Tipo de Cuenta:</strong><br>
+                    <span class="badge bg-{% if user_info.tipo == 'empresa' %}info{% else %}success{% endif %}">
+                        {{ user_info.tipo|capfirst }}
+                    </span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Total Solicitudes:</strong><br>
+                    <span class="text-muted">{{ solicitudes|length }} solicitud{{ solicitudes|length|pluralize:"es" }}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Email:</strong><br>
+                    <span class="text-muted">{{ user_info.email }}</span>
+                </div>
+            </div>
+
+            <!-- Tabla de solicitudes de servicios -->
+            <div class="row">
+                <div class="col-12">
+                    <h6 class="mb-3"><i class="fas fa-list me-2"></i>Mis Solicitudes de Servicios</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Servicio</th>
+                                    <th scope="col">Fecha Solicitud</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col">Sucursal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solicitud_data in solicitudes %}
+                                {% with solicitud=solicitud_data.solicitud %}
+                                <tr>
+                                    <td>
+                                        {% if user_info.tipo == 'empresa' %}
+                                            #{{ solicitud.id_solicitud_servicio_empresa }}
+                                        {% else %}
+                                            #{{ solicitud.id_solicitud_servicio_usuario }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fas fa-{% if solicitud.id_servicio_usuario_fk %}user{% else %}building{% endif %} text-primary" style="font-size: 1.5rem;"></i>
+                                            </div>
+                                            <div>
+                                                {% if solicitud.id_servicio_usuario_fk %}
+                                                    <strong>{{ solicitud.id_servicio_usuario_fk.nombre_servicio_usuario }}</strong><br>
+                                                    <small class="text-muted">Servicio de Usuario</small>
+                                                {% elif solicitud.id_servicio_sucursal_fk %}
+                                                    <strong>{{ solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa }}</strong><br>
+                                                    <small class="text-muted">Servicio de Empresa</small>
+                                                {% else %}
+                                                    <span class="text-muted">Servicio no especificado</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ solicitud.fecha_solicitud|date:"d/m/Y" }}</strong><br>
+                                        <small class="text-muted">{{ solicitud.fecha_solicitud|date:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if solicitud.estado == 'pendiente' %}
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        {% elif solicitud.estado == 'cotizada' %}
+                                            <span class="badge bg-info">Cotizada</span>
+                                        {% elif solicitud.estado == 'aceptada' %}
+                                            <span class="badge bg-primary">Aceptada</span>
+                                        {% elif solicitud.estado == 'pagada' %}
+                                            <span class="badge bg-success">Pagada</span>
+                                        {% elif solicitud.estado == 'completada' %}
+                                            <span class="badge bg-success">Completada</span>
+                                        {% elif solicitud.estado == 'rechazada' %}
+                                            <span class="badge bg-danger">Rechazada</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ solicitud.estado|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if solicitud_data.sucursal_info %}
+                                            <div class="text-primary fw-bold">
+                                                <i class="fas fa-store me-1"></i>{{ solicitud_data.sucursal_info.nombre }}
+                                            </div>
+                                            <small class="text-muted">{{ solicitud_data.sucursal_info.direccion|truncatechars:30 }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Servicio individual</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-clipboard-list" style="font-size: 3rem; margin-bottom: 1rem; color: #6c757d; opacity: 0.5;"></i>
+                <h6 class="text-muted mb-0">No tienes solicitudes de servicios</h6>
+                <p class="text-muted small mt-2">Aún no has realizado ninguna solicitud de servicio. Puedes explorar los servicios disponibles y realizar tu primera solicitud.</p>
+                <a href="/ecommerce/perfil_servicios/" class="btn btn-primary mt-2">
+                    <i class="fas fa-search me-2"></i>Explorar Servicios
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+
+
+</body>
+</html>

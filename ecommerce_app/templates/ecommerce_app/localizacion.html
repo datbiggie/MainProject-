@@ -102,32 +102,68 @@
                   {{ resultados|length }} resultado{{ resultados|length|pluralize }}
                 </h6>
               </div>
-              <div class="card-body p-1" style="max-height: 500px; overflow-y: auto; padding-top: 5px !important; display: flex; flex-direction: column-reverse;">
+              <div class="card-body p-2" style="max-height: 500px; overflow-y: auto; padding-top: 10px !important; display: flex; flex-direction: column-reverse;">
                 {% for resultado in resultados %}
-                <div class="card mb-1 shadow-sm resultado-card" 
+                <div class="card mb-3 shadow-sm resultado-card" 
                      onclick="focusMarker('{{ forloop.counter0 }}')"
-                     style="cursor: pointer; transition: all 0.2s ease; border-left: 2px solid #007bff; height: 60px; max-height: 60px; overflow: hidden;"
-                     onmouseover="this.style.transform = 'translateY(-1px)'; this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';" 
-                     onmouseout="this.style.transform = 'translateY(0)'; this.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';">
-                  <div class="card-body py-0 px-1">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div class="flex-grow-1 me-2">
-                        <h6 class="mb-0 text-primary fw-bold text-truncate" style="font-size: 0.8rem; line-height: 1.1;">{{ resultado.nombre }}</h6>
-                        <div class="d-flex align-items-center text-muted mt-1" style="font-size: 0.65rem;">
-                          <i class="fas fa-map-marker-alt me-1 text-danger" style="font-size: 0.6rem;"></i>
-                          <span class="text-truncate">{{ resultado.direccion|default:"Sin dirección"|truncatechars:20 }}</span>
+                     style="cursor: pointer; transition: all 0.3s ease; border-left: 4px solid #007bff; min-height: 100px; border-radius: 8px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);"
+                     onmouseover="this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 4px 12px rgba(0,123,255,0.15)'; this.style.borderLeftColor = '#0056b3';" 
+                     onmouseout="this.style.transform = 'translateY(0)'; this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.08)'; this.style.borderLeftColor = '#007bff';">
+                  <div class="card-body py-3 px-3">
+                    <div class="d-flex justify-content-between align-items-start" style="width: 100%;">
+                       <div class="flex-grow-1 me-2" style="min-width: 0; flex: 1;">
+                        <!-- Título y tipo de propietario -->
+                        <div class="d-flex align-items-center mb-2">
+                          <h5 class="mb-0 text-primary fw-bold me-2" style="font-size: 1rem; line-height: 1.2;">{{ resultado.nombre }}</h5>
+                          {% if resultado.tipo_propietario %}
+                            {% if resultado.tipo_propietario == 'empresa' %}
+                              <span class="badge bg-primary text-white" style="font-size: 0.7rem; padding: 4px 8px; border-radius: 12px;">
+                                <i class="fas fa-building me-1" style="font-size: 0.7rem;"></i> Empresa
+                              </span>
+                            {% else %}
+                              <span class="badge bg-secondary text-white" style="font-size: 0.7rem; padding: 4px 8px; border-radius: 12px;">
+                                <i class="fas fa-user me-1" style="font-size: 0.7rem;"></i> Persona
+                              </span>
+                            {% endif %}
+                          {% endif %}
                         </div>
-                      </div>
-                      <div class="d-flex flex-column align-items-end">
-                        <span class="badge bg-info text-white mb-1" style="font-size: 0.6rem;">
-                          {{ resultado.distancia|floatformat:1 }}km
-                        </span>
-                        {% if resultado.precio %}
-                        <span class="badge bg-success text-white" style="font-size: 0.6rem;">
-                          ${{ resultado.precio }}
-                        </span>
+                        
+                        <!-- Nombre del propietario -->
+                        {% if resultado.sucursal %}
+                        <div class="text-muted mb-2" style="font-size: 0.85rem;">
+                          <i class="fas fa-store me-2 text-info" style="font-size: 0.8rem;"></i>
+                          <span class="fw-medium">{{ resultado.sucursal }}</span>
+                        </div>
                         {% endif %}
+                        
+                        <!-- Dirección -->
+                        <div class="d-flex align-items-center text-muted mb-1" style="font-size: 0.8rem;">
+                          <i class="fas fa-map-marker-alt me-2 text-danger" style="font-size: 0.8rem;"></i>
+                          <span class="text-truncate">{{ resultado.direccion|default:"Sin dirección"|truncatechars:35 }}</span>
+                        </div>
+                        
+
                       </div>
+                      
+                      <!-- Panel derecho con distancia, precio y botón -->
+                        <div class="d-flex flex-column align-items-end text-end" style="flex-shrink: 0; width: 100px;">
+                          <span class="badge bg-info text-white mb-2" style="font-size: 0.7rem; padding: 4px 6px; border-radius: 12px; white-space: nowrap;">
+                            <i class="fas fa-route me-1" style="font-size: 0.6rem;"></i>
+                            {{ resultado.distancia|floatformat:1 }}km
+                          </span>
+                          {% if resultado.precio %}
+                          <span class="badge bg-success text-white mb-2" style="font-size: 0.7rem; padding: 4px 6px; border-radius: 12px; font-weight: 600; white-space: nowrap;">
+                            <i class="fas fa-dollar-sign me-1" style="font-size: 0.6rem;"></i>
+                            ${{ resultado.precio }}
+                          </span>
+                          {% endif %}
+                          <a href="/ecommerce/vista_items/?id={{ resultado.id }}&tipo={{ resultado.tipo }}&origen={{ resultado.origen }}" 
+                             class="btn btn-primary btn-sm" 
+                             style="font-size: 0.65rem; padding: 4px 8px; border-radius: 6px; text-decoration: none; white-space: nowrap; font-weight: 600;"
+                             onclick="event.stopPropagation();">
+                            <i class="fas fa-eye me-1" style="font-size: 0.6rem;"></i>Ver
+                          </a>
+                        </div>
                     </div>
                   </div>
                 </div>

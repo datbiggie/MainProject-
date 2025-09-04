@@ -1,0 +1,297 @@
+{% load static %}
+    {% include 'ecommerce_app/barra_superior_index.html' %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Favoritos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/css/vendor.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'favoritos/favoritos.css' %}">
+</head>
+<body>
+
+    <!-- Header Section -->
+    <div class="favorites-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="header-title">
+                    <i class="fas fa-heart me-3"></i>
+                    Mis Favoritos
+                </h1>
+                <p class="header-subtitle">
+                    Descubre y gestiona todos tus productos favoritos en un solo lugar
+                </p>
+                
+                <div class="favorites-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">{{ favoritos.count }}</span>
+                        <span class="stat-label">Productos</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">5</span>
+                        <span class="stat-label">Categorías</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">$2,450</span>
+                        <span class="stat-label">Valor Total</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="container">
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Buscar en mis favoritos..." id="searchInput">
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="container">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-category="all">
+                    <i class="fas fa-th-large me-2"></i>Todos
+                </button>
+                <button class="filter-btn" data-category="electronics">
+                    <i class="fas fa-laptop me-2"></i>Electrónicos
+                </button>
+                <button class="filter-btn" data-category="fashion">
+                    <i class="fas fa-tshirt me-2"></i>Moda
+                </button>
+                <button class="filter-btn" data-category="home">
+                    <i class="fas fa-home me-2"></i>Hogar
+                </button>
+                <button class="filter-btn" data-category="sports">
+                    <i class="fas fa-dumbbell me-2"></i>Deportes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="favorites-grid">
+        <div class="container">
+            {% if favoritos %}
+                <div class="products-grid" id="productsGrid">
+                    {% for producto in favoritos %}
+                    <div class="product-card" data-category="{{ producto.categoria.nombre|lower }}">
+                        <div class="product-image">
+                            {% if producto.imagen %}
+                                <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
+                            {% else %}
+                                <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400" alt="{{ producto.nombre }}">
+                            {% endif %}
+                            <div class="favorite-badge" onclick="toggle">
+                                <i class="fas fa-heart" style="color: #ef4444;"></i>
+                            </div>
+                            {% if producto.descuento %}
+                                <div class="discount-badge">-{{ producto.descuento }}%</div>
+                            {% endif %}
+                        </div>
+                        <div class="product-info">
+                            <div class="product-category">{{ producto.categoria.nombre }}</div>
+                            <h3 class="product-title">{{ producto.nombre }}</h3>
+                            <p class="product-description">{{ producto.descripcion|truncatewords:15 }}</p>
+                            <div class="product-rating">
+                                <div class="stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= producto.rating|default:4 %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="rating-text">{{ producto.rating|default:"4.5" }} ({{ producto.reviews|default:"50" }} reseñas)</span>
+                            </div>
+                            <div class="product-price">
+                                <span class="current-price">${{ producto.precio }}</span>
+                                {% if producto.precio_original %}
+                                    <span class="original-price">${{ producto.precio_original }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="product-actions">
+                                
+                                    <i class="fas fa-shopping-cart me-2"></i>Agregar al Carrito
+                                </button>
+                                <a href="{% url 'vista_items' %}" class="btn-secondary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-heart-broken"></i>
+                    </div>
+                    <h2 class="empty-title">No tienes productos favoritos</h2>
+                    <p class="empty-description">
+                        Explora nuestro catálogo y agrega productos a tus favoritos para verlos aquí
+                    </p>
+                    <a href="{% url 'vista_items' %}" class="btn-explore">
+                        <i class="fas fa-search me-2"></i>Explorar Productos
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script>
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const productsGrid = document.getElementById('productsGrid');
+        const productCards = document.querySelectorAll('.product-card');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+
+        // Search products
+        if (searchInput && productCards.length > 0) {
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                productCards.forEach(card => {
+                    const title = card.querySelector('.product-title').textContent.toLowerCase();
+                    const category = card.querySelector('.product-category').textContent.toLowerCase();
+                    const description = card.querySelector('.product-description').textContent.toLowerCase();
+                    
+                    if (title.includes(searchTerm) || category.includes(searchTerm) || description.includes(searchTerm)) {
+                        card.style.display = 'block';
+                        card.style.animation = 'fadeInUp 0.5s ease-out';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Filter by category
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                const category = this.getAttribute('data-category');
+                
+                productCards.forEach(card => {
+                    if (category === 'all' || card.getAttribute('data-category') === category) {
+                        card.style.display = 'block';
+                        card.style.animation = 'fadeInUp 0.5s ease-out';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Toggle favorite function
+        function toggleFavorito(productId) {
+            fetch('/ecommerce/favoritos/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({producto_id: productId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the product card with animation
+                    const productCard = document.querySelector(`[data-product-id="${productId}"]`);
+                    if (productCard) {
+                        productCard.style.animation = 'fadeOut 0.5s ease-out';
+                        setTimeout(() => {
+                            productCard.remove();
+                        }, 500);
+                    }
+                    // Reload page to update count
+                    setTimeout(() => {
+                        location.reload();
+                    }, 600);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Add to cart function
+        function agregarAlCarrito(productId) {
+            const button = event.target.closest('.btn-primary');
+            const originalText = button.innerHTML;
+            
+            fetch('/ecommerce/agregar_al_carrito/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({producto_id: productId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    button.innerHTML = '<i class="fas fa-check me-2"></i>¡Agregado!';
+                    button.style.background = '#10b981';
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.style.background = '';
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                button.innerHTML = '<i class="fas fa-times me-2"></i>Error';
+                button.style.background = '#ef4444';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '';
+                }, 2000);
+            });
+        }
+
+        // Loading animation on page load
+        window.addEventListener('load', function() {
+            productCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease-out';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+
+    <!-- Variables globales para el manejo de sesión -->
+    <script>
+        // Variables globales para el manejo de sesión
+        window.USER_INFO = {
+            account_type: '{{ request.session.account_type|default:"usuario" }}',
+            user_id: '{{ user_info.id|default:"" }}',
+            is_authenticated: "{% if user_info.is_authenticated %}true{% else %}false{% endif %}"
+        };
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+    </script>
+</body>
+</html>

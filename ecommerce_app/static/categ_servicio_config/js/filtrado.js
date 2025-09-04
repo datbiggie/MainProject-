@@ -27,7 +27,7 @@ function canUserEditCategory(categoria, userInfo) {
 document.addEventListener('DOMContentLoaded', function() {
     const busquedaInput = document.getElementById('busqueda');
     const filtroEstatus = document.getElementById('filtroEstatus');
-    const contenedorCategorias = document.querySelector('.d-flex.flex-wrap.justify-content-center.gap-3.w-100');
+    const contenedorCategorias = document.querySelector('.category-grid');
     
     // Función para filtrar categorías usando la API del servidor
     function filtrarCategorias() {
@@ -62,39 +62,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Verificar permisos para mostrar botones
                         const canEdit = canUserEditCategory(categoria, window.USER_INFO);
-                        const editButtons = canEdit ? `
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-primary btn-edit btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\\'")}', '${(descripcion || '').replace(/'/g, "\\'")}', '${(estatus || '').replace(/'/g, "\\'")}')">
-                                    <i class="lni lni-pencil"></i> Editar
-                                </button>
-                                <button class="btn btn-danger btn-delete btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="confirmarEliminacion('${id}')">
-                                    <i class="lni lni-trash"></i> Eliminar
-                                </button>
-                            </div>
-                        ` : `
-                            <div class="text-muted small" style="font-size:0.8rem;">
-                                Sin permisos
-                            </div>
-                        `;
                         
+                        const actionButtons = canEdit ? `
+                                <button class="action-btn btn-edit" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\\'")}', '${(descripcion || '').replace(/'/g, "\\'")}', '${(estatus || '').replace(/'/g, "\\'")}')" data-tooltip="Editar categoría">
+                                    <i class="lni lni-pencil"></i>
+                                </button>
+                                <button class="action-btn btn-delete" onclick="confirmarEliminacion('${id}')" data-tooltip="Eliminar categoría">
+                                    <i class="lni lni-trash-can"></i>
+                                </button>
+                        ` : '<small class="text-muted">Sin permisos</small>';
+
                         const categoriaHTML = `
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card shadow-sm bg-white wow fadeInUp" data-wow-delay=".2s" data-estatus="${estatus}" style="border-radius: 0.7rem; height: 100%;">
-                                <div class="card-body p-3 d-flex flex-column h-100">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div style="width:40px; height:40px; background:#e9ecef; border-radius:0.4rem; display:flex; align-items:center; justify-content:center; color:#0d6efd; font-size:1.2rem; margin-right: 12px;">
-                                            <i class="lni lni-folder"></i>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <h5 class="mb-1 fs-6">${nombre}</h5>
-                                            <small class="text-muted">Estado: ${estatus}</small>
-                                        </div>
-                                    </div>
-                                    <div class="mt-auto d-flex justify-content-center">
-                                        ${editButtons}
-                                    </div>
+                        <div class="category-card animate-card" data-nombre="${(nombre || '').toLowerCase()}" data-estatus="${(estatus || '').toLowerCase()}" data-type="${isEmpresa ? 'empresa' : 'usuario'}">
+                            <div class="category-icon">
+                                <i class="lni lni-cog"></i>
+                            </div>
+                            <div class="category-content">
+                                <h3 class="category-title">${nombre}</h3>
+                                <div class="category-meta">
+                                    <span class="status-badge ${estatus === 'Activo' ? 'status-active' : 'status-inactive'}">${estatus === 'Activo' ? '✅ Activa' : '⏸️ Inactiva'}</span>
+                                    <span class="category-type">${isEmpresa ? '🏢 Empresa' : '👤 Usuario'}</span>
                                 </div>
                             </div>
+                            <div class="category-actions">
+                                 ${actionButtons}
+                             </div>
                         </div>
                         `;
                         contenedorCategorias.innerHTML += categoriaHTML;

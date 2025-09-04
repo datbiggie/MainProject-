@@ -1,6 +1,7 @@
 import json
 from django.views.decorators.http import require_GET, require_POST
 from django.http import JsonResponse
+from django.utils import timezone
 from .models import producto_empresa, servicio_empresa, producto_sucursal, servicio_sucursal, sucursal, imagen_producto_empresa, imagen_servicio_empresa, categoria_servicio_usuario, categoria_servicio_empresa, imagen_producto_usuario, producto_usuario, categoria_producto_usuario, categoria_producto_empresa
 
 # API para obtener productos y servicios NO asociados a una sucursal
@@ -403,6 +404,15 @@ def api_filtrar_servicios(request):
                 # Obtener la primera imagen del servicio desde la nueva tabla
                 primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
                 imagen_url = primera_imagen.ruta_imagen_servicio_empresa.url if primera_imagen and primera_imagen.ruta_imagen_servicio_empresa else ''
+                
+                # Obtener sucursales asignadas al servicio
+                sucursales_asignadas = []
+                servicios_sucursal = servicio_sucursal.objects.filter(id_servicio_fk=serv).select_related('id_sucursal_fk')
+                for ss in servicios_sucursal:
+                    sucursales_asignadas.append({
+                        'id': ss.id_sucursal_fk.id_sucursal,
+                        'nombre': ss.id_sucursal_fk.nombre_sucursal
+                    })
                     
                 servicios_list.append({
                     'id_servicio_empresa': serv.id_servicio_empresa,
@@ -411,6 +421,7 @@ def api_filtrar_servicios(request):
                     'imagen_url': imagen_url,
                     'categoria_servicio': serv.id_categoria_servicios_fk.nombre_categoria_serv_empresa if serv.id_categoria_servicios_fk else '',
                     'caracteristicas_generales_empresa': '',
+                    'sucursales_asignadas': sucursales_asignadas,
                     'serial': idx
                 })
         else:
@@ -468,6 +479,10 @@ def api_filtrar_productos(request):
                 primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
                 imagen_url = primera_imagen.ruta_imagen_producto_empresa.url if primera_imagen and primera_imagen.ruta_imagen_producto_empresa else ''
                 
+                # Obtener sucursales donde está asignado este producto
+                sucursales_asignadas = producto_sucursal.objects.filter(id_producto_fk=prod).select_related('id_sucursal_fk')
+                sucursales_list = [{'nombre': ps.id_sucursal_fk.nombre_sucursal} for ps in sucursales_asignadas]
+                
                 productos_list.append({
                     'id_producto_empresa': prod.id_producto_empresa,
                     'nombre_producto_empresa': prod.nombre_producto_empresa,
@@ -477,7 +492,8 @@ def api_filtrar_productos(request):
                     'caracteristicas_generales_empresa': prod.caracteristicas_generales_empresa or '',
                     'categoria_producto': prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else '',
                     'serial': idx,
-                    'imagen_url': imagen_url
+                    'imagen_url': imagen_url,
+                    'sucursales_asignadas': sucursales_list
                 })
         else:
             # Filtrar productos de usuario
@@ -545,7 +561,7 @@ def api_categorias_servicio(request):
         categorias = list(categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user).values_list('nombre_categoria_serv_usuario', flat=True))
     
     return JsonResponse({'categorias': categorias})
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password, make_password
@@ -695,6 +711,7 @@ def iniciar_sesion(request):
                         request.session['user_type'] = empresa_obj.rol_empresa
                         request.session['is_authenticated'] = True
                         request.session['account_type'] = 'empresa'
+                        request.session['empresa_id'] = empresa_obj.id_empresa
                         
                         logger.info(f"Sesión creada para empresa: {empresa_obj.correo_empresa}")
                         
@@ -1474,6 +1491,23 @@ def producto_funcion(request):
                 condicion_producto = request.POST.get('condicion_producto_usuario', 'Nuevo')
                 estatus_producto = request.POST.get('estatus_producto_usuario', 'Activo')
                 
+                # Obtener los campos de ubicación (latitud y longitud)
+                latitud_entrega = request.POST.get('latitud_entrega_producto', None)
+                longitud_entrega = request.POST.get('longitud_entrega_producto', None)
+                
+                # Validar y convertir latitud y longitud si están presentes
+                if latitud_entrega:
+                    try:
+                        latitud_entrega = float(latitud_entrega)
+                    except (ValueError, TypeError):
+                        latitud_entrega = None
+                        
+                if longitud_entrega:
+                    try:
+                        longitud_entrega = float(longitud_entrega)
+                    except (ValueError, TypeError):
+                        longitud_entrega = None
+                
                 # Crear el producto para usuario
                 nuevo_producto = producto_usuario(
                     nombre_producto_usuario=nombre_producto,
@@ -1485,6 +1519,8 @@ def producto_funcion(request):
                     precio_producto_usuario=precio_producto,
                     condicion_producto_usuario=condicion_producto,
                     estatus_producto_usuario=estatus_producto,
+                    latitud_entrega_producto=latitud_entrega,
+                    longitud_entrega_producto=longitud_entrega,
                     id_usuario_fk=current_user,
                     id_categoria_prod_fk=categoria_producto_consul
                 )
@@ -1887,12 +1923,26 @@ def categ_producto_config_funcion(request):
         }
         categ_producto_all = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user).order_by('-fecha_creacion_prod_usuario')
     
+    # Calcular estadísticas
+    total_categorias = categ_producto_all.count()
+    
+    if account_type == 'empresa':
+        categorias_activas = categ_producto_all.filter(estatus_categoria_prod_empresa='Activo').count()
+        categorias_inactivas = categ_producto_all.filter(estatus_categoria_prod_empresa='Inactivo').count()
+    else:
+        categorias_activas = categ_producto_all.filter(estatus_categoria_prod_usuario='Activo').count()
+        categorias_inactivas = categ_producto_all.filter(estatus_categoria_prod_usuario='Inactivo').count()
+    
     # Logging básico
-    logger.info(f"Total de categorías encontradas: {categ_producto_all.count()}")
+    logger.info(f"Total de categorías encontradas: {total_categorias}")
+    logger.info(f"Categorías activas: {categorias_activas}, inactivas: {categorias_inactivas}")
 
     return render(request, 'ecommerce_app/categ_producto_config.html', {
         'categoria_producto': categ_producto_all,
-        'user_info': user_info
+        'user_info': user_info,
+        'total_categorias': total_categorias,
+        'categorias_activas': categorias_activas,
+        'categorias_inactivas': categorias_inactivas
     })
 
 @require_GET
@@ -2323,7 +2373,7 @@ def categ_servicio_config_funcion(request):
             'tipo': current_user.rol_empresa,
             'is_authenticated': True
         }
-        categ_servicio_all = categoria_servicio_empresa.objects.filter(id_empresa_fk=empresa_obj)
+        categ_servicio_all = categoria_servicio_empresa.objects.filter(id_empresa_fk=empresa_obj).order_by('-fecha_creacion_categ_serv_empresa')
     else:
         # Para usuarios, usar categorías de usuario
         user_info = {
@@ -2333,11 +2383,28 @@ def categ_servicio_config_funcion(request):
             'tipo': current_user.rol_usuario,
             'is_authenticated': True
         }
-        categ_servicio_all = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
+        categ_servicio_all = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user).order_by('-fecha_creacion_categ_serv_usuario')
+    
+    # Calcular estadísticas
+    total_categorias = categ_servicio_all.count()
+    
+    if account_type == 'empresa':
+        categorias_activas = categ_servicio_all.filter(estatus_categoria_serv_empresa='Activo').count()
+        categorias_inactivas = categ_servicio_all.filter(estatus_categoria_serv_empresa='Inactivo').count()
+    else:
+        categorias_activas = categ_servicio_all.filter(estatus_categoria_serv_usuario='Activo').count()
+        categorias_inactivas = categ_servicio_all.filter(estatus_categoria_serv_usuario='Inactivo').count()
+    
+    # Logging básico
+    logger.info(f"Total de categorías de servicio encontradas: {total_categorias}")
+    logger.info(f"Categorías de servicio activas: {categorias_activas}, inactivas: {categorias_inactivas}")
 
     return render(request, 'ecommerce_app/categ_servicio_config.html', {
         'categoria_servicio': categ_servicio_all,
-        'user_info': user_info
+        'user_info': user_info,
+        'total_categorias': total_categorias,
+        'categorias_activas': categorias_activas,
+        'categorias_inactivas': categorias_inactivas
     })
 
 
@@ -2426,11 +2493,16 @@ def producto_config_funcion(request):
         producto_sucursal_all = producto_sucursal.objects.select_related('id_producto_fk').filter(id_producto_fk__id_empresa_fk=empresa_obj)
         categoria_producto_all = categoria_producto_empresa.objects.filter(id_empresa_fk=empresa_obj)
         
-        # Agregar la primera imagen de cada producto
+        # Agregar la primera imagen de cada producto y las sucursales asignadas
         productos_con_imagenes = []
         for prod in productos_all:
             primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
-            prod.primera_imagen = primera_imagen
+            prod.primera_imagen_empresa = primera_imagen
+            
+            # Obtener sucursales donde está asignado este producto
+            sucursales_asignadas = producto_sucursal.objects.filter(id_producto_fk=prod).select_related('id_sucursal_fk')
+            prod.sucursales_asignadas = [ps.id_sucursal_fk for ps in sucursales_asignadas]
+            
             productos_con_imagenes.append(prod)
     else:
         # Para usuarios, usar productos de usuario
@@ -2484,11 +2556,16 @@ def servicio_config_funcion(request):
         servicios_all = servicio_empresa.objects.filter(id_empresa_fk=empresa_obj)
         categoria_servicio_all = categoria_servicio_empresa.objects.filter(id_empresa_fk=empresa_obj)
         
-        # Agregar la primera imagen de cada servicio
+        # Agregar la primera imagen de cada servicio y las sucursales asignadas
         servicios_con_imagenes = []
         for serv in servicios_all:
             primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
             serv.primera_imagen = primera_imagen
+            
+            # Obtener sucursales donde está asignado este servicio
+            sucursales_asignadas = servicio_sucursal.objects.filter(id_servicio_fk=serv).select_related('id_sucursal_fk')
+            serv.sucursales_asignadas = [ss.id_sucursal_fk for ss in sucursales_asignadas]
+            
             servicios_con_imagenes.append(serv)
     else:
         # Para usuarios, usar servicios de usuario
@@ -2609,6 +2686,26 @@ def editar_producto(request):
                     producto_obj.condicion_producto_usuario = request.POST.get('condicion_producto_usuario', 'Nuevo')
                     producto_obj.estatus_producto_usuario = request.POST.get('estatus_producto_usuario', 'Activo')
                     
+                    # Actualizar coordenadas de entrega
+                    latitud = request.POST.get('latitud_entrega_producto')
+                    longitud = request.POST.get('longitud_entrega_producto')
+                    
+                    if latitud and latitud != 'None' and latitud.strip():
+                        try:
+                            producto_obj.latitud_entrega_producto = float(latitud)
+                        except (ValueError, TypeError):
+                            producto_obj.latitud_entrega_producto = None
+                    else:
+                        producto_obj.latitud_entrega_producto = None
+                        
+                    if longitud and longitud != 'None' and longitud.strip():
+                        try:
+                            producto_obj.longitud_entrega_producto = float(longitud)
+                        except (ValueError, TypeError):
+                            producto_obj.longitud_entrega_producto = None
+                    else:
+                        producto_obj.longitud_entrega_producto = None
+                    
                     # Actualizar categoría si se proporciona
                     categoria_id = request.POST.get('categoria_producto')
                     if categoria_id:
@@ -2674,6 +2771,7 @@ def editar_producto(request):
         'message': 'Método no permitido'
     })
 
+@require_login
 def eliminar_producto(request):
     if request.method == 'POST':
         try:
@@ -3019,60 +3117,155 @@ def perfil_empresa(request):
 
 def busquedad(request):
     query = request.GET.get('query', '')
+    
+    # Obtener parámetros de filtrado
+    condicion = request.GET.get('condicion', '')
+    marca = request.GET.get('marca', '')
+    modelo = request.GET.get('modelo', '')
+    categoria_producto = request.GET.get('categoria_producto', '')
+    categoria_servicio = request.GET.get('categoria_servicio', '')
+    precio_min = request.GET.get('precio_min', '')
+    precio_max = request.GET.get('precio_max', '')
+    latitud = request.GET.get('latitud', '')
+    longitud = request.GET.get('longitud', '')
+    rango_km = request.GET.get('rango_km', '')
+    
     resultados_productos = []
     resultados_servicios = []
     resultados_empresas = []
     resultados_usuarios = []
     
-    if query:
+    if query or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]):
         # Determinar el tipo de búsqueda
-        query_lower = query.lower().strip()
+        query_lower = query.lower().strip() if query else ''
         
         # Palabras clave que indican búsqueda de productos/servicios
         palabras_producto = ['laptop', 'computadora', 'celular', 'telefono', 'ropa', 'zapatos', 'libro', 'mueble', 'casa', 'carro', 'auto']
         palabras_servicio = ['reparacion', 'mantenimiento', 'limpieza', 'consultoria', 'asesoria', 'diseño', 'programacion', 'corte', 'pintura']
         
-        # Buscar empresas por nombre (prioridad alta)
-        empresas_list = empresa.objects.filter(
-            nombre_empresa__icontains=query
-        )
+        # Buscar empresas por nombre (prioridad alta) - solo si no hay filtros específicos
+        empresas_list = empresa.objects.none()
+        usuarios_list = usuario.objects.none()
         
-        # Buscar usuarios por nombre (prioridad alta)
-        usuarios_list = usuario.objects.filter(
-            nombre_usuario__icontains=query
-        )
+        if query and not any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]):
+            empresas_list = empresa.objects.filter(
+                nombre_empresa__icontains=query
+            )
+            
+            # Buscar usuarios por nombre (prioridad alta)
+            usuarios_list = usuario.objects.filter(
+                nombre_usuario__icontains=query
+            )
         
         # Determinar si la búsqueda es para productos/servicios o personas/empresas
-        es_busqueda_producto_servicio = any(palabra in query_lower for palabra in palabras_producto + palabras_servicio)
-        es_busqueda_persona_empresa = len(query) <= 3 or query_lower in ['juan', 'maria', 'carlos', 'ana', 'empresa', 'tienda', 'negocio']
+        es_busqueda_producto_servicio = any(palabra in query_lower for palabra in palabras_producto + palabras_servicio) or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max])
+        es_busqueda_persona_empresa = query and len(query) <= 3 or query_lower in ['juan', 'maria', 'carlos', 'ana', 'empresa', 'tienda', 'negocio']
         
-        # Solo buscar productos y servicios si:
-        # 1. La búsqueda es específica para productos/servicios, O
-        # 2. No se encontraron empresas/usuarios específicos Y la búsqueda es suficientemente larga
-        if es_busqueda_producto_servicio or (len(query) > 3 and not empresas_list.exists() and not usuarios_list.exists()):
-            # Buscar en productos_sucursal con estado activo (productos de empresa)
+        # Buscar productos y servicios si hay filtros o es búsqueda específica
+        if es_busqueda_producto_servicio or (query and len(query) > 3 and not empresas_list.exists() and not usuarios_list.exists()):
+            # Construir filtros para productos de empresa
+            filtros_productos_sucursal = {'estatus_producto_sucursal': 'Activo'}
+            if query:
+                filtros_productos_sucursal['id_producto_fk__nombre_producto_empresa__icontains'] = query
+            if condicion:
+                filtros_productos_sucursal['condicion_producto_sucursal'] = condicion
+            if marca:
+                filtros_productos_sucursal['id_producto_fk__marca_producto_empresa__icontains'] = marca
+            if modelo:
+                filtros_productos_sucursal['id_producto_fk__modelo_producto_empresa__icontains'] = modelo
+            if categoria_producto:
+                filtros_productos_sucursal['id_producto_fk__id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
+            
             productos_sucursal_list = producto_sucursal.objects.filter(
-                id_producto_fk__nombre_producto_empresa__icontains=query,
-                estatus_producto_sucursal='Activo'
+                **filtros_productos_sucursal
             ).select_related('id_producto_fk', 'id_sucursal_fk')
             
-            # Buscar en productos de usuario con estado activo
+            # Aplicar filtro de precio para productos de empresa
+            if precio_min:
+                try:
+                    productos_sucursal_list = productos_sucursal_list.filter(precio_producto_sucursal__gte=float(precio_min))
+                except ValueError:
+                    pass
+            if precio_max:
+                try:
+                    productos_sucursal_list = productos_sucursal_list.filter(precio_producto_sucursal__lte=float(precio_max))
+                except ValueError:
+                    pass
+            
+            # Construir filtros para productos de usuario
+            filtros_productos_usuario = {'estatus_producto_usuario': 'Activo'}
+            if query:
+                filtros_productos_usuario['nombre_producto_usuario__icontains'] = query
+            if condicion:
+                filtros_productos_usuario['condicion_producto_usuario'] = condicion
+            if marca:
+                filtros_productos_usuario['marca_producto_usuario__icontains'] = marca
+            if modelo:
+                filtros_productos_usuario['modelo_producto_usuario__icontains'] = modelo
+            if categoria_producto:
+                filtros_productos_usuario['id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
+            
             productos_usuario_list = producto_usuario.objects.filter(
-                nombre_producto_usuario__icontains=query,
-                estatus_producto_usuario='Activo'
+                **filtros_productos_usuario
             )
             
-            # Buscar en servicios_sucursal con estado activo (servicios de empresa)
+            # Aplicar filtro de precio para productos de usuario
+            if precio_min:
+                try:
+                    productos_usuario_list = productos_usuario_list.filter(precio_producto_usuario__gte=float(precio_min))
+                except ValueError:
+                    pass
+            if precio_max:
+                try:
+                    productos_usuario_list = productos_usuario_list.filter(precio_producto_usuario__lte=float(precio_max))
+                except ValueError:
+                    pass
+            
+            # Construir filtros para servicios de empresa
+            filtros_servicios_sucursal = {'estatus_servicio_sucursal': 'Activo'}
+            if query:
+                filtros_servicios_sucursal['id_servicio_fk__nombre_servicio_empresa__icontains'] = query
+            if categoria_servicio:
+                filtros_servicios_sucursal['id_servicio_fk__id_categoria_servicio_fk__nombre_categoria_servicio'] = categoria_servicio
+            
             servicios_sucursal_list = servicio_sucursal.objects.filter(
-                id_servicio_fk__nombre_servicio_empresa__icontains=query,
-                estatus_servicio_sucursal='Activo'
+                **filtros_servicios_sucursal
             ).select_related('id_servicio_fk', 'id_sucursal_fk')
             
-            # Buscar en servicios de usuario con estado activo
+            # Aplicar filtro de precio para servicios de empresa
+            if precio_min:
+                try:
+                    servicios_sucursal_list = servicios_sucursal_list.filter(precio_servicio_sucursal__gte=float(precio_min))
+                except ValueError:
+                    pass
+            if precio_max:
+                try:
+                    servicios_sucursal_list = servicios_sucursal_list.filter(precio_servicio_sucursal__lte=float(precio_max))
+                except ValueError:
+                    pass
+            
+            # Construir filtros para servicios de usuario
+            filtros_servicios_usuario = {'estatus_servicio_usuario': 'Activo'}
+            if query:
+                filtros_servicios_usuario['nombre_servicio_usuario__icontains'] = query
+            if categoria_servicio:
+                filtros_servicios_usuario['id_categoria_servicio_fk__nombre_categoria_servicio'] = categoria_servicio
+            
             servicios_usuario_list = servicio_usuario.objects.filter(
-                nombre_servicio_usuario__icontains=query,
-                estatus_servicio_usuario='Activo'
+                **filtros_servicios_usuario
             )
+            
+            # Aplicar filtro de precio para servicios de usuario
+            if precio_min:
+                try:
+                    servicios_usuario_list = servicios_usuario_list.filter(precio_servicio_usuario__gte=float(precio_min))
+                except ValueError:
+                    pass
+            if precio_max:
+                try:
+                    servicios_usuario_list = servicios_usuario_list.filter(precio_servicio_usuario__lte=float(precio_max))
+                except ValueError:
+                    pass
         else:
             # Si se encontraron empresas o usuarios, no mostrar productos/servicios
             productos_sucursal_list = producto_sucursal.objects.none()
@@ -3080,77 +3273,233 @@ def busquedad(request):
             servicios_sucursal_list = servicio_sucursal.objects.none()
             servicios_usuario_list = servicio_usuario.objects.none()
         
+        # Función para calcular distancia entre dos puntos geográficos (fórmula de Haversine)
+        def calcular_distancia(lat1, lon1, lat2, lon2):
+            from math import radians, cos, sin, asin, sqrt
+            
+            # Convertir grados a radianes
+            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+            
+            # Fórmula de Haversine
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * asin(sqrt(a))
+            r = 6371  # Radio de la Tierra en kilómetros
+            return c * r
+        
+        # Obtener coordenadas del usuario para filtro de localización
+        user_lat = None
+        user_lng = None
+        rango_km_float = None
+        
+        if latitud and longitud and rango_km:
+            try:
+                user_lat = float(latitud)
+                user_lng = float(longitud)
+                rango_km_float = float(rango_km)
+            except ValueError:
+                pass
+        
         # Formatear resultados de productos de empresa
         for ps in productos_sucursal_list:
-            # Obtener la primera imagen del producto desde la nueva tabla
-            primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=ps.id_producto_fk).first()
-            imagen_url = primera_imagen.ruta_imagen_producto_empresa.url if primera_imagen and primera_imagen.ruta_imagen_producto_empresa else None
+            # Verificar filtro de localización
+            incluir_producto = True
+            distancia = None
             
-            resultados_productos.append({
-                'id': ps.id_producto_sucursal,
-                'nombre': ps.id_producto_fk.nombre_producto_empresa,
-                'descripcion': ps.id_producto_fk.descripcion_producto_empresa,
-                'precio': ps.precio_producto_sucursal,
-                'stock': ps.stock_producto_sucursal,
-                'condicion': ps.condicion_producto_sucursal,
-                'imagen': imagen_url,
-                'sucursal': ps.id_sucursal_fk.nombre_sucursal,
-                'tipo': 'producto',
-                'origen': 'empresa'
-            })
+            if user_lat is not None and user_lng is not None and rango_km_float is not None:
+                # Verificar si la sucursal tiene coordenadas
+                if (hasattr(ps.id_sucursal_fk, 'latitud_sucursal') and 
+                    hasattr(ps.id_sucursal_fk, 'longitud_sucursal') and 
+                    ps.id_sucursal_fk.latitud_sucursal and 
+                    ps.id_sucursal_fk.longitud_sucursal):
+                    
+                    try:
+                        sucursal_lat = float(ps.id_sucursal_fk.latitud_sucursal)
+                        sucursal_lng = float(ps.id_sucursal_fk.longitud_sucursal)
+                        distancia = calcular_distancia(user_lat, user_lng, sucursal_lat, sucursal_lng)
+                        
+                        if distancia > rango_km_float:
+                            incluir_producto = False
+                    except (ValueError, TypeError):
+                        incluir_producto = False
+                else:
+                    incluir_producto = False
+            
+            if incluir_producto:
+                # Obtener la primera imagen del producto desde la nueva tabla
+                primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=ps.id_producto_fk).first()
+                imagen_url = primera_imagen.ruta_imagen_producto_empresa.url if primera_imagen and primera_imagen.ruta_imagen_producto_empresa else None
+                
+                producto_data = {
+                    'id': ps.id_producto_sucursal,
+                    'nombre': ps.id_producto_fk.nombre_producto_empresa,
+                    'descripcion': ps.id_producto_fk.descripcion_producto_empresa,
+                    'precio': ps.precio_producto_sucursal,
+                    'stock': ps.stock_producto_sucursal,
+                    'condicion': ps.condicion_producto_sucursal,
+                    'imagen': imagen_url,
+                    'sucursal': ps.id_sucursal_fk.nombre_sucursal,
+                    'empresa_nombre': ps.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                    'tipo': 'producto',
+                    'origen': 'empresa',
+                    'latitud': ps.id_sucursal_fk.latitud_sucursal if hasattr(ps.id_sucursal_fk, 'latitud_sucursal') else None,
+                    'longitud': ps.id_sucursal_fk.longitud_sucursal if hasattr(ps.id_sucursal_fk, 'longitud_sucursal') else None
+                }
+                
+                if distancia is not None:
+                    producto_data['distancia'] = round(distancia, 2)
+                
+                resultados_productos.append(producto_data)
         
         # Formatear resultados de productos de usuario
         for pu in productos_usuario_list:
-            # Obtener la primera imagen del producto de usuario
-            primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=pu).first()
-            imagen_url = primera_imagen.ruta_imagen_producto_usuario.url if primera_imagen and primera_imagen.ruta_imagen_producto_usuario else None
+            # Verificar filtro de localización
+            incluir_producto = True
+            distancia = None
             
-            resultados_productos.append({
-                'id': pu.id_producto_usuario,
-                'nombre': pu.nombre_producto_usuario,
-                'descripcion': pu.descripcion_producto_usuario,
-                'precio': pu.precio_producto_usuario,
-                'stock': pu.stock_producto_usuario,
-                'condicion': pu.condicion_producto_usuario,
-                'imagen': imagen_url,
-                'sucursal': f"Usuario: {pu.id_usuario_fk.nombre_usuario}",
-                'tipo': 'producto',
-                'origen': 'usuario'
-            })
+            if user_lat is not None and user_lng is not None and rango_km_float is not None:
+                # Verificar si el producto tiene coordenadas de entrega
+                if (hasattr(pu, 'latitud_entrega_producto') and 
+                    hasattr(pu, 'longitud_entrega_producto') and 
+                    pu.latitud_entrega_producto and 
+                    pu.longitud_entrega_producto):
+                    
+                    try:
+                        producto_lat = float(pu.latitud_entrega_producto)
+                        producto_lng = float(pu.longitud_entrega_producto)
+                        distancia = calcular_distancia(user_lat, user_lng, producto_lat, producto_lng)
+                        
+                        if distancia > rango_km_float:
+                            incluir_producto = False
+                    except (ValueError, TypeError):
+                        incluir_producto = False
+                else:
+                    incluir_producto = False
+            
+            if incluir_producto:
+                # Obtener la primera imagen del producto de usuario
+                primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=pu).first()
+                imagen_url = primera_imagen.ruta_imagen_producto_usuario.url if primera_imagen and primera_imagen.ruta_imagen_producto_usuario else None
+                
+                producto_data = {
+                    'id': pu.id_producto_usuario,
+                    'nombre': pu.nombre_producto_usuario,
+                    'descripcion': pu.descripcion_producto_usuario,
+                    'precio': pu.precio_producto_usuario,
+                    'stock': pu.stock_producto_usuario,
+                    'condicion': pu.condicion_producto_usuario,
+                    'imagen': imagen_url,
+                    'sucursal': f"Usuario: {pu.id_usuario_fk.nombre_usuario}",
+                    'empresa_nombre': None,
+                    'tipo': 'producto',
+                    'origen': 'usuario',
+                    'latitud': pu.latitud_entrega_producto if hasattr(pu, 'latitud_entrega_producto') else None,
+                    'longitud': pu.longitud_entrega_producto if hasattr(pu, 'longitud_entrega_producto') else None
+                }
+                
+                if distancia is not None:
+                    producto_data['distancia'] = round(distancia, 2)
+                
+                resultados_productos.append(producto_data)
         
         # Formatear resultados de servicios de empresa
         for ss in servicios_sucursal_list:
-            # Obtener la primera imagen del servicio desde la nueva tabla
-            primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
-            imagen_url = primera_imagen.ruta_imagen_servicio_empresa.url if primera_imagen and primera_imagen.ruta_imagen_servicio_empresa else None
+            # Verificar filtro de localización
+            incluir_servicio = True
+            distancia = None
             
-            resultados_servicios.append({
-                'id': ss.id_servicio_sucursal,
-                'nombre': ss.id_servicio_fk.nombre_servicio_empresa,
-                'descripcion': ss.id_servicio_fk.descripcion_servicio_empresa,
-                'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
-                'imagen': imagen_url,
-                'sucursal': ss.id_sucursal_fk.nombre_sucursal,
-                'tipo': 'servicio',
-                'origen': 'empresa'
-            })
+            if user_lat is not None and user_lng is not None and rango_km_float is not None:
+                # Verificar si la sucursal tiene coordenadas
+                if (hasattr(ss.id_sucursal_fk, 'latitud_sucursal') and 
+                    hasattr(ss.id_sucursal_fk, 'longitud_sucursal') and 
+                    ss.id_sucursal_fk.latitud_sucursal and 
+                    ss.id_sucursal_fk.longitud_sucursal):
+                    
+                    try:
+                        sucursal_lat = float(ss.id_sucursal_fk.latitud_sucursal)
+                        sucursal_lng = float(ss.id_sucursal_fk.longitud_sucursal)
+                        distancia = calcular_distancia(user_lat, user_lng, sucursal_lat, sucursal_lng)
+                        
+                        if distancia > rango_km_float:
+                            incluir_servicio = False
+                    except (ValueError, TypeError):
+                        incluir_servicio = False
+                else:
+                    incluir_servicio = False
+            
+            if incluir_servicio:
+                # Obtener la primera imagen del servicio desde la nueva tabla
+                primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
+                imagen_url = primera_imagen.ruta_imagen_servicio_empresa.url if primera_imagen and primera_imagen.ruta_imagen_servicio_empresa else None
+                
+                servicio_data = {
+                    'id': ss.id_servicio_sucursal,
+                    'nombre': ss.id_servicio_fk.nombre_servicio_empresa,
+                    'descripcion': ss.id_servicio_fk.descripcion_servicio_empresa,
+                    'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
+                    'imagen': imagen_url,
+                    'sucursal': ss.id_sucursal_fk.nombre_sucursal,
+                    'empresa_nombre': ss.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                    'tipo': 'servicio',
+                    'origen': 'empresa',
+                    'latitud': ss.id_sucursal_fk.latitud_sucursal if hasattr(ss.id_sucursal_fk, 'latitud_sucursal') else None,
+                    'longitud': ss.id_sucursal_fk.longitud_sucursal if hasattr(ss.id_sucursal_fk, 'longitud_sucursal') else None
+                }
+                
+                if distancia is not None:
+                    servicio_data['distancia'] = round(distancia, 2)
+                
+                resultados_servicios.append(servicio_data)
         
         # Formatear resultados de servicios de usuario
         for su in servicios_usuario_list:
-            # Obtener la primera imagen del servicio de usuario
-            primera_imagen = imagen_servicio_usuario.objects.filter(id_servicio_fk=su).first()
-            imagen_url = primera_imagen.ruta_imagen_servicio_usuario.url if primera_imagen and primera_imagen.ruta_imagen_servicio_usuario else None
+            # Verificar filtro de localización
+            incluir_servicio = True
+            distancia = None
             
-            resultados_servicios.append({
-                'id': su.id_servicio_usuario,
-                'nombre': su.nombre_servicio_usuario,
-                'descripcion': su.descripcion_servicio_usuario,
-                'precio': su.precio_servicio_usuario if su.precio_servicio_usuario else 'Consultar',
-                'imagen': imagen_url,
-                'sucursal': f"Usuario: {su.id_usuario_fk.nombre_usuario}",
-                'tipo': 'servicio',
-                'origen': 'usuario'
-            })
+            if user_lat is not None and user_lng is not None and rango_km_float is not None:
+                # Verificar si el usuario tiene coordenadas
+                if (hasattr(su.id_usuario_fk, 'latitud_usuario') and 
+                    hasattr(su.id_usuario_fk, 'longitud_usuario') and 
+                    su.id_usuario_fk.latitud_usuario and 
+                    su.id_usuario_fk.longitud_usuario):
+                    
+                    try:
+                        usuario_lat = float(su.id_usuario_fk.latitud_usuario)
+                        usuario_lng = float(su.id_usuario_fk.longitud_usuario)
+                        distancia = calcular_distancia(user_lat, user_lng, usuario_lat, usuario_lng)
+                        
+                        if distancia > rango_km_float:
+                            incluir_servicio = False
+                    except (ValueError, TypeError):
+                        incluir_servicio = False
+                else:
+                    incluir_servicio = False
+            
+            if incluir_servicio:
+                # Obtener la primera imagen del servicio de usuario
+                primera_imagen = imagen_servicio_usuario.objects.filter(id_servicio_fk=su).first()
+                imagen_url = primera_imagen.ruta_imagen_servicio_usuario.url if primera_imagen and primera_imagen.ruta_imagen_servicio_usuario else None
+                
+                servicio_data = {
+                    'id': su.id_servicio_usuario,
+                    'nombre': su.nombre_servicio_usuario,
+                    'descripcion': su.descripcion_servicio_usuario,
+                    'precio': su.precio_servicio_usuario if su.precio_servicio_usuario else 'Consultar',
+                    'imagen': imagen_url,
+                    'sucursal': f"Usuario: {su.id_usuario_fk.nombre_usuario}",
+                    'empresa_nombre': None,
+                    'tipo': 'servicio',
+                    'origen': 'usuario',
+                    'latitud': su.id_usuario_fk.latitud_usuario if hasattr(su.id_usuario_fk, 'latitud_usuario') else None,
+                    'longitud': su.id_usuario_fk.longitud_usuario if hasattr(su.id_usuario_fk, 'longitud_usuario') else None
+                }
+                
+                if distancia is not None:
+                    servicio_data['distancia'] = round(distancia, 2)
+                
+                resultados_servicios.append(servicio_data)
         
         # Formatear resultados de empresas
         for emp in empresas_list:
@@ -3177,8 +3526,34 @@ def busquedad(request):
                 'estado': usr.estado
             })
     
-    # Combinar resultados
-    resultados_combinados = resultados_productos + resultados_servicios + resultados_empresas + resultados_usuarios
+    # Combinar resultados de productos y servicios
+    resultados_productos_servicios = resultados_productos + resultados_servicios
+    
+    # Ordenar por distancia si se proporcionaron coordenadas del usuario
+    if user_lat is not None and user_lng is not None:
+        # Separar elementos con y sin distancia
+        con_distancia = [item for item in resultados_productos_servicios if 'distancia' in item]
+        sin_distancia = [item for item in resultados_productos_servicios if 'distancia' not in item]
+        
+        # Ordenar los elementos con distancia de menor a mayor
+        con_distancia.sort(key=lambda x: x['distancia'])
+        
+        # Combinar: primero los ordenados por distancia, luego los sin distancia
+        resultados_productos_servicios = con_distancia + sin_distancia
+    
+    # Combinar con empresas y usuarios (estos no se ordenan por distancia)
+    resultados_combinados = resultados_productos_servicios + resultados_empresas + resultados_usuarios
+    
+    # Implementar paginación
+    page = request.GET.get('page', 1)
+    paginator = Paginator(resultados_combinados, 3)  # 3 elementos por página
+    
+    try:
+        resultados_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        resultados_paginados = paginator.page(1)
+    except EmptyPage:
+        resultados_paginados = paginator.page(paginator.num_pages)
     
     # Obtener información del usuario para el modal de sesión
     current_user = get_current_user(request)
@@ -3205,13 +3580,15 @@ def busquedad(request):
     
     return render(request, 'ecommerce_app/busquedad.html', {
         'query': query,
-        'resultados': resultados_combinados,
+        'resultados': resultados_paginados,
         'total_resultados': len(resultados_combinados),
         'resultados_productos': resultados_productos,
         'resultados_servicios': resultados_servicios,
         'resultados_empresas': resultados_empresas,
         'resultados_usuarios': resultados_usuarios,
-        'user_info': user_info
+        'user_info': user_info,
+        'paginator': paginator,
+        'page_obj': resultados_paginados
     })
 
 
@@ -3445,6 +3822,14 @@ def localizacion(request):
             estatus_producto_sucursal='Activo'
         ).select_related('id_producto_fk', 'id_sucursal_fk')
         
+        # Buscar productos de usuarios con coordenadas de entrega
+        productos_usuario_list = producto_usuario.objects.filter(
+            nombre_producto_usuario__icontains=query,
+            estatus_producto_usuario='Activo',
+            latitud_entrega_producto__isnull=False,
+            longitud_entrega_producto__isnull=False
+        ).select_related('id_usuario_fk')
+        
         servicios_sucursal_list = servicio_sucursal.objects.filter(
             id_servicio_fk__nombre_servicio_empresa__icontains=query,
             estatus_servicio_sucursal='Activo'
@@ -3459,17 +3844,62 @@ def localizacion(request):
                 primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=ps.id_producto_fk).first()
                 imagen_url = primera_imagen.ruta_imagen_producto_empresa.url if primera_imagen and primera_imagen.ruta_imagen_producto_empresa else None
                 
+                # Para productos de empresa, el propietario siempre es empresa
+                empresa_nombre = ps.id_producto_fk.id_empresa_fk.nombre_empresa if hasattr(ps.id_producto_fk, 'id_empresa_fk') else ps.id_sucursal_fk.nombre_sucursal
+                
                 resultado = {
                     'id': ps.id_producto_sucursal,
                     'nombre': ps.id_producto_fk.nombre_producto_empresa,
                     'descripcion': ps.id_producto_fk.descripcion_producto_empresa,
                     'precio': ps.precio_producto_sucursal,
                     'imagen': imagen_url,
-                    'sucursal': ps.id_sucursal_fk.nombre_sucursal,
+                    'sucursal': f"Empresa: {empresa_nombre}",
                     'direccion': ps.id_sucursal_fk.direccion_sucursal,
                     'lat': float(ps.id_sucursal_fk.latitud_sucursal),
                     'lng': float(ps.id_sucursal_fk.longitud_sucursal),
                     'tipo': 'producto',
+                    'origen': 'empresa',
+                    'tipo_propietario': 'empresa',
+                    'distancia': 0
+                }
+                
+                # Calcular distancia si se proporcionan coordenadas del usuario
+                if user_lat and user_lng:
+                    try:
+                        user_lat_float = float(user_lat)
+                        user_lng_float = float(user_lng)
+                        resultado['distancia'] = haversine(
+                            user_lng_float, user_lat_float,
+                            resultado['lng'], resultado['lat']
+                        )
+                    except (ValueError, TypeError):
+                        resultado['distancia'] = float('inf')
+                
+                todos_resultados.append(resultado)
+        
+        # Procesar productos de usuarios
+        for pu in productos_usuario_list:
+            if pu.latitud_entrega_producto and pu.longitud_entrega_producto:
+                primera_imagen = imagen_producto_usuario.objects.filter(id_producto_fk=pu).first()
+                imagen_url = primera_imagen.ruta_imagen_producto_usuario.url if primera_imagen and primera_imagen.ruta_imagen_producto_usuario else None
+                
+                # Determinar el tipo de usuario (persona o empresa)
+                tipo_usuario = pu.id_usuario_fk.rol_usuario if hasattr(pu.id_usuario_fk, 'rol_usuario') else 'persona'
+                tipo_usuario_texto = 'Empresa' if tipo_usuario == 'empresa' else 'Persona'
+                
+                resultado = {
+                    'id': pu.id_producto_usuario,
+                    'nombre': pu.nombre_producto_usuario,
+                    'descripcion': pu.descripcion_producto_usuario,
+                    'precio': pu.precio_producto_usuario,
+                    'imagen': imagen_url,
+                    'sucursal': f"{tipo_usuario_texto}: {pu.id_usuario_fk.nombre_usuario}",
+                    'direccion': f"Entrega desde ubicación del usuario",
+                    'lat': float(pu.latitud_entrega_producto),
+                    'lng': float(pu.longitud_entrega_producto),
+                    'tipo': 'producto',
+                    'origen': 'usuario',
+                    'tipo_propietario': tipo_usuario,
                     'distancia': 0
                 }
                 
@@ -3493,17 +3923,22 @@ def localizacion(request):
                 primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=ss.id_servicio_fk).first()
                 imagen_url = primera_imagen.ruta_imagen_servicio_empresa.url if primera_imagen and primera_imagen.ruta_imagen_servicio_empresa else None
                 
+                # Para servicios de empresa, el propietario siempre es empresa
+                empresa_nombre = ss.id_servicio_fk.id_empresa_fk.nombre_empresa if hasattr(ss.id_servicio_fk, 'id_empresa_fk') else ss.id_sucursal_fk.nombre_sucursal
+                
                 resultado = {
                     'id': ss.id_servicio_sucursal,
                     'nombre': ss.id_servicio_fk.nombre_servicio_empresa,
                     'descripcion': ss.id_servicio_fk.descripcion_servicio_empresa,
                     'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
                     'imagen': imagen_url,
-                    'sucursal': ss.id_sucursal_fk.nombre_sucursal,
+                    'sucursal': f"Empresa: {empresa_nombre}",
                     'direccion': ss.id_sucursal_fk.direccion_sucursal,
                     'lat': float(ss.id_sucursal_fk.latitud_sucursal),
                     'lng': float(ss.id_sucursal_fk.longitud_sucursal),
                     'tipo': 'servicio',
+                    'origen': 'empresa',
+                    'tipo_propietario': 'empresa',
                     'distancia': 0
                 }
                 
@@ -3586,6 +4021,9 @@ def carrito(request):
         ).first()
         
         if carrito_empresa:
+            # Validar precios antes de mostrar el carrito
+            cambios_precio = validar_precios_carrito_empresa(carrito_empresa)
+            
             # Obtener detalles del carrito
             detalles_carrito = detalle_compra_producto_empresa.objects.filter(
                 id_fk_carritocompra_empresa=carrito_empresa
@@ -3662,6 +4100,9 @@ def carrito(request):
         ).first()
         
         if carrito_usuario:
+            # Validar precios antes de mostrar el carrito
+            cambios_precio = validar_precios_carrito_usuario(carrito_usuario)
+            
             # Obtener detalles del carrito
             detalles_carrito = detalle_compra_producto_usuario.objects.filter(
                 id_fk_carritocompra_usuario=carrito_usuario
@@ -3765,6 +4206,11 @@ def carrito(request):
             estado_pedido='pendiente'
         ).exists()
     
+    # Verificar si hay cambios de precio para mostrar notificación
+    cambios_precio_info = None
+    if 'cambios_precio' in locals() and cambios_precio:
+        cambios_precio_info = cambios_precio
+    
     context = {
         'user_info': user_info,
         'account_type': account_type,
@@ -3776,7 +4222,8 @@ def carrito(request):
         'cantidad_productos': len(productos_carrito),
         'cantidad_servicios': len(servicios_carrito),
         'carrito_info': carrito_info,
-        'pedidos_pendientes': pedidos_pendientes
+        'pedidos_pendientes': pedidos_pendientes,
+        'cambios_precio': cambios_precio_info
     }
     
     return render(request, 'ecommerce_app/carrito.html', context)
@@ -3949,11 +4396,13 @@ def vista_items(request):
                         'nombre': servicio_sucursal_obj.id_sucursal_fk.nombre_sucursal,
                         'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
                         'precio': servicio_sucursal_obj.precio_servicio_sucursal,
-                        'estatus': servicio_sucursal_obj.estatus_servicio_sucursal
+                        'estatus': servicio_sucursal_obj.estatus_servicio_sucursal,
+                        'id_sucursal': servicio_sucursal_obj.id_sucursal_fk.id_sucursal,
+                        'id_servicio_fk': servicio.id_servicio_empresa
                     }
                     
                     item_data = {
-                        'id': servicio.id_servicio_empresa,
+                        'id': servicio_sucursal_obj.id_servicio_sucursal,
                         'nombre': servicio.nombre_servicio_empresa,
                         'descripcion': servicio.descripcion_servicio_empresa,
                         'caracteristicas': servicio.descripcion_servicio_empresa,
@@ -4266,13 +4715,26 @@ def perfil_productos(request):
     if empresa_id:
         try:
             empresa_obj = empresa.objects.get(id_empresa=empresa_id)
-            productos_query = producto_empresa.objects.filter(id_empresa_fk=empresa_obj).select_related('id_categoria_prod_fk')
+            # Obtener productos a través de producto_sucursal para mostrar solo productos disponibles en sucursales
+            productos_sucursal_query = producto_sucursal.objects.filter(
+                id_sucursal_fk__id_empresa_fk=empresa_obj,
+                estatus_producto_sucursal='Activo'
+            ).select_related('id_producto_fk__id_categoria_prod_fk', 'id_sucursal_fk')
+            
             productos_con_imagenes = []
             productos_por_categoria = defaultdict(list)
             
-            for prod in productos_query:
+            for prod_sucursal in productos_sucursal_query:
+                prod = prod_sucursal.id_producto_fk
                 primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
+                
+                # Agregar información de sucursal al producto
                 prod.primera_imagen = primera_imagen
+                prod.producto_sucursal_id = prod_sucursal.id_producto_sucursal
+                prod.sucursal_info = prod_sucursal.id_sucursal_fk
+                prod.precio_sucursal = prod_sucursal.precio_producto_sucursal
+                prod.stock_sucursal = prod_sucursal.stock_producto_sucursal
+                
                 productos_con_imagenes.append(prod)
                 
                 # Agrupar por categoría
@@ -4495,6 +4957,11 @@ def perfil_servicios(request):
             for serv in servicios_query:
                 primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
                 serv.primera_imagen = primera_imagen
+                
+                # Obtener sucursales asociadas al servicio
+                sucursales_servicio = servicio_sucursal.objects.filter(id_servicio_fk=serv).select_related('id_sucursal_fk')
+                serv.sucursales_asociadas = sucursales_servicio
+                
                 servicios_con_imagenes.append(serv)
                 
                 # Agrupar por categoría
@@ -4601,6 +5068,11 @@ def perfil_servicios(request):
         for serv in servicios_query:
             primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
             serv.primera_imagen = primera_imagen
+            
+            # Obtener sucursales asociadas al servicio
+            sucursales_servicio = servicio_sucursal.objects.filter(id_servicio_fk=serv).select_related('id_sucursal_fk')
+            serv.sucursales_asociadas = sucursales_servicio
+            
             servicios_con_imagenes.append(serv)
             
             # Agrupar por categoría
@@ -4666,6 +5138,11 @@ def perfil_servicios(request):
             for serv in servicios_query:
                 primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
                 serv.primera_imagen = primera_imagen
+                
+                # Obtener sucursales asociadas al servicio
+                sucursales_servicio = servicio_sucursal.objects.filter(id_servicio_fk=serv).select_related('id_sucursal_fk')
+                serv.sucursales_asociadas = sucursales_servicio
+                
                 servicios_con_imagenes.append(serv)
                 
                 # Agrupar por categoría
@@ -4890,6 +5367,153 @@ def detalle_carrito(request):
     return render(request, 'ecommerce_app/detalle_carrito.html', context)
 
 
+def validar_precios_carrito_usuario(carrito):
+    """Valida los precios del carrito de usuario y retorna información sobre cambios"""
+    cambios_precio = []
+    
+    # Validar productos de empresa en carrito de usuario
+    detalles_empresa = detalle_compra_producto_usuario.objects.filter(
+        id_fk_carritocompra_usuario=carrito,
+        id_fk_producto_sucursal_empresa__isnull=False
+    )
+    
+    for detalle in detalles_empresa:
+        precio_actual = detalle.id_fk_producto_sucursal_empresa.precio_producto_sucursal
+        precio_original = detalle.precio_original_deta_carrito_prod_usuario
+        
+        if precio_original and precio_actual != precio_original:
+            # Actualizar precio y subtotal
+            detalle.precio_unit_deta_carrito_prod_usuario = precio_actual
+            detalle.subtotal_deta_carrito_prod_usuario = detalle.cantidad_deta_carrito_prod_usuario * precio_actual
+            detalle.save()
+            
+            cambios_precio.append({
+                'producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                'precio_original': float(precio_original),
+                'precio_actual': float(precio_actual),
+                'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                'tipo': 'empresa'
+            })
+    
+    # Validar productos de usuario en carrito de usuario
+    detalles_usuario = detalle_compra_producto_usuario.objects.filter(
+        id_fk_carritocompra_usuario=carrito,
+        idproducto_fk_usuario__isnull=False
+    )
+    
+    for detalle in detalles_usuario:
+        precio_actual = detalle.idproducto_fk_usuario.precio_producto_usuario
+        precio_original = detalle.precio_original_deta_carrito_prod_usuario
+        
+        if precio_original and precio_actual != precio_original:
+            # Actualizar precio y subtotal
+            detalle.precio_unit_deta_carrito_prod_usuario = precio_actual
+            detalle.subtotal_deta_carrito_prod_usuario = detalle.cantidad_deta_carrito_prod_usuario * precio_actual
+            detalle.save()
+            
+            cambios_precio.append({
+                'producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                'precio_original': float(precio_original),
+                'precio_actual': float(precio_actual),
+                'cantidad': detalle.cantidad_deta_carrito_prod_usuario,
+                'tipo': 'usuario'
+            })
+    
+    # Actualizar total del carrito si hubo cambios
+    if cambios_precio:
+        total = sum(
+            detalle.subtotal_deta_carrito_prod_usuario 
+            for detalle in carrito.detalles.all()
+        )
+        carrito.total_carrito_prod_usuario = total
+        carrito.save()
+    
+    return cambios_precio
+
+def recalcular_total_carrito(carrito_obj, account_type):
+    """Recalcula el total del carrito después de cambios en los productos"""
+    if account_type == 'empresa':
+        nuevo_total = sum(
+            detalle.subtotal_deta_carrito_prod_empresa 
+            for detalle in carrito_obj.detalles.all()
+        )
+        carrito_obj.total_carrito_prod_empresa = nuevo_total
+        carrito_obj.save()
+        print(f"Total del carrito recalculado (empresa): ${nuevo_total}")
+        return nuevo_total
+    else:
+        nuevo_total = sum(
+            detalle.subtotal_deta_carrito_prod_usuario 
+            for detalle in carrito_obj.detalles.all()
+        )
+        carrito_obj.total_carrito_prod_usuario = nuevo_total
+        carrito_obj.save()
+        print(f"Total del carrito recalculado (usuario): ${nuevo_total}")
+        return nuevo_total
+
+def validar_precios_carrito_empresa(carrito):
+    """Valida los precios del carrito de empresa y retorna información sobre cambios"""
+    cambios_precio = []
+    
+    # Validar productos de empresa en carrito de empresa
+    detalles_empresa = detalle_compra_producto_empresa.objects.filter(
+        id_fk_carritocompra_empresa=carrito,
+        id_fk_producto_sucursal_empresa__isnull=False
+    )
+    
+    for detalle in detalles_empresa:
+        precio_actual = detalle.id_fk_producto_sucursal_empresa.precio_producto_sucursal
+        precio_original = detalle.precio_original_deta_carrito_prod_empresa
+        
+        if precio_original and precio_actual != precio_original:
+            # Actualizar precio y subtotal
+            detalle.precio_unit_deta_carrito_prod_empresa = precio_actual
+            detalle.subtotal_deta_carrito_prod_empresa = detalle.cantidad_deta_carrito_prod_empresa * precio_actual
+            detalle.save()
+            
+            cambios_precio.append({
+                'producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                'precio_original': float(precio_original),
+                'precio_actual': float(precio_actual),
+                'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                'tipo': 'empresa'
+            })
+    
+    # Validar productos de usuario en carrito de empresa
+    detalles_usuario = detalle_compra_producto_empresa.objects.filter(
+        id_fk_carritocompra_empresa=carrito,
+        idproducto_fk_usuario__isnull=False
+    )
+    
+    for detalle in detalles_usuario:
+        precio_actual = detalle.idproducto_fk_usuario.precio_producto_usuario
+        precio_original = detalle.precio_original_deta_carrito_prod_empresa
+        
+        if precio_original and precio_actual != precio_original:
+            # Actualizar precio y subtotal
+            detalle.precio_unit_deta_carrito_prod_empresa = precio_actual
+            detalle.subtotal_deta_carrito_prod_empresa = detalle.cantidad_deta_carrito_prod_empresa * precio_actual
+            detalle.save()
+            
+            cambios_precio.append({
+                'producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                'precio_original': float(precio_original),
+                'precio_actual': float(precio_actual),
+                'cantidad': detalle.cantidad_deta_carrito_prod_empresa,
+                'tipo': 'usuario'
+            })
+    
+    # Actualizar total del carrito si hubo cambios
+    if cambios_precio:
+        total = sum(
+            detalle.subtotal_deta_carrito_prod_empresa 
+            for detalle in carrito.detalles.all()
+        )
+        carrito.total_carrito_prod_empresa = total
+        carrito.save()
+    
+    return cambios_precio
+
 @csrf_exempt
 @require_POST
 def agregar_al_carrito(request):
@@ -4976,13 +5600,28 @@ def agregar_al_carrito(request):
             
             created = False
             if not carrito:
-                # Si no existe carrito, crear uno nuevo con estatus activo
-                carrito = carrito_compra_producto_empresa.objects.create(
+                # Buscar carrito completado para reutilizar
+                carrito_completado = carrito_compra_producto_empresa.objects.filter(
                     id_empresa_fk=current_user,
-                    estatuscarrito_prod_empresa='activo',
-                    total_carrito_prod_empresa=0
-                )
-                created = True
+                    estatuscarrito_prod_empresa='completado'
+                ).first()
+                
+                if carrito_completado:
+                    # Reutilizar carrito completado: cambiar estado, limpiar total y actualizar fecha
+                    carrito_completado.estatuscarrito_prod_empresa = 'activo'
+                    carrito_completado.total_carrito_prod_empresa = 0
+                    carrito_completado.fecha_carrito_prod_empresa = timezone.now()
+                    carrito_completado.save()
+                    carrito = carrito_completado
+                    created = False
+                else:
+                    # Si no existe carrito, crear uno nuevo con estatus activo
+                    carrito = carrito_compra_producto_empresa.objects.create(
+                        id_empresa_fk=current_user,
+                        estatuscarrito_prod_empresa='activo',
+                        total_carrito_prod_empresa=0
+                    )
+                    created = True
             
             # Agregar producto al carrito de empresa
             if producto_info['tipo'] == 'empresa':
@@ -5015,6 +5654,7 @@ def agregar_al_carrito(request):
                         id_fk_producto_sucursal_empresa=producto_info['objeto'],
                         cantidad_deta_carrito_prod_empresa=cantidad,
                         precio_unit_deta_carrito_prod_empresa=producto_info['precio'],
+                        precio_original_deta_carrito_prod_empresa=producto_info['precio'],
                         subtotal_deta_carrito_prod_empresa=cantidad * producto_info['precio']
                     )
             
@@ -5048,16 +5688,12 @@ def agregar_al_carrito(request):
                         idproducto_fk_usuario=producto_info['objeto'],
                         cantidad_deta_carrito_prod_empresa=cantidad,
                         precio_unit_deta_carrito_prod_empresa=producto_info['precio'],
+                        precio_original_deta_carrito_prod_empresa=producto_info['precio'],
                         subtotal_deta_carrito_prod_empresa=cantidad * producto_info['precio']
                     )
             
             # Actualizar total del carrito
-            total = sum(
-                detalle.subtotal_deta_carrito_prod_empresa 
-                for detalle in carrito.detalles.all()
-            )
-            carrito.total_carrito_prod_empresa = total
-            carrito.save()
+            recalcular_total_carrito(carrito, 'empresa')
         
         # Lógica para usuarios
         else:
@@ -5069,13 +5705,28 @@ def agregar_al_carrito(request):
             
             created = False
             if not carrito:
-                # Si no existe carrito, crear uno nuevo con estatus activo
-                carrito = carrito_compra_producto_usuario.objects.create(
+                # Buscar carrito completado para reutilizar
+                carrito_completado = carrito_compra_producto_usuario.objects.filter(
                     id_usuario_fk=current_user,
-                    estatuscarrito_prod_usuario='activo',
-                    total_carrito_prod_usuario=0
-                )
-                created = True
+                    estatuscarrito_prod_usuario='completado'
+                ).first()
+                
+                if carrito_completado:
+                    # Reutilizar carrito completado: cambiar estado, limpiar total y actualizar fecha
+                    carrito_completado.estatuscarrito_prod_usuario = 'activo'
+                    carrito_completado.total_carrito_prod_usuario = 0
+                    carrito_completado.fecha_carrito_prod_usuario = timezone.now()
+                    carrito_completado.save()
+                    carrito = carrito_completado
+                    created = False
+                else:
+                    # Si no existe carrito, crear uno nuevo con estatus activo
+                    carrito = carrito_compra_producto_usuario.objects.create(
+                        id_usuario_fk=current_user,
+                        estatuscarrito_prod_usuario='activo',
+                        total_carrito_prod_usuario=0
+                    )
+                    created = True
             
             # Agregar producto al carrito de usuario
             if producto_info['tipo'] == 'empresa':
@@ -5108,6 +5759,7 @@ def agregar_al_carrito(request):
                         id_fk_producto_sucursal_empresa=producto_info['objeto'],
                         cantidad_deta_carrito_prod_usuario=cantidad,
                         precio_unit_deta_carrito_prod_usuario=producto_info['precio'],
+                        precio_original_deta_carrito_prod_usuario=producto_info['precio'],
                         subtotal_deta_carrito_prod_usuario=cantidad * producto_info['precio']
                     )
             
@@ -5141,16 +5793,12 @@ def agregar_al_carrito(request):
                         idproducto_fk_usuario=producto_info['objeto'],
                         cantidad_deta_carrito_prod_usuario=cantidad,
                         precio_unit_deta_carrito_prod_usuario=producto_info['precio'],
+                        precio_original_deta_carrito_prod_usuario=producto_info['precio'],
                         subtotal_deta_carrito_prod_usuario=cantidad * producto_info['precio']
                     )
             
             # Actualizar total del carrito
-            total = sum(
-                detalle.subtotal_deta_carrito_prod_usuario 
-                for detalle in carrito.detalles.all()
-            )
-            carrito.total_carrito_prod_usuario = total
-            carrito.save()
+            recalcular_total_carrito(carrito, 'usuario')
         
         return JsonResponse({
             'success': True,
@@ -5235,12 +5883,7 @@ def actualizar_cantidad_carrito(request):
             detalle.save()
             
             # Recalcular el total del carrito
-            total = sum(
-                d.subtotal_deta_carrito_prod_empresa 
-                for d in carrito.detalles.all()
-            )
-            carrito.total_carrito_prod_empresa = total
-            carrito.save()
+            recalcular_total_carrito(carrito, 'empresa')
         
         else:  # account_type == 'usuario'
             # Buscar el carrito de usuario
@@ -5280,12 +5923,7 @@ def actualizar_cantidad_carrito(request):
             detalle.save()
             
             # Recalcular el total del carrito
-            total = sum(
-                d.subtotal_deta_carrito_prod_usuario 
-                for d in carrito.detalles.all()
-            )
-            carrito.total_carrito_prod_usuario = total
-            carrito.save()
+            recalcular_total_carrito(carrito, 'usuario')
         
         return JsonResponse({
             'success': True,
@@ -5346,7 +5984,7 @@ def eliminar_del_carrito(request):
             try:
                 carrito = carrito_compra_producto_empresa.objects.get(
                     id_empresa_fk=current_user,
-                    estatuscarrito_prod_empresa='activo'
+                    estatuscarrito_prod_empresa__in=['activo', 'pendiente']
                 )
             except carrito_compra_producto_empresa.DoesNotExist:
                 return JsonResponse({
@@ -5382,7 +6020,7 @@ def eliminar_del_carrito(request):
             try:
                 carrito = carrito_compra_producto_usuario.objects.get(
                     id_usuario_fk=current_user,
-                    estatuscarrito_prod_usuario='activo'
+                    estatuscarrito_prod_usuario__in=['activo', 'pendiente']
                 )
                 print(f"[DEBUG] Carrito de usuario encontrado: {carrito.id_carrito_prod_usuario}")
             except carrito_compra_producto_usuario.DoesNotExist:
@@ -5489,13 +6127,13 @@ def pedido(request):
                             id_producto_fk=producto
                         ).first()
                         
-                        vendedor_id = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa
-                        vendedor_nombre = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.nombre_empresa
+                        sucursal_id = producto_sucursal_obj.id_sucursal_fk.id_sucursal
+                        sucursal_nombre = f"{producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.nombre_empresa} - {producto_sucursal_obj.id_sucursal_fk.nombre_sucursal}"
                         
-                        if vendedor_id not in productos_por_empresa:
-                            productos_por_empresa[vendedor_id] = []
+                        if sucursal_id not in productos_por_empresa:
+                            productos_por_empresa[sucursal_id] = []
                         
-                        productos_por_empresa[vendedor_id].append({
+                        productos_por_empresa[sucursal_id].append({
                             'id': producto.id_producto_empresa,
                             'nombre': producto.nombre_producto_empresa,
                             'descripcion': producto.descripcion_producto_empresa,
@@ -5503,8 +6141,8 @@ def pedido(request):
                             'precio_unitario': detalle.precio_unit_deta_carrito_prod_empresa,
                             'subtotal': detalle.subtotal_deta_carrito_prod_empresa,
                             'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
-                            'vendedor_id': vendedor_id,
-                            'vendedor_nombre': vendedor_nombre
+                            'vendedor_id': sucursal_id,
+                            'vendedor_nombre': sucursal_nombre
                         })
                     
                     elif detalle.idproducto_fk_usuario:
@@ -5534,9 +6172,9 @@ def pedido(request):
                             'vendedor_nombre': vendedor_nombre
                         })
                 
-                # Agregar cada empresa como un vendedor separado
-                for empresa_id, productos in productos_por_empresa.items():
-                    productos_por_vendedor[f'empresa_{empresa_id}'] = productos
+                # Agregar cada sucursal como un vendedor separado
+                for sucursal_id, productos in productos_por_empresa.items():
+                    productos_por_vendedor[f'empresa_{sucursal_id}'] = productos
                 
                 # Agregar cada usuario como un vendedor separado
                 for usuario_id, productos in productos_por_usuario.items():
@@ -5571,13 +6209,13 @@ def pedido(request):
                             id_producto_fk=producto
                         ).first()
                         
-                        vendedor_id = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa
-                        vendedor_nombre = producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.nombre_empresa
+                        sucursal_id = producto_sucursal_obj.id_sucursal_fk.id_sucursal
+                        sucursal_nombre = f"{producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.nombre_empresa} - {producto_sucursal_obj.id_sucursal_fk.nombre_sucursal}"
                         
-                        if vendedor_id not in productos_por_empresa:
-                            productos_por_empresa[vendedor_id] = []
+                        if sucursal_id not in productos_por_empresa:
+                            productos_por_empresa[sucursal_id] = []
                         
-                        productos_por_empresa[vendedor_id].append({
+                        productos_por_empresa[sucursal_id].append({
                             'id': producto.id_producto_empresa,
                             'nombre': producto.nombre_producto_empresa,
                             'descripcion': producto.descripcion_producto_empresa,
@@ -5585,8 +6223,8 @@ def pedido(request):
                             'precio_unitario': detalle.precio_unit_deta_carrito_prod_usuario,
                             'subtotal': detalle.subtotal_deta_carrito_prod_usuario,
                             'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None,
-                            'vendedor_id': vendedor_id,
-                            'vendedor_nombre': vendedor_nombre
+                            'vendedor_id': sucursal_id,
+                            'vendedor_nombre': sucursal_nombre
                         })
                     
                     elif detalle.idproducto_fk_usuario:
@@ -5616,9 +6254,9 @@ def pedido(request):
                             'vendedor_nombre': vendedor_nombre
                         })
                 
-                # Agregar cada empresa como un vendedor separado
-                for empresa_id, productos in productos_por_empresa.items():
-                    productos_por_vendedor[f'empresa_{empresa_id}'] = productos
+                # Agregar cada sucursal como un vendedor separado
+                for sucursal_id, productos in productos_por_empresa.items():
+                    productos_por_vendedor[f'empresa_{sucursal_id}'] = productos
                 
                 # Agregar cada usuario como un vendedor separado
                 for usuario_id, productos in productos_por_usuario.items():
@@ -5725,6 +6363,11 @@ def procesar_pedido(request):
         print(f"Tipo de vendedores_a_procesar: {type(vendedores_a_procesar)}")
         if vendedores_a_procesar:
             print(f"Contenido de vendedores_a_procesar: {vendedores_a_procesar}")
+            print(f"Longitud de vendedores_a_procesar: {len(vendedores_a_procesar)}")
+            for i, vendedor in enumerate(vendedores_a_procesar):
+                print(f"  Vendedor {i}: '{vendedor}' (tipo: {type(vendedor)})")
+        else:
+            print("vendedores_a_procesar es None o vacío")
         
         # Generar número de pedido único
         import uuid
@@ -5848,42 +6491,51 @@ def procesar_pedido(request):
         if not productos_carrito:
             return JsonResponse({'success': False, 'error': 'Carrito vacío'})
         
-        # Separar productos por vendedor (empresa/usuario) para crear pedidos agrupados
-        print(f"Separando productos por vendedor...")
+        # Separar productos por vendedor (sucursal/usuario) para crear pedidos agrupados
+        print(f"Separando productos por vendedor (sucursal)...")
         print(f"Total productos en carrito antes del filtrado: {len(productos_carrito)}")
         for i, prod in enumerate(productos_carrito[:3]):  # Solo mostrar los primeros 3
             print(f"Producto {i+1}: tipo={prod.get('tipo')}, id={prod.get('id')}, nombre={prod.get('nombre')}")
             if prod['tipo'] == 'empresa' and 'producto_sucursal_obj' in prod:
+                sucursal_id = prod['producto_sucursal_obj'].id_sucursal_fk.id_sucursal
                 empresa_id = prod['producto_sucursal_obj'].id_sucursal_fk.id_empresa_fk.id_empresa
-                print(f"  -> Empresa ID: {empresa_id}, vendedor_key: empresa_{empresa_id}")
+                print(f"  -> Sucursal ID: {sucursal_id}, Empresa ID: {empresa_id}, vendedor_key: sucursal_{sucursal_id}")
             elif prod['tipo'] == 'usuario' and 'producto_usuario_obj' in prod:
                 usuario_id = prod['producto_usuario_obj'].id_usuario_fk.id_usuario
                 print(f"  -> Usuario ID: {usuario_id}, vendedor_key: usuario_{usuario_id}")
-        productos_por_empresa = {}
+        productos_por_sucursal = {}
         productos_por_usuario = {}
         
         for producto in productos_carrito:
             if producto['tipo'] == 'empresa':
-                # Agrupar por sucursal/empresa
+                # Agrupar por sucursal
                 if 'producto_sucursal_obj' in producto:
                     sucursal_id = producto['producto_sucursal_obj'].id_sucursal_fk.id_sucursal
                     empresa_id = producto['producto_sucursal_obj'].id_sucursal_fk.id_empresa_fk.id_empresa
                     
                     # Filtrar por vendedores seleccionados si no es "finalizar todos"
                     if vendedores_a_procesar is not None:
-                        vendedor_key = f"empresa_{empresa_id}"
-                        if vendedor_key not in vendedores_a_procesar:
-                            continue  # Saltar este producto si el vendedor no está seleccionado
+                        # Verificar tanto 'sucursal_' como 'empresa_' para compatibilidad
+                        vendedor_key_sucursal = f"sucursal_{sucursal_id}"
+                        vendedor_key_empresa = f"empresa_{sucursal_id}"
+                        print(f"Comparando vendedor_keys '{vendedor_key_sucursal}' y '{vendedor_key_empresa}' con vendedores_a_procesar: {vendedores_a_procesar}")
+                        
+                        if vendedor_key_sucursal not in vendedores_a_procesar and vendedor_key_empresa not in vendedores_a_procesar:
+                            print(f"SALTANDO producto de sucursal {sucursal_id} porque ni '{vendedor_key_sucursal}' ni '{vendedor_key_empresa}' están en vendedores seleccionados")
+                            continue  # Saltar este producto si la sucursal no está seleccionada
+                        else:
+                            print(f"INCLUYENDO producto de sucursal {sucursal_id} porque está en vendedores seleccionados")
                     
-                    if empresa_id not in productos_por_empresa:
-                        productos_por_empresa[empresa_id] = {
+                    if sucursal_id not in productos_por_sucursal:
+                        productos_por_sucursal[sucursal_id] = {
+                            'sucursal_obj': producto['producto_sucursal_obj'].id_sucursal_fk,
                             'empresa_obj': producto['producto_sucursal_obj'].id_sucursal_fk.id_empresa_fk,
                             'productos': [],
                             'total': 0
                         }
                     
-                    productos_por_empresa[empresa_id]['productos'].append(producto)
-                    productos_por_empresa[empresa_id]['total'] += producto['subtotal']
+                    productos_por_sucursal[sucursal_id]['productos'].append(producto)
+                    productos_por_sucursal[sucursal_id]['total'] += producto['subtotal']
             
             elif producto['tipo'] == 'usuario':
                 # Agrupar por usuario vendedor
@@ -5893,8 +6545,13 @@ def procesar_pedido(request):
                     # Filtrar por vendedores seleccionados si no es "finalizar todos"
                     if vendedores_a_procesar is not None:
                         vendedor_key = f"usuario_{usuario_id}"
+                        print(f"Comparando vendedor_key '{vendedor_key}' con vendedores_a_procesar: {vendedores_a_procesar}")
+                        print(f"¿'{vendedor_key}' está en vendedores_a_procesar? {vendedor_key in vendedores_a_procesar}")
                         if vendedor_key not in vendedores_a_procesar:
+                            print(f"SALTANDO producto de usuario {usuario_id} porque '{vendedor_key}' no está en vendedores seleccionados")
                             continue  # Saltar este producto si el vendedor no está seleccionado
+                        else:
+                            print(f"INCLUYENDO producto de usuario {usuario_id} porque '{vendedor_key}' SÍ está en vendedores seleccionados")
                     
                     if usuario_id not in productos_por_usuario:
                         productos_por_usuario[usuario_id] = {
@@ -5906,10 +6563,10 @@ def procesar_pedido(request):
                     productos_por_usuario[usuario_id]['productos'].append(producto)
                     productos_por_usuario[usuario_id]['total'] += producto['subtotal']
         
-        print(f"Productos agrupados (filtrados) - Empresas: {len(productos_por_empresa)}, Usuarios: {len(productos_por_usuario)}")
+        print(f"Productos agrupados (filtrados) - Sucursales: {len(productos_por_sucursal)}, Usuarios: {len(productos_por_usuario)}")
         
         # Verificar que hay productos para procesar
-        if not productos_por_empresa and not productos_por_usuario:
+        if not productos_por_sucursal and not productos_por_usuario:
             return JsonResponse({'success': False, 'error': 'No hay productos seleccionados para procesar'})
         
         # Crear pedidos según el tipo de cuenta del comprador
@@ -5919,11 +6576,11 @@ def procesar_pedido(request):
             if account_type == 'empresa':
                 print("Creando pedidos para empresa compradora...")
                 
-                # Crear pedidos de empresa para productos de empresas
-                for empresa_id, grupo in productos_por_empresa.items():
+                # Crear pedidos de empresa para productos de sucursales
+                for sucursal_id, grupo in productos_por_sucursal.items():
                     nuevo_pedido = pedido_empresa.objects.create(
                         id_carrito_fk=carrito_empresa,
-                        numero_pedido=f"{numero_pedido}-EMP{empresa_id}",
+                        numero_pedido=f"{numero_pedido}-SUC{sucursal_id}",
                         direccion_envio=data.get('direccionEntrega', ''),
                         metodo_pago=data.get('metodoPago', ''),
                         total_pedido=grupo['total'],
@@ -5941,10 +6598,13 @@ def procesar_pedido(request):
                             subtotal_detalle_pedido=producto['subtotal']
                         )
                     
+                    # Notificar al vendedor (empresa) sobre el nuevo pedido
+                    notificar_nuevo_pedido(nuevo_pedido)
+                    
                     pedidos_creados.append({
                         'tipo': 'empresa',
                         'id': nuevo_pedido.id_pedido_empresa,
-                        'vendedor': grupo['empresa_obj'].nombre_empresa,
+                        'vendedor': f"{grupo['empresa_obj'].nombre_empresa} - {grupo['sucursal_obj'].nombre_sucursal}",
                         'total': float(grupo['total'])
                     })
                 
@@ -5970,6 +6630,9 @@ def procesar_pedido(request):
                             subtotal_detalle_pedido=producto['subtotal']
                         )
                     
+                    # Notificar al vendedor (usuario) sobre el nuevo pedido
+                    notificar_nuevo_pedido(nuevo_pedido)
+                    
                     pedidos_creados.append({
                         'tipo': 'empresa',
                         'id': nuevo_pedido.id_pedido_empresa,
@@ -5980,11 +6643,11 @@ def procesar_pedido(request):
             else:  # account_type == 'usuario'
                 print("Creando pedidos para usuario comprador...")
                 
-                # Crear pedidos de usuario para productos de empresas
-                for empresa_id, grupo in productos_por_empresa.items():
+                # Crear pedidos de usuario para productos de sucursales
+                for sucursal_id, grupo in productos_por_sucursal.items():
                     nuevo_pedido = pedido_usuario.objects.create(
                         id_carrito_fk=carrito_usuario,
-                        numero_pedido=f"{numero_pedido}-EMP{empresa_id}",
+                        numero_pedido=f"{numero_pedido}-SUC{sucursal_id}",
                         direccion_envio=data.get('direccionEntrega', ''),
                         metodo_pago=data.get('metodoPago', ''),
                         total_pedido=grupo['total'],
@@ -6002,10 +6665,13 @@ def procesar_pedido(request):
                             subtotal_detalle_pedido=producto['subtotal']
                         )
                     
+                    # Notificar al vendedor (empresa) sobre el nuevo pedido
+                    notificar_nuevo_pedido(nuevo_pedido)
+                    
                     pedidos_creados.append({
                         'tipo': 'usuario',
                         'id': nuevo_pedido.id_pedido_usuario,
-                        'vendedor': grupo['empresa_obj'].nombre_empresa,
+                        'vendedor': f"{grupo['empresa_obj'].nombre_empresa} - {grupo['sucursal_obj'].nombre_sucursal}",
                         'total': float(grupo['total'])
                     })
                 
@@ -6031,6 +6697,9 @@ def procesar_pedido(request):
                             subtotal_detalle_pedido=producto['subtotal']
                         )
                     
+                    # Notificar al vendedor (usuario) sobre el nuevo pedido
+                    notificar_nuevo_pedido(nuevo_pedido)
+                    
                     pedidos_creados.append({
                         'tipo': 'usuario',
                         'id': nuevo_pedido.id_pedido_usuario,
@@ -6052,7 +6721,7 @@ def procesar_pedido(request):
                 ).count()
             
             # Contar productos procesados en esta transacción
-            productos_procesados = sum(len(grupo['productos']) for grupo in productos_por_empresa.values()) + \
+            productos_procesados = sum(len(grupo['productos']) for grupo in productos_por_sucursal.values()) + \
                                  sum(len(grupo['productos']) for grupo in productos_por_usuario.values())
             
             print(f"Total productos en carrito: {todos_productos_carrito}")
@@ -6078,8 +6747,8 @@ def procesar_pedido(request):
             # Eliminar productos procesados del carrito
             productos_eliminados = 0
             
-            # Eliminar productos de empresas procesados
-            for empresa_id, grupo in productos_por_empresa.items():
+            # Eliminar productos de sucursales procesados
+            for sucursal_id, grupo in productos_por_sucursal.items():
                 for producto in grupo['productos']:
                     if account_type == 'empresa':
                         detalle_compra_producto_empresa.objects.filter(
@@ -6110,6 +6779,9 @@ def procesar_pedido(request):
             
             print(f"Pedidos creados exitosamente: {len(pedidos_creados)}")
             print(f"Productos eliminados del carrito: {productos_eliminados}")
+            
+            # Recalcular el total del carrito después de eliminar productos
+            recalcular_total_carrito(carrito_obj, account_type)
             
             # Guardar datos en la sesión para mostrar en la página de confirmación
             request.session['pedidos_confirmacion'] = pedidos_creados
@@ -6155,6 +6827,1465 @@ def confirmacion_pedido(request):
             # Si no hay datos en la sesión, redirigir al carrito
             return redirect('/ecommerce/carrito')
             
+        # Procesar y mostrar los datos de confirmación
+        context = {
+            'pedidos_data': pedidos_data,
+            'datos_cliente': datos_cliente,
+            'total_general': total_general,
+            'account_type': account_type
+        }
+        
+        return render(request, 'ecommerce_app/confirmacion_pedido.html', context)
+        
+    except Exception as e:
+        print(f"Error en confirmacion_pedido: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+def obtener_ventas_pendientes_como_notificaciones(current_user, account_type):
+    """Función auxiliar para obtener ventas pendientes y convertirlas en formato de notificaciones"""
+    ventas_notificaciones = []
+    
+    try:
+        if account_type == 'usuario':
+            # Pedidos de usuarios que compraron productos de este usuario (solo pendientes)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Pedidos de empresas que compraron productos de este usuario (solo pendientes)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'pedido': pedido,
+                        'comprador_nombre': comprador.nombre_usuario,
+                        'comprador_tipo': 'usuario',
+                        'total': pedido.total_pedido,
+                        'productos_count': 0
+                    }
+                pedidos_dict[pedido.numero_pedido]['productos_count'] += 1
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'pedido': pedido,
+                        'comprador_nombre': comprador.nombre_empresa,
+                        'comprador_tipo': 'empresa',
+                        'total': pedido.total_pedido,
+                        'productos_count': 0
+                    }
+                pedidos_dict[pedido.numero_pedido]['productos_count'] += 1
+            
+            # Convertir a formato de notificaciones
+            for pedido_info in pedidos_dict.values():
+                pedido = pedido_info['pedido']
+                ventas_notificaciones.append({
+                    'id_notificacion': f"venta_{pedido.numero_pedido}",
+                    'tipo_notificacion': 'venta_pendiente',
+                    'titulo': f"Nueva Venta - Pedido #{pedido.numero_pedido}",
+                    'mensaje': f"¡Tienes una nueva venta! {pedido_info['comprador_nombre']} ({pedido_info['comprador_tipo']}) compró {pedido_info['productos_count']} producto(s) por ${pedido_info['total']}. Confirma la venta para proceder.",
+                    'estado': 'no_leida',
+                    'fecha_creacion': pedido.fecha_pedido,
+                    'fecha_leida': None,
+                    'es_venta_pendiente': True,
+                    'numero_pedido': pedido.numero_pedido,
+                    'total_venta': pedido_info['total']
+                })
+                
+        elif account_type == 'empresa':
+            current_empresa = current_user
+            
+            # Pedidos de usuarios que compraron productos de esta empresa (solo pendientes)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Pedidos de empresas que compraron productos de esta empresa (solo pendientes)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='pendiente'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'pedido': pedido,
+                        'comprador_nombre': comprador.nombre_usuario,
+                        'comprador_tipo': 'usuario',
+                        'total': pedido.total_pedido,
+                        'productos_count': 0
+                    }
+                pedidos_dict[pedido.numero_pedido]['productos_count'] += 1
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'pedido': pedido,
+                        'comprador_nombre': comprador.nombre_empresa,
+                        'comprador_tipo': 'empresa',
+                        'total': pedido.total_pedido,
+                        'productos_count': 0
+                    }
+                pedidos_dict[pedido.numero_pedido]['productos_count'] += 1
+            
+            # Convertir a formato de notificaciones
+            for pedido_info in pedidos_dict.values():
+                pedido = pedido_info['pedido']
+                ventas_notificaciones.append({
+                    'id_notificacion': f"venta_{pedido.numero_pedido}",
+                    'tipo_notificacion': 'venta_pendiente',
+                    'titulo': f"Nueva Venta - Pedido #{pedido.numero_pedido}",
+                    'mensaje': f"¡Tienen una nueva venta! {pedido_info['comprador_nombre']} ({pedido_info['comprador_tipo']}) compró {pedido_info['productos_count']} producto(s) por ${pedido_info['total']}. Confirmen la venta para proceder.",
+                    'estado': 'no_leida',
+                    'fecha_creacion': pedido.fecha_pedido,
+                    'fecha_leida': None,
+                    'es_venta_pendiente': True,
+                    'numero_pedido': pedido.numero_pedido,
+                    'total_venta': pedido_info['total']
+                })
+    
+    except Exception as e:
+        logger.error(f"Error al obtener ventas pendientes: {str(e)}")
+    
+    return ventas_notificaciones
+
+
+def notificaciones(request):
+    """Vista para mostrar las notificaciones del usuario incluyendo ventas pendientes"""
+    current_user = get_current_user(request)
+    if not current_user:
+        # Para pruebas, crear un usuario temporal
+        try:
+            current_user = usuario.objects.first()
+            if current_user:
+                request.session['is_authenticated'] = True
+                request.session['user_id'] = current_user.id_usuario
+                request.session['account_type'] = 'usuario'
+            else:
+                return redirect('/ecommerce/login')
+        except:
+            return redirect('/ecommerce/login')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Obtener información del usuario
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': 'empresa',
+                'is_authenticated': True
+            }
+            
+            # Obtener notificaciones de empresa
+            from .models import notificacion_empresa
+            notificaciones_list = list(notificacion_empresa.objects.filter(
+                id_empresa_fk=current_user
+            ).order_by('-fecha_creacion'))
+            
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+            
+            # Obtener notificaciones de usuario
+            from .models import notificacion_usuario
+            notificaciones_list = list(notificacion_usuario.objects.filter(
+                id_usuario_fk=current_user
+            ).order_by('-fecha_creacion'))
+        
+        # Obtener ventas pendientes como notificaciones
+        ventas_pendientes = obtener_ventas_pendientes_como_notificaciones(current_user, account_type)
+        
+        # Combinar notificaciones regulares con ventas pendientes
+        todas_notificaciones = []
+        
+        # Agregar notificaciones regulares
+        for notif in notificaciones_list:
+            todas_notificaciones.append({
+                'id_notificacion': notif.id_notificacion_empresa if account_type == 'empresa' else notif.id_notificacion_usuario,
+                'tipo_notificacion': notif.tipo_notificacion,
+                'titulo': notif.titulo,
+                'mensaje': notif.mensaje,
+                'estado': notif.estado,
+                'fecha_creacion': notif.fecha_creacion,
+                'fecha_leida': notif.fecha_leida,
+                'es_venta_pendiente': False
+            })
+        
+        # Agregar ventas pendientes
+        todas_notificaciones.extend(ventas_pendientes)
+        
+        # Ordenar todas las notificaciones por fecha de creación (más recientes primero)
+        todas_notificaciones.sort(key=lambda x: x['fecha_creacion'], reverse=True)
+        
+        # Contar notificaciones no leídas (incluyendo ventas pendientes)
+        total_no_leidas = sum(1 for notif in todas_notificaciones if notif['estado'] == 'no_leida')
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'notificaciones': todas_notificaciones,
+            'total_no_leidas': total_no_leidas,
+            'total_notificaciones': len(todas_notificaciones),
+            'ventas_pendientes_count': len(ventas_pendientes)
+        }
+        
+        return render(request, 'ecommerce_app/notificaciones.html', context)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en función notificaciones: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        print(f"ERROR EN NOTIFICACIONES: {str(e)}")
+        print(f"TRACEBACK: {traceback.format_exc()}")
+        return redirect('/ecommerce/index')
+        
+        # Obtener los pedidos reales de la base de datos para mostrar información actualizada
+        pedidos_creados = []
+        
+        for pedido_info in pedidos_data:
+            if pedido_info['tipo'] == 'usuario':
+                try:
+                    pedido_obj = pedido_usuario.objects.get(id_pedido_usuario=pedido_info['id'])
+                    detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido_obj)
+                    
+                    detalles_list = []
+                    for detalle in detalles:
+                        if detalle.id_fk_producto_sucursal_empresa:
+                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        elif detalle.idproducto_fk_usuario:
+                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        else:
+                            nombre_producto = "Producto no disponible"
+                        
+                        detalles_list.append({
+                            'nombre_producto': nombre_producto,
+                            'cantidad': detalle.cantidad_detalle_pedido,
+                            'precio_unitario': float(detalle.precio_unitario_pedido),
+                            'subtotal': float(detalle.subtotal_detalle_pedido)
+                        })
+                    
+                    pedidos_creados.append({
+                        'numero_pedido': pedido_obj.numero_pedido,
+                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
+                        'estado_pedido': pedido_obj.estado_pedido,
+                        'total_pedido': float(pedido_obj.total_pedido),
+                        'vendedor_nombre': pedido_info['vendedor'],
+                        'detalles': detalles_list
+                    })
+                except pedido_usuario.DoesNotExist:
+                    continue
+                    
+            elif pedido_info['tipo'] == 'empresa':
+                try:
+                    pedido_obj = pedido_empresa.objects.get(id_pedido_empresa=pedido_info['id'])
+                    detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido_obj)
+                    
+                    detalles_list = []
+                    for detalle in detalles:
+                        if detalle.id_fk_producto_sucursal_empresa:
+                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        elif detalle.idproducto_fk_usuario:
+                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        else:
+                            nombre_producto = "Producto no disponible"
+                        
+                        detalles_list.append({
+                            'nombre_producto': nombre_producto,
+                            'cantidad': detalle.cantidad_detalle_pedido,
+                            'precio_unitario': float(detalle.precio_unitario_pedido),
+                            'subtotal': float(detalle.subtotal_detalle_pedido)
+                        })
+                    
+                    pedidos_creados.append({
+                        'numero_pedido': pedido_obj.numero_pedido,
+                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
+                        'estado_pedido': pedido_obj.estado_pedido,
+                        'total_pedido': float(pedido_obj.total_pedido),
+                        'vendedor_nombre': pedido_info['vendedor'],
+                        'detalles': detalles_list
+                    })
+                except pedido_empresa.DoesNotExist:
+                    continue
+        
+        # Limpiar datos de la sesión después de mostrarlos
+        if 'pedidos_confirmacion' in request.session:
+            del request.session['pedidos_confirmacion']
+        if 'datos_cliente_confirmacion' in request.session:
+            del request.session['datos_cliente_confirmacion']
+        if 'total_general_confirmacion' in request.session:
+            del request.session['total_general_confirmacion']
+        
+        context = {
+            'account_type': account_type,
+            'pedidos_creados': pedidos_creados,
+            'datos_cliente': datos_cliente,
+            'total_general': total_general
+        }
+        
+        return render(request, 'ecommerce_app/confirmacion_pedido.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función confirmacion_pedido: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+# Funciones para manejar cambios de estado en servicios
+def actualizar_estado_servicio_usuario(request):
+    """Actualiza el estado de una solicitud de servicio de usuario"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'})
+    
+    current_user = get_current_user(request)
+    if not current_user:
+        return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        nuevo_estado = data.get('nuevo_estado')
+        precio_cotizado = data.get('precio_cotizado')
+        comentario = data.get('comentario', '')
+        
+        if not solicitud_id or not nuevo_estado:
+            return JsonResponse({'success': False, 'message': 'Datos incompletos'})
+        
+        # Obtener la solicitud
+        solicitud = solicitud_servicio_usuario.objects.get(id_solicitud_servicio_usuario=solicitud_id)
+        
+        # Verificar permisos (solo el proveedor del servicio puede cambiar el estado)
+        if solicitud.id_servicio_usuario_fk:
+            if solicitud.id_servicio_usuario_fk.id_usuario_fk != current_user:
+                return JsonResponse({'success': False, 'message': 'No tienes permisos para actualizar esta solicitud'})
+        elif solicitud.id_servicio_sucursal_fk:
+            if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_empresa_fk != current_user:
+                return JsonResponse({'success': False, 'message': 'No tienes permisos para actualizar esta solicitud'})
+        
+        # Actualizar estado
+        estado_anterior = solicitud.estado
+        solicitud.estado = nuevo_estado
+        solicitud.save()
+        
+        # Crear notificación para el solicitante
+        cliente = solicitud.id_usuario_fk
+        
+        if nuevo_estado == 'cotizada':
+            titulo = "Servicio Cotizado"
+            mensaje = f"Tu solicitud de servicio ha sido cotizada. Precio: ${precio_cotizado}"
+        elif nuevo_estado == 'aceptada':
+            titulo = "Servicio Aceptado"
+            mensaje = f"Tu solicitud de servicio ha sido aceptada y está en proceso."
+        elif nuevo_estado == 'completada':
+            titulo = "Servicio Completado"
+            mensaje = f"Tu servicio ha sido completado exitosamente."
+        elif nuevo_estado == 'rechazada':
+            titulo = "Servicio Rechazado"
+            mensaje = f"Tu solicitud de servicio ha sido rechazada. {comentario}"
+        else:
+            titulo = "Estado de Servicio Actualizado"
+            mensaje = f"El estado de tu servicio ha cambiado a {nuevo_estado}."
+        
+        crear_notificacion_usuario(
+            usuario=cliente,
+            tipo_notificacion='cambio_estado_servicio',
+            titulo=titulo,
+            mensaje=mensaje,
+            solicitud_servicio=solicitud
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Estado actualizado a {nuevo_estado}',
+            'estado_anterior': estado_anterior,
+            'nuevo_estado': nuevo_estado
+        })
+        
+    except solicitud_servicio_usuario.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Solicitud no encontrada'})
+    except Exception as e:
+        logger.error(f"Error al actualizar estado de servicio: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+def marcar_notificacion_leida_vista(request):
+    """Vista para marcar una notificación como leída vía AJAX"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'})
+    
+    current_user = get_current_user(request)
+    if not current_user:
+        return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+    
+    try:
+        data = json.loads(request.body)
+        notificacion_id = data.get('notificacion_id')
+        es_empresa = data.get('es_empresa', False)
+        
+        if not notificacion_id:
+            return JsonResponse({'success': False, 'message': 'ID de notificación requerido'})
+        
+        # Verificar que la notificación pertenece al usuario actual
+        if es_empresa:
+            from .models import notificacion_empresa
+            try:
+                notificacion = notificacion_empresa.objects.get(
+                    id_notificacion_empresa=notificacion_id,
+                    id_empresa_fk=current_user
+                )
+            except notificacion_empresa.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Notificación no encontrada o no autorizada'})
+        else:
+            from .models import notificacion_usuario
+            try:
+                notificacion = notificacion_usuario.objects.get(
+                    id_notificacion_usuario=notificacion_id,
+                    id_usuario_fk=current_user
+                )
+            except notificacion_usuario.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Notificación no encontrada o no autorizada'})
+        
+        # Marcar como leída
+        resultado = marcar_notificacion_leida(notificacion_id, es_empresa)
+        
+        if resultado:
+            return JsonResponse({
+                'success': True, 
+                'message': 'Notificación marcada como leída'
+            })
+        else:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Error al marcar la notificación como leída'
+            })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Datos JSON inválidos'})
+    except Exception as e:
+        logger.error(f"Error en marcar_notificacion_leida_vista: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+def obtener_notificaciones_usuario(request):
+    """Vista para obtener las notificaciones del usuario actual incluyendo ventas pendientes"""
+    current_user = get_current_user(request)
+    if not current_user:
+        return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        notificaciones = []
+        
+        if account_type == 'empresa':
+            from .models import notificacion_empresa
+            notifs = notificacion_empresa.objects.filter(
+                id_empresa_fk=current_user
+            ).order_by('-fecha_creacion')[:20]  # Últimas 20 notificaciones
+            
+            for notif in notifs:
+                notificaciones.append({
+                    'id': notif.id_notificacion_empresa,
+                    'tipo': notif.tipo_notificacion,
+                    'titulo': notif.titulo,
+                    'mensaje': notif.mensaje,
+                    'estado': notif.estado,
+                    'fecha_creacion': notif.fecha_creacion.isoformat(),
+                    'fecha_leida': notif.fecha_leida.isoformat() if notif.fecha_leida else None,
+                    'es_empresa': True
+                })
+        else:
+            from .models import notificacion_usuario
+            notifs = notificacion_usuario.objects.filter(
+                id_usuario_fk=current_user
+            ).order_by('-fecha_creacion')[:20]  # Últimas 20 notificaciones
+            
+            for notif in notifs:
+                notificaciones.append({
+                    'id': notif.id_notificacion_usuario,
+                    'tipo': notif.tipo_notificacion,
+                    'titulo': notif.titulo,
+                    'mensaje': notif.mensaje,
+                    'estado': notif.estado,
+                    'fecha_creacion': notif.fecha_creacion.isoformat(),
+                    'fecha_leida': notif.fecha_leida.isoformat() if notif.fecha_leida else None,
+                    'es_empresa': False
+                })
+        
+        # Obtener ventas pendientes como notificaciones
+        ventas_pendientes = obtener_ventas_pendientes_como_notificaciones(current_user, account_type)
+        
+        # Contar notificaciones no leídas regulares
+        notificaciones_no_leidas = len([n for n in notificaciones if n['estado'] == 'no_leida'])
+        
+        # Contar ventas pendientes (todas se consideran no leídas)
+        ventas_pendientes_count = len(ventas_pendientes)
+        
+        # Total de notificaciones no leídas
+        total_no_leidas = notificaciones_no_leidas + ventas_pendientes_count
+        
+        return JsonResponse({
+            'success': True,
+            'notificaciones': notificaciones,
+            'ventas_pendientes': ventas_pendientes,
+            'total_no_leidas': total_no_leidas,
+            'ventas_pendientes_count': ventas_pendientes_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al obtener notificaciones: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+def actualizar_estado_servicio_empresa(request):
+    """Actualiza el estado de una solicitud de servicio de empresa"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'})
+    
+    current_user = get_current_user(request)
+    if not current_user:
+        return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        nuevo_estado = data.get('nuevo_estado')
+        precio_cotizado = data.get('precio_cotizado')
+        comentario = data.get('comentario', '')
+        
+        if not solicitud_id or not nuevo_estado:
+            return JsonResponse({'success': False, 'message': 'Datos incompletos'})
+        
+        # Obtener la solicitud
+        solicitud = solicitud_servicio_empresa.objects.get(id_solicitud_servicio_empresa=solicitud_id)
+        
+        # Verificar permisos (solo el proveedor del servicio puede cambiar el estado)
+        if solicitud.id_servicio_usuario_fk:
+            if solicitud.id_servicio_usuario_fk.id_usuario_fk != current_user:
+                return JsonResponse({'success': False, 'message': 'No tienes permisos para actualizar esta solicitud'})
+        elif solicitud.id_servicio_sucursal_fk:
+            if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_empresa_fk != current_user:
+                return JsonResponse({'success': False, 'message': 'No tienes permisos para actualizar esta solicitud'})
+        
+        # Actualizar estado
+        estado_anterior = solicitud.estado
+        solicitud.estado = nuevo_estado
+        solicitud.save()
+        
+        # Crear notificación para el solicitante
+        cliente = solicitud.id_empresa_fk
+        
+        if nuevo_estado == 'cotizada':
+            titulo = "Servicio Cotizado"
+            mensaje = f"Su solicitud de servicio ha sido cotizada. Precio: ${precio_cotizado}"
+        elif nuevo_estado == 'aceptada':
+            titulo = "Servicio Aceptado"
+            mensaje = f"Su solicitud de servicio ha sido aceptada y está en proceso."
+        elif nuevo_estado == 'completada':
+            titulo = "Servicio Completado"
+            mensaje = f"Su servicio ha sido completado exitosamente."
+        elif nuevo_estado == 'rechazada':
+            titulo = "Servicio Rechazado"
+            mensaje = f"Su solicitud de servicio ha sido rechazada. {comentario}"
+        else:
+            titulo = "Estado de Servicio Actualizado"
+            mensaje = f"El estado de su servicio ha cambiado a {nuevo_estado}."
+        
+        crear_notificacion_empresa(
+            empresa=cliente,
+            tipo_notificacion='cambio_estado_servicio',
+            titulo=titulo,
+            mensaje=mensaje,
+            solicitud_servicio=solicitud
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Estado actualizado a {nuevo_estado}',
+            'estado_anterior': estado_anterior,
+            'nuevo_estado': nuevo_estado
+        })
+        
+    except solicitud_servicio_empresa.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Solicitud no encontrada'})
+    except Exception as e:
+        logger.error(f"Error al actualizar estado de servicio: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+
+# ============================================================================
+# FUNCIONES AUXILIARES PARA NOTIFICACIONES
+# ============================================================================
+
+def crear_notificacion_usuario(usuario, tipo_notificacion, titulo, mensaje, pedido=None, solicitud_servicio=None):
+    """
+    Función auxiliar para crear notificaciones para usuarios.
+    
+    Args:
+        usuario: Instancia del modelo usuario
+        tipo_notificacion: Tipo de notificación (debe estar en TIPOS_NOTIFICACION)
+        titulo: Título de la notificación
+        mensaje: Mensaje de la notificación
+        pedido: Instancia del pedido relacionado (opcional)
+        solicitud_servicio: Instancia de la solicitud de servicio relacionada (opcional)
+    """
+    try:
+        from .models import notificacion_usuario
+        
+        notificacion = notificacion_usuario.objects.create(
+            id_usuario_fk=usuario,
+            tipo_notificacion=tipo_notificacion,
+            titulo=titulo,
+            mensaje=mensaje,
+            id_pedido_usuario_fk=pedido,
+            id_solicitud_servicio_usuario_fk=solicitud_servicio,
+            estado='no_leida'
+        )
+        
+        logger.info(f"Notificación creada para usuario {usuario.nombre_usuario}: {titulo}")
+        return notificacion
+        
+    except Exception as e:
+        logger.error(f"Error al crear notificación para usuario {usuario.nombre_usuario}: {str(e)}")
+        return None
+
+
+def crear_notificacion_empresa(empresa, tipo_notificacion, titulo, mensaje, pedido=None, solicitud_servicio=None):
+    """
+    Función auxiliar para crear notificaciones para empresas.
+    
+    Args:
+        empresa: Instancia del modelo empresa
+        tipo_notificacion: Tipo de notificación (debe estar en TIPOS_NOTIFICACION)
+        titulo: Título de la notificación
+        mensaje: Mensaje de la notificación
+        pedido: Instancia del pedido relacionado (opcional)
+        solicitud_servicio: Instancia de la solicitud de servicio relacionada (opcional)
+    """
+    try:
+        from .models import notificacion_empresa
+        
+        notificacion = notificacion_empresa.objects.create(
+            id_empresa_fk=empresa,
+            tipo_notificacion=tipo_notificacion,
+            titulo=titulo,
+            mensaje=mensaje,
+            id_pedido_empresa_fk=pedido,
+            id_solicitud_servicio_empresa_fk=solicitud_servicio,
+            estado='no_leida'
+        )
+        
+        logger.info(f"Notificación creada para empresa {empresa.nombre_empresa}: {titulo}")
+        return notificacion
+        
+    except Exception as e:
+        logger.error(f"Error al crear notificación para empresa {empresa.nombre_empresa}: {str(e)}")
+        return None
+
+
+def notificar_pedido_confirmado(pedido):
+    """
+    Crear notificación cuando un pedido es confirmado.
+    Notifica al comprador que su pedido fue confirmado.
+    """
+    try:
+        # Obtener el comprador del pedido
+        comprador = None
+        if hasattr(pedido, 'id_carrito_fk'):
+            if hasattr(pedido.id_carrito_fk, 'id_usuario_fk'):
+                # Pedido de usuario
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                titulo = f"Pedido #{pedido.numero_pedido} Confirmado"
+                mensaje = f"¡Excelente! Tu pedido #{pedido.numero_pedido} por ${pedido.total_pedido} ha sido confirmado y será procesado pronto."
+                
+                crear_notificacion_usuario(
+                    usuario=comprador,
+                    tipo_notificacion='pedido_confirmado',
+                    titulo=titulo,
+                    mensaje=mensaje,
+                    pedido=pedido
+                )
+                
+            elif hasattr(pedido.id_carrito_fk, 'id_empresa_fk'):
+                # Pedido de empresa
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                titulo = f"Pedido #{pedido.numero_pedido} Confirmado"
+                mensaje = f"¡Excelente! Su pedido #{pedido.numero_pedido} por ${pedido.total_pedido} ha sido confirmado y será procesado pronto."
+                
+                crear_notificacion_empresa(
+                    empresa=comprador,
+                    tipo_notificacion='venta_confirmada',
+                    titulo=titulo,
+                    mensaje=mensaje,
+                    pedido=pedido
+                )
+                
+    except Exception as e:
+        logger.error(f"Error al notificar pedido confirmado {pedido.numero_pedido}: {str(e)}")
+
+
+def notificar_pedido_cancelado(pedido, motivo_rechazo):
+    """
+    Crear notificación cuando un pedido es cancelado/rechazado.
+    Notifica al comprador que su pedido fue rechazado.
+    """
+    try:
+        # Obtener el comprador del pedido
+        comprador = None
+        if hasattr(pedido, 'id_carrito_fk'):
+            if hasattr(pedido.id_carrito_fk, 'id_usuario_fk'):
+                # Pedido de usuario
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                titulo = f"Pedido #{pedido.numero_pedido} Rechazado"
+                mensaje = f"Lamentamos informarte que tu pedido #{pedido.numero_pedido} ha sido rechazado. Motivo: {motivo_rechazo}"
+                
+                crear_notificacion_usuario(
+                    usuario=comprador,
+                    tipo_notificacion='pedido_rechazado',
+                    titulo=titulo,
+                    mensaje=mensaje,
+                    pedido=pedido
+                )
+                
+            elif hasattr(pedido.id_carrito_fk, 'id_empresa_fk'):
+                # Pedido de empresa
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                titulo = f"Pedido #{pedido.numero_pedido} Rechazado"
+                mensaje = f"Lamentamos informarle que su pedido #{pedido.numero_pedido} ha sido rechazado. Motivo: {motivo_rechazo}"
+                
+                crear_notificacion_empresa(
+                    empresa=comprador,
+                    tipo_notificacion='venta_rechazada',
+                    titulo=titulo,
+                    mensaje=mensaje,
+                    pedido=pedido
+                )
+                
+    except Exception as e:
+        logger.error(f"Error al notificar pedido cancelado {pedido.numero_pedido}: {str(e)}")
+
+
+def notificar_nuevo_pedido(pedido):
+    """
+    Crear notificación cuando se recibe un nuevo pedido.
+    Notifica al vendedor que tiene un nuevo pedido pendiente.
+    """
+    try:
+        # Obtener los detalles del pedido para identificar a los vendedores
+        from .models import detalle_pedido_usuario, detalle_pedido_empresa
+        
+        vendedores_notificados = set()
+        
+        # Buscar en detalles de pedidos de usuario
+        if hasattr(pedido, 'detalles'):
+            detalles = pedido.detalles.all()
+            
+            for detalle in detalles:
+                vendedor = None
+                
+                # Verificar si es producto de usuario
+                if hasattr(detalle, 'idproducto_fk_usuario') and detalle.idproducto_fk_usuario:
+                    vendedor = detalle.idproducto_fk_usuario.id_usuario_fk
+                    if vendedor.id_usuario not in vendedores_notificados:
+                        titulo = f"Nuevo Pedido #{pedido.numero_pedido}"
+                        mensaje = f"¡Tienes un nuevo pedido! Pedido #{pedido.numero_pedido} por ${pedido.total_pedido}. Revisa los detalles y confirma la venta."
+                        
+                        crear_notificacion_usuario(
+                            usuario=vendedor,
+                            tipo_notificacion='pedido_confirmado',
+                            titulo=titulo,
+                            mensaje=mensaje,
+                            pedido=pedido
+                        )
+                        vendedores_notificados.add(vendedor.id_usuario)
+                
+                # Verificar si es producto de empresa
+                elif hasattr(detalle, 'id_fk_producto_sucursal_empresa') and detalle.id_fk_producto_sucursal_empresa:
+                    vendedor = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.id_empresa_fk
+                    if vendedor.id_empresa not in vendedores_notificados:
+                        titulo = f"Nuevo Pedido #{pedido.numero_pedido}"
+                        mensaje = f"¡Tienen un nuevo pedido! Pedido #{pedido.numero_pedido} por ${pedido.total_pedido}. Revisen los detalles y confirmen la venta."
+                        
+                        crear_notificacion_empresa(
+                            empresa=vendedor,
+                            tipo_notificacion='nuevo_pedido',
+                            titulo=titulo,
+                            mensaje=mensaje,
+                            pedido=pedido
+                        )
+                        vendedores_notificados.add(vendedor.id_empresa)
+                        
+    except Exception as e:
+        logger.error(f"Error al notificar nuevo pedido {pedido.numero_pedido}: {str(e)}")
+
+
+def notificar_servicio_cotizado(solicitud_servicio, precio_cotizado):
+    """
+    Crear notificación cuando un servicio es cotizado.
+    """
+    try:
+        if hasattr(solicitud_servicio, 'id_usuario_fk'):
+            # Solicitud de usuario
+            titulo = f"Servicio Cotizado"
+            mensaje = f"Tu solicitud de servicio ha sido cotizada por ${precio_cotizado}. Revisa los detalles y acepta si estás de acuerdo."
+            
+            crear_notificacion_usuario(
+                usuario=solicitud_servicio.id_usuario_fk,
+                tipo_notificacion='servicio_cotizado',
+                titulo=titulo,
+                mensaje=mensaje,
+                solicitud_servicio=solicitud_servicio
+            )
+            
+        elif hasattr(solicitud_servicio, 'id_empresa_fk'):
+            # Solicitud de empresa
+            titulo = f"Servicio Cotizado"
+            mensaje = f"Su solicitud de servicio ha sido cotizada por ${precio_cotizado}. Revisen los detalles y acepten si están de acuerdo."
+            
+            crear_notificacion_empresa(
+                empresa=solicitud_servicio.id_empresa_fk,
+                tipo_notificacion='servicio_cotizado',
+                titulo=titulo,
+                mensaje=mensaje,
+                solicitud_servicio=solicitud_servicio
+            )
+            
+    except Exception as e:
+        logger.error(f"Error al notificar servicio cotizado: {str(e)}")
+
+
+def marcar_notificacion_leida(notificacion_id, es_empresa=False):
+    """
+    Marcar una notificación como leída.
+    
+    Args:
+        notificacion_id: ID de la notificación
+        es_empresa: True si es notificación de empresa, False si es de usuario
+    """
+    try:
+        if es_empresa:
+            from .models import notificacion_empresa
+            notificacion = notificacion_empresa.objects.get(id_notificacion_empresa=notificacion_id)
+        else:
+            from .models import notificacion_usuario
+            notificacion = notificacion_usuario.objects.get(id_notificacion_usuario=notificacion_id)
+        
+        notificacion.estado = 'leida'
+        notificacion.fecha_leida = timezone.now()
+        notificacion.save()
+        
+        logger.info(f"Notificación {notificacion_id} marcada como leída")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error al marcar notificación {notificacion_id} como leída: {str(e)}")
+        return False
+        
+        # Obtener los pedidos reales de la base de datos para mostrar información actualizada
+        pedidos_creados = []
+        
+        for pedido_info in pedidos_data:
+            if pedido_info['tipo'] == 'usuario':
+                try:
+                    pedido_obj = pedido_usuario.objects.get(id_pedido_usuario=pedido_info['id'])
+                    detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido_obj)
+                    
+                    detalles_list = []
+                    for detalle in detalles:
+                        if detalle.id_fk_producto_sucursal_empresa:
+                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        elif detalle.idproducto_fk_usuario:
+                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        else:
+                            nombre_producto = "Producto no disponible"
+                        
+                        detalles_list.append({
+                            'nombre_producto': nombre_producto,
+                            'cantidad': detalle.cantidad_detalle_pedido,
+                            'precio_unitario': float(detalle.precio_unitario_pedido),
+                            'subtotal': float(detalle.subtotal_detalle_pedido)
+                        })
+                    
+                    pedidos_creados.append({
+                        'numero_pedido': pedido_obj.numero_pedido,
+                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
+                        'estado_pedido': pedido_obj.estado_pedido,
+                        'total_pedido': float(pedido_obj.total_pedido),
+                        'vendedor_nombre': pedido_info['vendedor'],
+                        'detalles': detalles_list
+                    })
+                except pedido_usuario.DoesNotExist:
+                    continue
+            elif pedido_info['tipo'] == 'empresa':
+                try:
+                    pedido_obj = pedido_empresa.objects.get(id_pedido_empresa=pedido_info['id'])
+                    detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido_obj)
+                    
+                    detalles_list = []
+                    for detalle in detalles:
+                        if detalle.id_fk_producto_sucursal_empresa:
+                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        elif detalle.idproducto_fk_usuario:
+                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        else:
+                            nombre_producto = "Producto no disponible"
+                        
+                        detalles_list.append({
+                            'nombre_producto': nombre_producto,
+                            'cantidad': detalle.cantidad_detalle_pedido,
+                            'precio_unitario': float(detalle.precio_unitario_pedido),
+                            'subtotal': float(detalle.subtotal_detalle_pedido)
+                        })
+                    
+                    pedidos_creados.append({
+                        'numero_pedido': pedido_obj.numero_pedido,
+                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
+                        'estado_pedido': pedido_obj.estado_pedido,
+                        'total_pedido': float(pedido_obj.total_pedido),
+                        'vendedor_nombre': pedido_info['vendedor'],
+                        'detalles': detalles_list
+                    })
+                except pedido_empresa.DoesNotExist:
+                    continue
+        
+        # Limpiar datos de la sesión después de mostrarlos
+        if 'pedidos_confirmacion' in request.session:
+            del request.session['pedidos_confirmacion']
+        if 'datos_cliente_confirmacion' in request.session:
+            del request.session['datos_cliente_confirmacion']
+        if 'total_general_confirmacion' in request.session:
+            del request.session['total_general_confirmacion']
+        
+        context = {
+            'account_type': account_type,
+            'pedidos_creados': pedidos_creados,
+            'datos_cliente': datos_cliente,
+            'total_general': total_general
+        }
+        
+        return render(request, 'ecommerce_app/confirmacion_pedido.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función confirmacion_pedido: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+
+@require_login
+def ventas_confirmadas(request):
+    """
+    Vista para mostrar las ventas confirmadas realizadas por el usuario o empresa.
+    Muestra los pedidos donde vendieron productos con estado 'confirmado'.
+    """
+    try:
+        current_user = get_current_user(request)
+        logger.info(f"ventas_confirmadas - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("ventas_confirmadas - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"ventas_confirmadas - account_type: {account_type}")
+        ventas_confirmadas = []
+        
+        if account_type == 'usuario':
+            # current_user ya es el objeto usuario
+            
+            # Pedidos de usuarios que compraron productos de este usuario (solo confirmados)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='confirmado'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Pedidos de empresas que compraron productos de este usuario (solo confirmados)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='confirmado'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_usuario,
+                        'email_comprador': comprador.correo_usuario,
+                        'telefono_comprador': comprador.telefono_usuario,
+                        'tipo_comprador': 'usuario',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_usuario.objects.filter(
+                    id_producto_fk=detalle.idproducto_fk_usuario
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None
+                })
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_empresa,
+                        'email_comprador': comprador.correo_empresa,
+                        'telefono_comprador': 'No disponible',
+                        'tipo_comprador': 'empresa',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_usuario.objects.filter(
+                    id_producto_fk=detalle.idproducto_fk_usuario
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None
+                })
+            
+            # Convertir diccionario a lista
+            ventas_confirmadas = list(pedidos_dict.values())
+                
+        elif account_type == 'empresa':
+            # current_user ya es el objeto empresa
+            current_empresa = current_user
+            
+            # Pedidos de usuarios que compraron productos de esta empresa (solo confirmados)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='confirmado'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Pedidos de empresas que compraron productos de esta empresa (solo confirmados)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='confirmado'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_usuario,
+                        'email_comprador': comprador.correo_usuario,
+                        'telefono_comprador': comprador.telefono_usuario,
+                        'tipo_comprador': 'usuario',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_empresa.objects.filter(
+                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None
+                })
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_empresa,
+                        'email_comprador': comprador.correo_empresa,
+                        'telefono_comprador': 'No disponible',
+                        'tipo_comprador': 'empresa',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_empresa.objects.filter(
+                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None
+                })
+            
+            # Convertir diccionario a lista
+            ventas_confirmadas = list(pedidos_dict.values())
+        
+        # Ordenar por fecha más reciente
+        ventas_confirmadas.sort(key=lambda x: x['fecha_pedido'], reverse=True)
+        
+        # Crear user_info para compatibilidad con el template
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+        
+        context = {
+            'current_user': current_user,
+            'user_info': user_info,
+            'account_type': account_type,
+            'ventas_confirmadas': ventas_confirmadas,
+            'total_ventas': len(ventas_confirmadas)
+        }
+        
+        return render(request, 'ecommerce_app/ventas_confirmadas.html', context)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en función ventas_confirmadas: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return redirect('/ecommerce/index/')
+
+
+@require_login
+def ventas_rechazadas(request):
+    """
+    Vista para mostrar las ventas rechazadas realizadas por el usuario o empresa.
+    Muestra los pedidos donde vendieron productos con estado 'rechazado'.
+    """
+    try:
+        current_user = get_current_user(request)
+        logger.info(f"ventas_rechazadas - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("ventas_rechazadas - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"ventas_rechazadas - account_type: {account_type}")
+        ventas_rechazadas = []
+        
+        if account_type == 'usuario':
+            # current_user ya es el objeto usuario
+            
+            # Pedidos de usuarios que compraron productos de este usuario (solo rechazados)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='cancelado'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Pedidos de empresas que compraron productos de este usuario (solo rechazados)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__estado_pedido='cancelado'
+            ).select_related('id_pedido_fk', 'idproducto_fk_usuario')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_usuario,
+                        'email_comprador': comprador.correo_usuario,
+                        'telefono_comprador': comprador.telefono_usuario,
+                        'tipo_comprador': 'usuario',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'fecha_rechazo': pedido.fecha_rechazo if hasattr(pedido, 'fecha_rechazo') else pedido.fecha_pedido,
+                        'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None),
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_usuario.objects.filter(
+                    id_producto_fk=detalle.idproducto_fk_usuario
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None
+                })
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_empresa,
+                        'email_comprador': comprador.correo_empresa,
+                        'telefono_comprador': 'No disponible',
+                        'tipo_comprador': 'empresa',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'fecha_rechazo': pedido.fecha_rechazo if hasattr(pedido, 'fecha_rechazo') else pedido.fecha_pedido,
+                        'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None),
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_usuario.objects.filter(
+                    id_producto_fk=detalle.idproducto_fk_usuario
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.idproducto_fk_usuario.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_usuario.url if imagen else None
+                })
+            
+            # Convertir diccionario a lista
+            ventas_rechazadas = list(pedidos_dict.values())
+                
+        elif account_type == 'empresa':
+            # current_user ya es el objeto empresa
+            current_empresa = current_user
+            
+            # Pedidos de usuarios que compraron productos de esta empresa (solo rechazados)
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='cancelado'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Pedidos de empresas que compraron productos de esta empresa (solo rechazados)
+            detalles_empresa = detalle_pedido_empresa.objects.filter(
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_empresa,
+                id_pedido_fk__estado_pedido='cancelado'
+            ).select_related('id_pedido_fk', 'id_fk_producto_sucursal_empresa__id_producto_fk')
+            
+            # Agrupar detalles por pedido
+            pedidos_dict = {}
+            
+            # Procesar pedidos de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_usuario_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_usuario,
+                        'email_comprador': comprador.correo_usuario,
+                        'telefono_comprador': comprador.telefono_usuario,
+                        'tipo_comprador': 'usuario',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'fecha_rechazo': pedido.fecha_rechazo if hasattr(pedido, 'fecha_rechazo') else pedido.fecha_pedido,
+                        'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None),
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_empresa.objects.filter(
+                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None
+                })
+            
+            # Procesar pedidos de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                comprador = pedido.id_carrito_fk.id_empresa_fk
+                
+                if pedido.numero_pedido not in pedidos_dict:
+                    pedidos_dict[pedido.numero_pedido] = {
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'nombre_comprador': comprador.nombre_empresa,
+                        'email_comprador': comprador.correo_empresa,
+                        'telefono_comprador': 'No disponible',
+                        'tipo_comprador': 'empresa',
+                        'direccion_envio': pedido.direccion_envio,
+                        'metodo_pago': pedido.metodo_pago,
+                        'comprobante_pago': pedido.comprobante_pago,
+                        'notas_pedido': pedido.notas_pedido,
+                        'total_pedido': pedido.total_pedido,
+                        'fecha_rechazo': pedido.fecha_rechazo if hasattr(pedido, 'fecha_rechazo') else pedido.fecha_pedido,
+                        'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None),
+                        'detalles': []
+                    }
+                
+                # Obtener imagen del producto
+                imagen = imagen_producto_empresa.objects.filter(
+                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                ).first()
+                
+                pedidos_dict[pedido.numero_pedido]['detalles'].append({
+                    'nombre_producto': detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': detalle.precio_unitario_pedido,
+                    'subtotal': detalle.subtotal_detalle_pedido,
+                    'imagen': imagen.ruta_imagen_producto_empresa.url if imagen else None
+                })
+            
+            # Convertir diccionario a lista
+            ventas_rechazadas = list(pedidos_dict.values())
+        
+        # Ordenar por fecha más reciente
+        ventas_rechazadas.sort(key=lambda x: x['fecha_pedido'], reverse=True)
+        
+        # Crear user_info para compatibilidad con el template
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+        
+        context = {
+            'current_user': current_user,
+            'user_info': user_info,
+            'account_type': account_type,
+            'ventas_rechazadas': ventas_rechazadas,
+            'total_ventas': len(ventas_rechazadas)
+        }
+        
+        return render(request, 'ecommerce_app/ventas_rechazadas.html', context)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en función ventas_rechazadas: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return redirect('/ecommerce/index/')
+            
         # Resto de la lógica de confirmación_pedido aquí...
         # Por ahora retornamos una respuesta básica
         return render(request, 'ecommerce_app/confirmacion_pedido.html', {
@@ -6169,7 +8300,7 @@ def confirmacion_pedido(request):
 
 @require_login
 @require_login
-def mis_ventas(request):
+def ventas_pendientes(request):
     """
     Vista para mostrar las ventas realizadas por el usuario o empresa.
     Muestra los pedidos donde vendieron productos con datos del comprador y comprobante.
@@ -6399,7 +8530,7 @@ def mis_ventas(request):
             'total_ventas': len(ventas_realizadas)
         }
         
-        return render(request, 'ecommerce_app/mis_ventas.html', context)
+        return render(request, 'ecommerce_app/ventas_pendientes.html', context)
         
     except Exception as e:
         import traceback
@@ -6441,18 +8572,24 @@ def mis_pedidos(request):
                 for detalle in detalles:
                     if detalle.id_fk_producto_sucursal_empresa:
                         nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
                         imagen = imagen_producto_empresa.objects.filter(
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = detalle.idproducto_fk_usuario.sucursal_usuario.nombre_sucursal if hasattr(detalle.idproducto_fk_usuario, 'sucursal_usuario') and detalle.idproducto_fk_usuario.sucursal_usuario else "Sin sucursal"
+                        empresa = detalle.idproducto_fk_usuario.sucursal_usuario.id_empresa_fk.nombre_empresa if hasattr(detalle.idproducto_fk_usuario, 'sucursal_usuario') and detalle.idproducto_fk_usuario.sucursal_usuario and hasattr(detalle.idproducto_fk_usuario.sucursal_usuario, 'id_empresa_fk') and detalle.idproducto_fk_usuario.sucursal_usuario.id_empresa_fk else "Sin empresa"
                         imagen = imagen_producto_usuario.objects.filter(
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
                     else:
                         nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
                         imagen_url = None
                     
                     detalles_list.append({
@@ -6460,7 +8597,9 @@ def mis_pedidos(request):
                         'cantidad': detalle.cantidad_detalle_pedido,
                         'precio_unitario': float(detalle.precio_unitario_pedido),
                         'subtotal': float(detalle.subtotal_detalle_pedido),
-                        'imagen': imagen_url
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
                     })
                 
                 pedidos_historial.append({
@@ -6470,9 +8609,13 @@ def mis_pedidos(request):
                     'total_pedido': float(pedido.total_pedido),
                     'metodo_pago': pedido.metodo_pago,
                     'direccion_entrega': pedido.direccion_envio,
+                    'direccion_envio': pedido.direccion_envio,
                     'notas_pedido': pedido.notas_pedido,
                     'detalles': detalles_list,
-                    'tipo_pedido': 'empresa'
+                    'tipo_pedido': 'empresa',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None,
+                    'fecha_rechazo': pedido.fecha_pedido,
+                    'motivo_rechazo': pedido.comentario_rechazo if hasattr(pedido, 'comentario_rechazo') else None
                 })
         
         else:
@@ -6497,18 +8640,24 @@ def mis_pedidos(request):
                 for detalle in detalles:
                     if detalle.id_fk_producto_sucursal_empresa:
                         nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
                         imagen = imagen_producto_empresa.objects.filter(
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = detalle.idproducto_fk_usuario.sucursal_usuario.nombre_sucursal if hasattr(detalle.idproducto_fk_usuario, 'sucursal_usuario') and detalle.idproducto_fk_usuario.sucursal_usuario else "Sin sucursal"
+                        empresa = detalle.idproducto_fk_usuario.sucursal_usuario.id_empresa_fk.nombre_empresa if hasattr(detalle.idproducto_fk_usuario, 'sucursal_usuario') and detalle.idproducto_fk_usuario.sucursal_usuario and hasattr(detalle.idproducto_fk_usuario.sucursal_usuario, 'id_empresa_fk') and detalle.idproducto_fk_usuario.sucursal_usuario.id_empresa_fk else "Sin empresa"
                         imagen = imagen_producto_usuario.objects.filter(
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
                     else:
                         nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
                         imagen_url = None
                     
                     detalles_list.append({
@@ -6516,7 +8665,9 @@ def mis_pedidos(request):
                         'cantidad': detalle.cantidad_detalle_pedido,
                         'precio_unitario': float(detalle.precio_unitario_pedido),
                         'subtotal': float(detalle.subtotal_detalle_pedido),
-                        'imagen': imagen_url
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
                     })
                 
                 pedidos_historial.append({
@@ -6526,15 +8677,19 @@ def mis_pedidos(request):
                     'total_pedido': float(pedido.total_pedido),
                     'metodo_pago': pedido.metodo_pago,
                     'direccion_entrega': pedido.direccion_envio,
+                    'direccion_envio': pedido.direccion_envio,
                     'notas_pedido': pedido.notas_pedido,
                     'detalles': detalles_list,
-                    'tipo_pedido': 'usuario'
+                    'tipo_pedido': 'usuario',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None,
+                    'fecha_rechazo': pedido.fecha_pedido,
+                    'motivo_rechazo': pedido.comentario_rechazo if hasattr(pedido, 'comentario_rechazo') else None
                 })
         
         context = {
             'user_info': user_info,
             'account_type': account_type,
-            'pedidos_historial': pedidos_historial,
+            'pedidos_confirmados': pedidos_historial,
             'total_pedidos': len(pedidos_historial)
         }
         
@@ -6542,95 +8697,6 @@ def mis_pedidos(request):
         
     except Exception as e:
         logger.error(f"Error en función mis_pedidos: {str(e)}")
-        return redirect('/ecommerce/carrito')
-        
-        # Obtener los pedidos reales de la base de datos para mostrar información actualizada
-        pedidos_creados = []
-        
-        for pedido_info in pedidos_data:
-            if pedido_info['tipo'] == 'usuario':
-                try:
-                    pedido_obj = pedido_usuario.objects.get(id_pedido_usuario=pedido_info['id'])
-                    detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido_obj)
-                    
-                    detalles_list = []
-                    for detalle in detalles:
-                        if detalle.id_fk_producto_sucursal_empresa:
-                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
-                        elif detalle.idproducto_fk_usuario:
-                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
-                        else:
-                            nombre_producto = "Producto no disponible"
-                        
-                        detalles_list.append({
-                            'nombre_producto': nombre_producto,
-                            'cantidad': detalle.cantidad_detalle_pedido,
-                            'precio_unitario': float(detalle.precio_unitario_pedido),
-                            'subtotal': float(detalle.subtotal_detalle_pedido)
-                        })
-                    
-                    pedidos_creados.append({
-                        'numero_pedido': pedido_obj.numero_pedido,
-                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
-                        'estado_pedido': pedido_obj.estado_pedido,
-                        'total_pedido': float(pedido_obj.total_pedido),
-                        'vendedor_nombre': pedido_info['vendedor'],
-                        'detalles': detalles_list
-                    })
-                except pedido_usuario.DoesNotExist:
-                    continue
-                    
-            elif pedido_info['tipo'] == 'empresa':
-                try:
-                    pedido_obj = pedido_empresa.objects.get(id_pedido_empresa=pedido_info['id'])
-                    detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido_obj)
-                    
-                    detalles_list = []
-                    for detalle in detalles:
-                        if detalle.id_fk_producto_sucursal_empresa:
-                            nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
-                        elif detalle.idproducto_fk_usuario:
-                            nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
-                        else:
-                            nombre_producto = "Producto no disponible"
-                        
-                        detalles_list.append({
-                            'nombre_producto': nombre_producto,
-                            'cantidad': detalle.cantidad_detalle_pedido,
-                            'precio_unitario': float(detalle.precio_unitario_pedido),
-                            'subtotal': float(detalle.subtotal_detalle_pedido)
-                        })
-                    
-                    pedidos_creados.append({
-                        'numero_pedido': pedido_obj.numero_pedido,
-                        'fecha_pedido': pedido_obj.fecha_pedido.isoformat() if pedido_obj.fecha_pedido else None,
-                        'estado_pedido': pedido_obj.estado_pedido,
-                        'total_pedido': float(pedido_obj.total_pedido),
-                        'vendedor_nombre': pedido_info['vendedor'],
-                        'detalles': detalles_list
-                    })
-                except pedido_empresa.DoesNotExist:
-                    continue
-        
-        # Limpiar datos de la sesión después de mostrarlos
-        if 'pedidos_confirmacion' in request.session:
-            del request.session['pedidos_confirmacion']
-        if 'datos_cliente_confirmacion' in request.session:
-            del request.session['datos_cliente_confirmacion']
-        if 'total_general_confirmacion' in request.session:
-            del request.session['total_general_confirmacion']
-        
-        context = {
-            'account_type': account_type,
-            'pedidos_creados': pedidos_creados,
-            'datos_cliente': datos_cliente,
-            'total_general': total_general
-        }
-        
-        return render(request, 'ecommerce_app/confirmacion_pedido.html', context)
-        
-    except Exception as e:
-        logger.error(f"Error en función confirmacion_pedido: {str(e)}")
         return redirect('/ecommerce/carrito')
 
 
@@ -6717,6 +8783,9 @@ def confirmar_venta(request):
         pedido_encontrado.estado_pedido = 'confirmado'
         pedido_encontrado.save()
         
+        # Crear notificación automática para el comprador
+        notificar_pedido_confirmado(pedido_encontrado)
+        
         logger.info(f"Pedido {numero_pedido} confirmado por {account_type} {current_user}")
         
         return JsonResponse({
@@ -6728,3 +8797,1750 @@ def confirmar_venta(request):
     except Exception as e:
         logger.error(f"Error en función confirmar_venta: {str(e)}")
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+
+@require_login
+def rechazar_venta(request):
+    """
+    Vista para rechazar una venta cambiando el estado del pedido de 'pendiente' a 'cancelado'
+    y guardando el comentario de rechazo. Solo acepta peticiones POST con AJAX.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'})
+    
+    try:
+        import json
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Leer datos JSON del cuerpo de la petición
+        try:
+            data = json.loads(request.body)
+            numero_pedido = data.get('numero_pedido')
+            comentario_rechazo = data.get('comentario_rechazo', '').strip()
+        except json.JSONDecodeError:
+            # Fallback a request.POST si no es JSON
+            numero_pedido = request.POST.get('numero_pedido')
+            comentario_rechazo = request.POST.get('comentario_rechazo', '').strip()
+        
+        if not numero_pedido:
+            return JsonResponse({'success': False, 'message': 'Número de pedido requerido'})
+        
+        if not comentario_rechazo:
+            return JsonResponse({'success': False, 'message': 'El comentario de rechazo es obligatorio'})
+        
+        # Buscar el pedido según el tipo de cuenta
+        pedido_encontrado = None
+        
+        if account_type == 'usuario':
+            # Buscar en pedidos de usuarios donde el vendedor es el usuario actual
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_pedido_fk__numero_pedido=numero_pedido,
+                idproducto_fk_usuario__id_usuario_fk=current_user
+            ).select_related('id_pedido_fk').first()
+            
+            if detalles_usuario:
+                pedido_encontrado = detalles_usuario.id_pedido_fk
+            else:
+                # Buscar en pedidos de empresas donde el vendedor es el usuario actual
+                detalles_empresa = detalle_pedido_empresa.objects.filter(
+                    id_pedido_fk__numero_pedido=numero_pedido,
+                    idproducto_fk_usuario__id_usuario_fk=current_user
+                ).select_related('id_pedido_fk').first()
+                
+                if detalles_empresa:
+                    pedido_encontrado = detalles_empresa.id_pedido_fk
+        
+        elif account_type == 'empresa':
+            # Buscar en pedidos de usuarios donde el vendedor es la empresa actual
+            detalles_usuario = detalle_pedido_usuario.objects.filter(
+                id_pedido_fk__numero_pedido=numero_pedido,
+                id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_user
+            ).select_related('id_pedido_fk').first()
+            
+            if detalles_usuario:
+                pedido_encontrado = detalles_usuario.id_pedido_fk
+            else:
+                # Buscar en pedidos de empresas donde el vendedor es la empresa actual
+                detalles_empresa = detalle_pedido_empresa.objects.filter(
+                    id_pedido_fk__numero_pedido=numero_pedido,
+                    id_fk_producto_sucursal_empresa__id_producto_fk__id_empresa_fk=current_user
+                ).select_related('id_pedido_fk').first()
+                
+                if detalles_empresa:
+                    pedido_encontrado = detalles_empresa.id_pedido_fk
+        
+        if not pedido_encontrado:
+            return JsonResponse({'success': False, 'message': 'Pedido no encontrado o no tienes permisos para rechazarlo'})
+        
+        # Verificar que el pedido esté en estado 'pendiente'
+        if pedido_encontrado.estado_pedido != 'pendiente':
+            return JsonResponse({
+                'success': False, 
+                'message': f'El pedido ya está en estado: {pedido_encontrado.estado_pedido}'
+            })
+        
+        # Cambiar el estado a 'cancelado' y guardar el comentario de rechazo
+        pedido_encontrado.estado_pedido = 'cancelado'
+        pedido_encontrado.comentario_rechazo = comentario_rechazo
+        pedido_encontrado.save()
+        
+        # Crear notificación automática para el comprador
+        notificar_pedido_cancelado(pedido_encontrado, comentario_rechazo)
+        
+        logger.info(f"Pedido {numero_pedido} rechazado por {account_type} {current_user} con comentario: {comentario_rechazo}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Venta rechazada exitosamente',
+            'nuevo_estado': 'cancelado'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en función rechazar_venta: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+
+def favoritos(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    current_user = None
+    
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    account_type = request.session.get('account_type', 'usuario')
+    
+    if current_user and account_type == 'usuario':
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.rol_usuario,
+            'is_authenticated': True
+        }
+    elif current_user and account_type == 'empresa':
+        user_info = {
+            'id': current_user.id_empresa,
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'tipo': current_user.rol_empresa,
+            'is_authenticated': True
+        }
+    else:
+        user_info = {
+            'is_authenticated': False
+        }
+    
+    # TODO: Aquí se pueden agregar los productos favoritos del usuario
+    # Por ahora solo pasamos la información de sesión
+    favoritos = []
+    
+    context = {
+        'user_info': user_info,
+        'favoritos': favoritos
+    }
+    
+    return render(request, 'ecommerce_app/favoritos.html', context)
+
+
+
+@require_login
+def productos_sucursal(request):
+    user_info = None
+    productos_sucursales = []
+    sucursales_list = []
+    
+    current_user = get_current_user(request)
+    if current_user and is_user_authenticated(request):
+        account_type = request.session.get('account_type', 'usuario')
+        
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True,
+                'empresa_nombre': current_user.nombre_empresa
+            }
+            
+            # Obtener parámetros de filtro
+            nombre_producto = request.GET.get('nombre_producto', '').strip()
+            sucursal_filtro = request.GET.get('sucursal_filtro', '')
+            estado_filtro = request.GET.get('estado_filtro', '')
+            
+            # Obtener lista de sucursales para el combobox
+            sucursales_list = sucursal.objects.filter(
+                id_empresa_fk=current_user
+            ).values('id_sucursal', 'nombre_sucursal').order_by('nombre_sucursal')
+            
+            # Construir query base
+            productos_sucursales_qs = producto_sucursal.objects.filter(
+                id_sucursal_fk__id_empresa_fk=current_user
+            ).select_related(
+                'id_producto_fk', 'id_sucursal_fk'
+            ).prefetch_related(
+                'id_producto_fk__imagenes'
+            )
+            
+            # Aplicar filtros
+            if nombre_producto:
+                productos_sucursales_qs = productos_sucursales_qs.filter(
+                    id_producto_fk__nombre_producto_empresa__icontains=nombre_producto
+                )
+            
+            if sucursal_filtro:
+                productos_sucursales_qs = productos_sucursales_qs.filter(
+                    id_sucursal_fk__id_sucursal=sucursal_filtro
+                )
+            
+            if estado_filtro:
+                productos_sucursales_qs = productos_sucursales_qs.filter(
+                    estatus_producto_sucursal=estado_filtro
+                )
+            
+            for prod_suc in productos_sucursales_qs:
+                # Obtener la primera imagen del producto
+                primera_imagen = prod_suc.id_producto_fk.imagenes.first()
+                imagen_url = primera_imagen.ruta_imagen_producto_empresa.url if primera_imagen else None
+                
+                productos_sucursales.append({
+                    'id_producto_sucursal': prod_suc.id_producto_sucursal,
+                    'nombre_producto': prod_suc.id_producto_fk.nombre_producto_empresa,
+                    'descripcion_producto': prod_suc.id_producto_fk.descripcion_producto_empresa,
+                    'marca_producto': prod_suc.id_producto_fk.marca_producto_empresa,
+                    'modelo_producto': prod_suc.id_producto_fk.modelo_producto_empresa,
+                    'precio': prod_suc.precio_producto_sucursal,
+                    'stock': prod_suc.stock_producto_sucursal,
+                    'condicion': prod_suc.condicion_producto_sucursal,
+                    'estatus': prod_suc.estatus_producto_sucursal,
+                    'nombre_sucursal': prod_suc.id_sucursal_fk.nombre_sucursal,
+                    'direccion_sucursal': prod_suc.id_sucursal_fk.direccion_sucursal,
+                    'imagen_url': imagen_url,
+                    'categoria': prod_suc.id_producto_fk.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod_suc.id_producto_fk.id_categoria_prod_fk else 'Sin categoría'
+                })
+                
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+    else:
+        user_info = {
+            'is_authenticated': False
+        }
+    
+    return render(request, 'ecommerce_app/productos_sucursal.html', {
+        'user_info': user_info,
+        'productos_sucursales': productos_sucursales,
+        'sucursales_list': sucursales_list,
+        'filtros': {
+            'nombre_producto': request.GET.get('nombre_producto', ''),
+            'sucursal_filtro': request.GET.get('sucursal_filtro', ''),
+            'estado_filtro': request.GET.get('estado_filtro', '')
+        }
+    })
+
+@require_login
+def editar_producto_sucursal(request):
+    if request.method == 'POST':
+        try:
+            id_producto_sucursal = request.POST.get('id_producto_sucursal')
+            precio = request.POST.get('precio')
+            stock = request.POST.get('stock')
+            estatus = request.POST.get('estatus')
+            condicion = request.POST.get('condicion')
+            
+            # Validar que todos los campos estén presentes
+            if not all([id_producto_sucursal, precio, stock, estatus, condicion]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Todos los campos son requeridos'
+                })
+            
+            # Obtener empresa_id de la sesión
+            empresa_id = request.session.get('empresa_id')
+            if not empresa_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró la empresa en la sesión'
+                })
+            
+            # Buscar el producto usando solo el ID principal
+            try:
+                producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=id_producto_sucursal)
+                
+                # Verificar si pertenece a la empresa actual
+                if producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa != empresa_id:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No tienes permisos para editar este producto'
+                    })
+                    
+            except producto_sucursal.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Producto no encontrado'
+                })
+            
+            # Validar valores numéricos
+            try:
+                precio_float = float(precio)
+                stock_int = int(stock)
+                
+                if precio_float < 0 or stock_int < 0:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El precio y stock deben ser valores positivos'
+                    })
+                    
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Precio y stock deben ser valores numéricos válidos'
+                })
+            
+            # Validar estatus y condición
+            if estatus not in ['Activo', 'Inactivo']:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Estado inválido'
+                })
+                
+            if condicion not in ['Nuevo', 'Usado']:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Condición inválida'
+                })
+            
+            # Actualizar el producto
+            producto_sucursal_obj.precio_producto_sucursal = precio_float
+            producto_sucursal_obj.stock_producto_sucursal = stock_int
+            producto_sucursal_obj.estatus_producto_sucursal = estatus
+            producto_sucursal_obj.condicion_producto_sucursal = condicion
+            producto_sucursal_obj.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Producto actualizado exitosamente'
+            })
+            
+        except producto_sucursal.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Producto no encontrado'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error interno: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+@require_login
+def eliminar_producto_sucursal(request):
+    if request.method == 'POST':
+        try:
+            id_producto_sucursal = request.POST.get('id_producto_sucursal')
+            
+            if not id_producto_sucursal:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID del producto es requerido'
+                })
+            
+            # Obtener empresa_id de la sesión
+            empresa_id = request.session.get('empresa_id')
+            if not empresa_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró la empresa en la sesión'
+                })
+            
+            # Buscar el producto usando solo el ID principal
+            try:
+                producto_sucursal_obj = producto_sucursal.objects.get(id_producto_sucursal=id_producto_sucursal)
+                
+                # Verificar si pertenece a la empresa actual
+                if producto_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa != empresa_id:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No tienes permisos para eliminar este producto'
+                    })
+                    
+            except producto_sucursal.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Producto no encontrado'
+                })
+            
+            # Eliminar el producto de la sucursal
+            producto_sucursal_obj.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Producto eliminado exitosamente de la sucursal'
+            })
+            
+        except producto_sucursal.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Producto no encontrado'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error interno: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+
+
+@require_login
+def servicios_sucursal(request):
+    user_info = None
+    servicios_sucursales = []
+    sucursales_list = []
+    
+    current_user = get_current_user(request)
+    if current_user and is_user_authenticated(request):
+        account_type = request.session.get('account_type', 'usuario')
+        
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True,
+                'empresa_nombre': current_user.nombre_empresa
+            }
+            
+            # Obtener parámetros de filtro
+            nombre_servicio = request.GET.get('nombre_servicio', '').strip()
+            sucursal_filtro = request.GET.get('sucursal_filtro', '')
+            estado_filtro = request.GET.get('estado_filtro', '')
+            
+            # Obtener lista de sucursales para el combobox
+            sucursales_list = sucursal.objects.filter(
+                id_empresa_fk=current_user
+            ).values('id_sucursal', 'nombre_sucursal').order_by('nombre_sucursal')
+            
+            # Construir query base
+            servicios_sucursales_qs = servicio_sucursal.objects.filter(
+                id_sucursal_fk__id_empresa_fk=current_user
+            ).select_related(
+                'id_servicio_fk', 'id_sucursal_fk'
+            ).prefetch_related(
+                'id_servicio_fk__imagenes'
+            )
+            
+            # Aplicar filtros
+            if nombre_servicio:
+                servicios_sucursales_qs = servicios_sucursales_qs.filter(
+                    id_servicio_fk__nombre_servicio_empresa__icontains=nombre_servicio
+                )
+            
+            if sucursal_filtro:
+                servicios_sucursales_qs = servicios_sucursales_qs.filter(
+                    id_sucursal_fk__id_sucursal=sucursal_filtro
+                )
+            
+            if estado_filtro:
+                servicios_sucursales_qs = servicios_sucursales_qs.filter(
+                    estatus_servicio_sucursal=estado_filtro
+                )
+            
+            for serv_suc in servicios_sucursales_qs:
+                # Obtener la primera imagen del servicio
+                primera_imagen = serv_suc.id_servicio_fk.imagenes.first()
+                imagen_url = primera_imagen.ruta_imagen_servicio_empresa.url if primera_imagen else None
+                
+                servicios_sucursales.append({
+                    'id_servicio_sucursal': serv_suc.id_servicio_sucursal,
+                    'nombre_servicio': serv_suc.id_servicio_fk.nombre_servicio_empresa,
+                    'descripcion_servicio': serv_suc.id_servicio_fk.descripcion_servicio_empresa,
+                    'precio': serv_suc.precio_servicio_sucursal,
+                    'estatus': serv_suc.estatus_servicio_sucursal,
+                    'nombre_sucursal': serv_suc.id_sucursal_fk.nombre_sucursal,
+                    'direccion_sucursal': serv_suc.id_sucursal_fk.direccion_sucursal,
+                    'imagen_url': imagen_url,
+                    'categoria': serv_suc.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if serv_suc.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría'
+                })
+                
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+    else:
+        user_info = {
+            'is_authenticated': False
+        }
+    
+    return render(request, 'ecommerce_app/servicios_sucursal.html', {
+        'user_info': user_info,
+        'servicios_sucursales': servicios_sucursales,
+        'sucursales_list': sucursales_list,
+        'filtros': {
+            'nombre_servicio': request.GET.get('nombre_servicio', ''),
+            'sucursal_filtro': request.GET.get('sucursal_filtro', ''),
+            'estado_filtro': request.GET.get('estado_filtro', '')
+        }
+    })
+
+@require_login
+def editar_servicio_sucursal(request):
+    if request.method == 'POST':
+        try:
+            id_servicio_sucursal = request.POST.get('id')
+            precio = request.POST.get('precio')
+            estatus = request.POST.get('estatus')
+            
+            # Validar que todos los campos estén presentes
+            if not all([id_servicio_sucursal, precio, estatus]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Todos los campos son requeridos'
+                })
+            
+            # Obtener empresa_id de la sesión
+            empresa_id = request.session.get('empresa_id')
+            if not empresa_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró la empresa en la sesión'
+                })
+            
+            # Buscar el servicio usando solo el ID principal
+            try:
+                servicio_sucursal_obj = servicio_sucursal.objects.get(id_servicio_sucursal=id_servicio_sucursal)
+                
+                # Verificar si pertenece a la empresa actual
+                if servicio_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa != empresa_id:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No tienes permisos para editar este servicio'
+                    })
+                    
+            except servicio_sucursal.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Servicio no encontrado'
+                })
+            
+            # Validar valores numéricos
+            try:
+                precio_float = float(precio)
+                
+                if precio_float < 0:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El precio no puede ser negativo'
+                    })
+                    
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El precio debe ser un valor numérico válido'
+                })
+            
+            # Validar estatus
+            if estatus not in ['Activo', 'Inactivo']:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Estado inválido'
+                })
+            
+            # Actualizar el servicio
+            servicio_sucursal_obj.precio_servicio_sucursal = precio_float
+            servicio_sucursal_obj.estatus_servicio_sucursal = estatus
+            servicio_sucursal_obj.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Servicio actualizado exitosamente'
+            })
+            
+        except servicio_sucursal.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Servicio no encontrado'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error interno: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+@require_login
+def eliminar_servicio_sucursal(request):
+    if request.method == 'POST':
+        try:
+            id_servicio_sucursal = request.POST.get('id')
+            
+            if not id_servicio_sucursal:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID del servicio es requerido'
+                })
+            
+            # Obtener empresa_id de la sesión
+            empresa_id = request.session.get('empresa_id')
+            if not empresa_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró la empresa en la sesión'
+                })
+            
+            # Buscar el servicio usando solo el ID principal
+            try:
+                servicio_sucursal_obj = servicio_sucursal.objects.get(id_servicio_sucursal=id_servicio_sucursal)
+                
+                # Verificar si pertenece a la empresa actual
+                if servicio_sucursal_obj.id_sucursal_fk.id_empresa_fk.id_empresa != empresa_id:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No tienes permisos para eliminar este servicio'
+                    })
+                    
+            except servicio_sucursal.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Servicio no encontrado'
+                })
+            
+            # Eliminar el servicio de la sucursal
+            servicio_sucursal_obj.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Servicio eliminado exitosamente de la sucursal'
+            })
+            
+        except servicio_sucursal.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Servicio no encontrado'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error interno: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+
+def solicitud_servicio(request):
+    # Obtener parámetros de la URL
+    servicio_id = request.GET.get('servicio_id')
+    tipo_propietario = request.GET.get('tipo_propietario')
+    sucursal_id_preseleccionada = request.GET.get('sucursal_id')
+    print(f"[DEBUG solicitud_servicio] servicio_id: {servicio_id}, tipo_propietario: {tipo_propietario}")
+    
+    # Verificar si hay usuario autenticado
+    current_user = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    # Obtener tipo de cuenta
+    account_type = request.session.get('account_type', 'usuario')
+    
+    # Inicializar variables
+    servicio_data = None
+    error_message = None
+    
+    # Si se proporcionan parámetros, obtener datos del servicio
+    if servicio_id and tipo_propietario:
+        try:
+            if tipo_propietario == 'empresa':
+                # Primero intentar buscar como servicio_sucursal específico
+                try:
+                    servicio_sucursal_obj = servicio_sucursal.objects.get(id_servicio_sucursal=servicio_id)
+                    servicio_obj = servicio_sucursal_obj.id_servicio_fk
+                    
+                    # Obtener imágenes del servicio
+                    imagenes_servicio = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio_obj)
+                    imagenes = [img.ruta_imagen_servicio_empresa.url for img in imagenes_servicio if img.ruta_imagen_servicio_empresa]
+                    
+                    # Solo mostrar la sucursal específica
+                    servicio_data = {
+                        'id': servicio_sucursal_obj.id_servicio_sucursal,  # Usar ID del servicio_sucursal
+                        'nombre': servicio_obj.nombre_servicio_empresa,
+                        'descripcion': servicio_obj.descripcion_servicio_empresa,
+                        'tipo_propietario': 'empresa',
+                        'empresa': servicio_obj.id_empresa_fk.nombre_empresa,
+                        'empresa_id': servicio_obj.id_empresa_fk.id_empresa,
+                        'categoria': servicio_obj.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio_obj.id_categoria_servicios_fk else 'Sin categoría',
+                        'imagenes': imagenes,
+                        'sucursales': [{
+                            'id': servicio_sucursal_obj.id_sucursal_fk.id_sucursal,
+                            'nombre': servicio_sucursal_obj.id_sucursal_fk.nombre_sucursal,
+                            'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
+                            'precio': servicio_sucursal_obj.precio_servicio_sucursal if servicio_sucursal_obj.precio_servicio_sucursal else 'Consultar',
+                            'telefono': servicio_sucursal_obj.id_sucursal_fk.telefono_sucursal,
+                            'email': None,
+                            'preseleccionada': True  # Siempre preseleccionada porque es específica
+                        }]
+                    }
+                    
+                except servicio_sucursal.DoesNotExist:
+                    # Si no es un servicio_sucursal específico, buscar como servicio_empresa general
+                    servicio_obj = servicio_empresa.objects.get(id_servicio_empresa=servicio_id)
+                    
+                    # Obtener imágenes del servicio
+                    imagenes_servicio = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio_obj)
+                    imagenes = [img.ruta_imagen_servicio_empresa.url for img in imagenes_servicio if img.ruta_imagen_servicio_empresa]
+                    
+                    # Obtener información de sucursales que ofrecen este servicio
+                    servicios_sucursal = servicio_sucursal.objects.filter(id_servicio_fk=servicio_obj, estatus_servicio_sucursal='Activo')
+                    
+                    servicio_data = {
+                        'id': servicio_obj.id_servicio_empresa,
+                        'nombre': servicio_obj.nombre_servicio_empresa,
+                        'descripcion': servicio_obj.descripcion_servicio_empresa,
+                        'tipo_propietario': 'empresa',
+                        'empresa': servicio_obj.id_empresa_fk.nombre_empresa,
+                        'empresa_id': servicio_obj.id_empresa_fk.id_empresa,
+                        'categoria': servicio_obj.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio_obj.id_categoria_servicios_fk else 'Sin categoría',
+                        'imagenes': imagenes,
+                        'sucursales': [{
+                            'id': ss.id_sucursal_fk.id_sucursal,
+                            'nombre': ss.id_sucursal_fk.nombre_sucursal,
+                            'direccion': ss.id_sucursal_fk.direccion_sucursal,
+                            'precio': ss.precio_servicio_sucursal if ss.precio_servicio_sucursal else 'Consultar',
+                            'telefono': ss.id_sucursal_fk.telefono_sucursal,
+                            'email': None,
+                            'preseleccionada': str(ss.id_sucursal_fk.id_sucursal) == str(sucursal_id_preseleccionada)
+                        } for ss in servicios_sucursal]
+                    }
+                
+            elif tipo_propietario == 'usuario':
+                # Buscar servicio de usuario
+                servicio_obj = servicio_usuario.objects.get(id_servicio_usuario=servicio_id)
+                
+                # Obtener imágenes del servicio
+                imagenes_servicio = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio_obj)
+                imagenes = [img.ruta_imagen_servicio_usuario.url for img in imagenes_servicio if img.ruta_imagen_servicio_usuario]
+                
+                servicio_data = {
+                    'id': servicio_obj.id_servicio_usuario,
+                    'nombre': servicio_obj.nombre_servicio_usuario,
+                    'descripcion': servicio_obj.descripcion_servicio_usuario,
+                    'tipo_propietario': 'usuario',
+                    'precio': servicio_obj.precio_servicio_usuario if servicio_obj.precio_servicio_usuario else 'Consultar',
+                    'usuario': servicio_obj.id_usuario_fk.nombre_usuario,
+                    'usuario_id': servicio_obj.id_usuario_fk.id_usuario,
+                    'categoria': servicio_obj.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio_obj.id_categoria_servicios_fk else 'Sin categoría',
+                    'imagenes': imagenes,
+                    'telefono': servicio_obj.id_usuario_fk.telefono_usuario,
+                    'email': servicio_obj.id_usuario_fk.correo_usuario
+                }
+                
+        except (servicio_empresa.DoesNotExist, servicio_usuario.DoesNotExist):
+            error_message = "El servicio solicitado no existe o no está disponible."
+        except Exception as e:
+            logger.error(f"Error al obtener datos del servicio: {str(e)}")
+            error_message = "Error al cargar los datos del servicio."
+    
+    # Información del usuario actual
+    user_info = {
+        'is_authenticated': bool(current_user),
+        'tipo': account_type
+    }
+    
+    if current_user:
+        if account_type == 'empresa':
+            user_info.update({
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa
+            })
+        else:
+            user_info.update({
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario
+            })
+    
+    # Procesar formulario de solicitud
+    if request.method == 'POST':
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Debe iniciar sesión para solicitar un servicio.'})
+        
+        try:
+            # Obtener datos del formulario
+            servicio_solicitado_id = request.POST.get('servicio_id')
+            tipo_propietario_servicio = request.POST.get('tipo_propietario')
+            sucursal_id = request.POST.get('sucursal_id')  # Solo para servicios de empresa
+            descripcion_solicitud = request.POST.get('descripcion_solicitud', '').strip()
+            fecha_preferida = request.POST.get('fecha_preferida')
+            hora_preferida = request.POST.get('hora_preferida')
+            
+            # Validaciones
+            if not servicio_solicitado_id or not tipo_propietario_servicio:
+                return JsonResponse({'success': False, 'message': 'Datos del servicio incompletos.'})
+            
+            if not descripcion_solicitud:
+                return JsonResponse({'success': False, 'message': 'La descripción de la solicitud es obligatoria.'})
+            
+            # Crear solicitud según el tipo de propietario del servicio
+            if tipo_propietario_servicio == 'empresa':
+                # Intentar obtener el servicio_sucursal
+                try:
+                    # Primero intentar como servicio_sucursal específico
+                    servicio_sucursal_obj = servicio_sucursal.objects.get(id_servicio_sucursal=servicio_solicitado_id)
+                except servicio_sucursal.DoesNotExist:
+                    # Si no es un servicio_sucursal específico, buscar por servicio_empresa y sucursal
+                    if not sucursal_id:
+                        return JsonResponse({'success': False, 'message': 'Debe seleccionar una sucursal para servicios de empresa.'})
+                    
+                    try:
+                        servicio_sucursal_obj = servicio_sucursal.objects.get(
+                            id_servicio_fk__id_servicio_empresa=servicio_solicitado_id,
+                            id_sucursal_fk__id_sucursal=sucursal_id
+                        )
+                    except servicio_sucursal.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'El servicio no está disponible en la sucursal seleccionada.'})
+                
+                # Combinar fecha y hora si están disponibles
+                fecha_requerida = None
+                if fecha_preferida:
+                    try:
+                        from datetime import datetime
+                        if hora_preferida:
+                            fecha_requerida = datetime.strptime(f"{fecha_preferida} {hora_preferida}", "%Y-%m-%d %H:%M").date()
+                        else:
+                            fecha_requerida = datetime.strptime(fecha_preferida, "%Y-%m-%d").date()
+                    except ValueError:
+                        fecha_requerida = None
+                
+                # Crear solicitud desde usuario a empresa
+                if account_type == 'usuario':
+                    solicitud = solicitud_servicio_usuario.objects.create(
+                        id_usuario_fk=current_user,
+                        id_servicio_sucursal_fk=servicio_sucursal_obj,
+                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        direccion=request.POST.get('direccion', ''),
+                        descripcion_detallada=descripcion_solicitud,
+                        estado='pendiente'
+                    )
+                    
+                    # Notificar a la empresa sobre la nueva solicitud de servicio
+                    empresa_proveedora = servicio_sucursal_obj.id_servicio_fk.id_empresa_fk
+                    titulo = f"Nueva Solicitud de Servicio"
+                    mensaje = f"Tienes una nueva solicitud para el servicio '{servicio_sucursal_obj.id_servicio_fk.nombre_servicio_empresa}' de {current_user.nombre_usuario}."
+                    
+                    crear_notificacion_empresa(
+                        empresa=empresa_proveedora,
+                        tipo_notificacion='solicitud_servicio',
+                        titulo=titulo,
+                        mensaje=mensaje,
+                        solicitud_servicio=solicitud
+                    )
+                    
+                else:
+                    # Solicitud desde empresa a empresa
+                    solicitud = solicitud_servicio_empresa.objects.create(
+                        id_empresa_fk=current_user,
+                        id_servicio_sucursal_fk=servicio_sucursal_obj,
+                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        direccion=request.POST.get('direccion', ''),
+                        descripcion_detallada=descripcion_solicitud,
+                        estado='pendiente'
+                    )
+                    
+                    # Notificar a la empresa sobre la nueva solicitud de servicio
+                    empresa_proveedora = servicio_sucursal_obj.id_servicio_fk.id_empresa_fk
+                    titulo = f"Nueva Solicitud de Servicio"
+                    mensaje = f"Tienen una nueva solicitud para el servicio '{servicio_sucursal_obj.id_servicio_fk.nombre_servicio_empresa}' de {current_user.nombre_empresa}."
+                    
+                    crear_notificacion_empresa(
+                        empresa=empresa_proveedora,
+                        tipo_notificacion='solicitud_servicio',
+                        titulo=titulo,
+                        mensaje=mensaje,
+                        solicitud_servicio=solicitud
+                    )
+                    
+            elif tipo_propietario_servicio == 'usuario':
+                # Solicitud a servicio de usuario
+                try:
+                    servicio_obj = servicio_usuario.objects.get(id_servicio_usuario=servicio_solicitado_id)
+                except servicio_usuario.DoesNotExist:
+                    return JsonResponse({'success': False, 'message': 'El servicio solicitado no existe.'})
+                
+                # Combinar fecha y hora si están disponibles
+                fecha_requerida = None
+                if fecha_preferida:
+                    try:
+                        from datetime import datetime
+                        if hora_preferida:
+                            fecha_requerida = datetime.strptime(f"{fecha_preferida} {hora_preferida}", "%Y-%m-%d %H:%M").date()
+                        else:
+                            fecha_requerida = datetime.strptime(fecha_preferida, "%Y-%m-%d").date()
+                    except ValueError:
+                        fecha_requerida = None
+                
+                # Tanto usuarios como empresas pueden solicitar servicios a usuarios individuales
+                if account_type == 'usuario':
+                    solicitud = solicitud_servicio_usuario.objects.create(
+                        id_usuario_fk=current_user,
+                        id_servicio_usuario_fk=servicio_obj,
+                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        direccion=request.POST.get('direccion', ''),
+                        descripcion_detallada=descripcion_solicitud,
+                        estado='pendiente'
+                    )
+                    
+                    # Notificar al usuario proveedor sobre la nueva solicitud de servicio
+                    usuario_proveedor = servicio_obj.id_usuario_fk
+                    titulo = f"Nueva Solicitud de Servicio"
+                    mensaje = f"Tienes una nueva solicitud para tu servicio '{servicio_obj.nombre_servicio_usuario}' de {current_user.nombre_usuario}."
+                    
+                    crear_notificacion_usuario(
+                        usuario=usuario_proveedor,
+                        tipo_notificacion='solicitud_servicio',
+                        titulo=titulo,
+                        mensaje=mensaje,
+                        solicitud_servicio=solicitud
+                    )
+                    
+                else:  # account_type == 'empresa'
+                    solicitud = solicitud_servicio_empresa.objects.create(
+                        id_empresa_fk=current_user,
+                        id_servicio_usuario_fk=servicio_obj,
+                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        direccion=request.POST.get('direccion', ''),
+                        descripcion_detallada=descripcion_solicitud,
+                        estado='pendiente'
+                    )
+                    
+                    # Notificar al usuario proveedor sobre la nueva solicitud de servicio
+                    usuario_proveedor = servicio_obj.id_usuario_fk
+                    titulo = f"Nueva Solicitud de Servicio"
+                    mensaje = f"Tienes una nueva solicitud para tu servicio '{servicio_obj.nombre_servicio_usuario}' de {current_user.nombre_empresa}."
+                    
+                    crear_notificacion_usuario(
+                        usuario=usuario_proveedor,
+                        tipo_notificacion='solicitud_servicio',
+                        titulo=titulo,
+                        mensaje=mensaje,
+                        solicitud_servicio=solicitud
+                    )
+            
+            logger.info(f"Solicitud de servicio creada exitosamente por {current_user}")
+            return JsonResponse({'success': True, 'message': 'Solicitud de servicio enviada exitosamente.'})
+            
+        except Exception as e:
+            logger.error(f"Error al crear solicitud de servicio: {str(e)}")
+            return JsonResponse({'success': False, 'message': 'Error al procesar la solicitud.'})
+    
+    return render(request, 'ecommerce_app/solicitud_servicio.html', {
+        'servicio_data': servicio_data,
+        'user_info': user_info,
+        'error_message': error_message
+    })
+
+def gestion_servicio(request):
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+
+    account_type = request.session.get('account_type', 'usuario')
+    
+    if account_type == 'empresa':
+        # Para empresas, current_user ya es la empresa
+        user_info = {
+            'id': current_user.id_empresa,
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'tipo': current_user.rol_empresa,
+            'is_authenticated': True
+        }
+        # Obtener solicitudes de servicios de la empresa
+        solicitudes_raw = solicitud_servicio_empresa.objects.filter(id_empresa_fk=current_user).order_by('-fecha_solicitud')
+        
+        # Agregar información de sucursal a cada solicitud
+        solicitudes = []
+        for solicitud in solicitudes_raw:
+            solicitud_data = {
+                'solicitud': solicitud,
+                'sucursal_info': None
+            }
+            
+            # Si la solicitud está asociada a un servicio de sucursal, obtener la información de la sucursal
+            if solicitud.id_servicio_sucursal_fk:
+                sucursal = solicitud.id_servicio_sucursal_fk.id_sucursal_fk
+                solicitud_data['sucursal_info'] = {
+                    'nombre': sucursal.nombre_sucursal,
+                    'direccion': sucursal.direccion_sucursal,
+                    'telefono': sucursal.telefono_sucursal
+                }
+            
+            solicitudes.append(solicitud_data)
+    else:
+        # Para usuarios individuales
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.rol_usuario,
+            'is_authenticated': True
+        }
+        # Obtener solicitudes de servicios del usuario
+        solicitudes_raw = solicitud_servicio_usuario.objects.filter(id_usuario_fk=current_user).order_by('-fecha_solicitud')
+        
+        # Agregar información de sucursal a cada solicitud
+        solicitudes = []
+        for solicitud in solicitudes_raw:
+            solicitud_data = {
+                'solicitud': solicitud,
+                'sucursal_info': None
+            }
+            
+            # Si la solicitud está asociada a un servicio de sucursal, obtener la información de la sucursal
+            if solicitud.id_servicio_sucursal_fk:
+                sucursal = solicitud.id_servicio_sucursal_fk.id_sucursal_fk
+                solicitud_data['sucursal_info'] = {
+                    'nombre': sucursal.nombre_sucursal,
+                    'direccion': sucursal.direccion_sucursal,
+                    'telefono': sucursal.telefono_sucursal
+                }
+            
+            solicitudes.append(solicitud_data)
+    
+    context = {
+        'user_info': user_info,
+        'solicitudes': solicitudes,
+    }
+    return render(request, 'ecommerce_app/gestion_servicio.html', context)
+
+# API para obtener datos dinámicos de filtros
+@require_GET
+def api_obtener_filtros_busqueda(request):
+    try:
+        # Obtener marcas únicas de productos
+        marcas_empresa = producto_empresa.objects.exclude(
+            marca_producto_empresa__isnull=True
+        ).exclude(
+            marca_producto_empresa__exact=''
+        ).values_list('marca_producto_empresa', flat=True).distinct()
+        
+        marcas_usuario = producto_usuario.objects.exclude(
+            marca_producto_usuario__isnull=True
+        ).exclude(
+            marca_producto_usuario__exact=''
+        ).values_list('marca_producto_usuario', flat=True).distinct()
+        
+        # Combinar y obtener marcas únicas
+        marcas = list(set(list(marcas_empresa) + list(marcas_usuario)))
+        marcas.sort()
+        
+        # Obtener modelos únicos de productos
+        modelos_empresa = producto_empresa.objects.exclude(
+            modelo_producto_empresa__isnull=True
+        ).exclude(
+            modelo_producto_empresa__exact=''
+        ).values_list('modelo_producto_empresa', flat=True).distinct()
+        
+        modelos_usuario = producto_usuario.objects.exclude(
+            modelo_producto_usuario__isnull=True
+        ).exclude(
+            modelo_producto_usuario__exact=''
+        ).values_list('modelo_producto_usuario', flat=True).distinct()
+        
+        # Combinar y obtener modelos únicos
+        modelos = list(set(list(modelos_empresa) + list(modelos_usuario)))
+        modelos.sort()
+        
+        # Obtener categorías de productos
+        categorias_productos = categoria_producto_empresa.objects.values(
+            'id_categoria_prod_empresa', 'nombre_categoria_prod_empresa'
+        ).distinct()
+        
+        # Obtener categorías de servicios
+        categorias_servicios = categoria_servicio_empresa.objects.values(
+            'id_categoria_servicios_empresa', 'nombre_categoria_serv_empresa'
+        ).distinct()
+        
+        # Obtener rangos de precios
+        precios_productos_sucursal = producto_sucursal.objects.exclude(
+            precio_producto_sucursal__isnull=True
+        ).values_list('precio_producto_sucursal', flat=True)
+        
+        precios_productos_usuario = producto_usuario.objects.exclude(
+            precio_producto_usuario__isnull=True
+        ).values_list('precio_producto_usuario', flat=True)
+        
+        precios_servicios_sucursal = servicio_sucursal.objects.exclude(
+            precio_servicio_sucursal__isnull=True
+        ).values_list('precio_servicio_sucursal', flat=True)
+        
+        precios_servicios_usuario = servicio_usuario.objects.exclude(
+            precio_servicio_usuario__isnull=True
+        ).values_list('precio_servicio_usuario', flat=True)
+        
+        # Combinar todos los precios y calcular rangos
+        todos_precios = list(precios_productos_sucursal) + list(precios_productos_usuario) + \
+                       list(precios_servicios_sucursal) + list(precios_servicios_usuario)
+        
+        # Filtrar precios válidos (números)
+        precios_numericos = []
+        for precio in todos_precios:
+            try:
+                precio_float = float(precio)
+                if precio_float > 0:
+                    precios_numericos.append(precio_float)
+            except (ValueError, TypeError):
+                continue
+        
+        # Calcular rangos de precios
+        rangos_precio = []
+        if precios_numericos:
+            precio_min = min(precios_numericos)
+            precio_max = max(precios_numericos)
+            
+            # Crear rangos dinámicos
+            if precio_max > 1000:
+                rangos_precio = [
+                    {'min': 0, 'max': 100, 'label': '$0 - $100'},
+                    {'min': 100, 'max': 500, 'label': '$100 - $500'},
+                    {'min': 500, 'max': 1000, 'label': '$500 - $1,000'},
+                    {'min': 1000, 'max': 5000, 'label': '$1,000 - $5,000'},
+                    {'min': 5000, 'max': None, 'label': 'Más de $5,000'}
+                ]
+            else:
+                rangos_precio = [
+                    {'min': 0, 'max': 50, 'label': '$0 - $50'},
+                    {'min': 50, 'max': 200, 'label': '$50 - $200'},
+                    {'min': 200, 'max': 500, 'label': '$200 - $500'},
+                    {'min': 500, 'max': None, 'label': 'Más de $500'}
+                ]
+        
+        return JsonResponse({
+            'success': True,
+            'filtros': {
+                'marcas': marcas,
+                'modelos': modelos,
+                'categorias_productos': list(categorias_productos),
+                'categorias_servicios': list(categorias_servicios),
+                'rangos_precio': rangos_precio,
+                'condiciones': ['Nuevo', 'Usado']
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener filtros: {str(e)}'
+        })
+
+# API para obtener conteos de filtros
+@require_GET
+def api_obtener_conteos_filtros(request):
+    try:
+        query = request.GET.get('query', '')
+        
+        # Filtros base para la búsqueda
+        if query:
+            # Productos de empresa
+            productos_empresa_query = producto_sucursal.objects.filter(
+                id_producto_fk__nombre_producto_empresa__icontains=query,
+                estatus_producto_sucursal='Activo'
+            ).select_related('id_producto_fk')
+            
+            # Productos de usuario
+            productos_usuario_query = producto_usuario.objects.filter(
+                nombre_producto_usuario__icontains=query,
+                estatus_producto_usuario='Activo'
+            )
+            
+            # Servicios de empresa
+            servicios_empresa_query = servicio_sucursal.objects.filter(
+                id_servicio_fk__nombre_servicio_empresa__icontains=query,
+                estatus_servicio_sucursal='Activo'
+            ).select_related('id_servicio_fk')
+            
+            # Servicios de usuario
+            servicios_usuario_query = servicio_usuario.objects.filter(
+                nombre_servicio_usuario__icontains=query,
+                estatus_servicio_usuario='Activo'
+            )
+        else:
+            # Si no hay query, obtener todos los activos
+            productos_empresa_query = producto_sucursal.objects.filter(
+                estatus_producto_sucursal='Activo'
+            ).select_related('id_producto_fk')
+            
+            productos_usuario_query = producto_usuario.objects.filter(
+                estatus_producto_usuario='Activo'
+            )
+            
+            servicios_empresa_query = servicio_sucursal.objects.filter(
+                estatus_servicio_sucursal='Activo'
+            ).select_related('id_servicio_fk')
+            
+            servicios_usuario_query = servicio_usuario.objects.filter(
+                estatus_servicio_usuario='Activo'
+            )
+        
+        # Contar por condición
+        conteo_nuevo = 0
+        conteo_usado = 0
+        
+        for producto in productos_empresa_query:
+            if producto.condicion_producto_sucursal == 'Nuevo':
+                conteo_nuevo += 1
+            elif producto.condicion_producto_sucursal == 'Usado':
+                conteo_usado += 1
+        
+        for producto in productos_usuario_query:
+            if producto.condicion_producto_usuario == 'Nuevo':
+                conteo_nuevo += 1
+            elif producto.condicion_producto_usuario == 'Usado':
+                conteo_usado += 1
+        
+        # Contar por marca
+        conteo_marcas = {}
+        
+        for producto in productos_empresa_query:
+            marca = producto.id_producto_fk.marca_producto_empresa
+            if marca:
+                conteo_marcas[marca] = conteo_marcas.get(marca, 0) + 1
+        
+        for producto in productos_usuario_query:
+            marca = producto.marca_producto_usuario
+            if marca:
+                conteo_marcas[marca] = conteo_marcas.get(marca, 0) + 1
+        
+        # Contar por modelo
+        conteo_modelos = {}
+        
+        for producto in productos_empresa_query:
+            modelo = producto.id_producto_fk.modelo_producto_empresa
+            if modelo:
+                conteo_modelos[modelo] = conteo_modelos.get(modelo, 0) + 1
+        
+        for producto in productos_usuario_query:
+            modelo = producto.modelo_producto_usuario
+            if modelo:
+                conteo_modelos[modelo] = conteo_modelos.get(modelo, 0) + 1
+        
+        return JsonResponse({
+            'success': True,
+            'conteos': {
+                'condiciones': {
+                    'Nuevo': conteo_nuevo,
+                    'Usado': conteo_usado
+                },
+                'marcas': conteo_marcas,
+                'modelos': conteo_modelos,
+                'total_productos': productos_empresa_query.count() + productos_usuario_query.count(),
+                'total_servicios': servicios_empresa_query.count() + servicios_usuario_query.count()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener conteos: {str(e)}'
+        })
+
+@require_login
+def pedidos_confirmados(request):
+    """Vista para mostrar pedidos confirmados del usuario"""
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        pedidos_historial = []
+        
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos confirmados de empresa
+            pedidos_empresa = pedido_empresa.objects.filter(
+                id_carrito_fk__id_empresa_fk=current_user,
+                estado_pedido='confirmado'
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_empresa:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'empresa',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None,
+                    'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None)
+                })
+        
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos confirmados de usuario
+            pedidos_usuario = pedido_usuario.objects.filter(
+                id_carrito_fk__id_usuario_fk=current_user,
+                estado_pedido='confirmado'
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_usuario:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'usuario',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None,
+                    'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None)
+                })
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'pedidos_historial': pedidos_historial,
+            'total_pedidos': len(pedidos_historial)
+        }
+        
+        return render(request, 'ecommerce_app/pedidos_confirmados.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función pedidos_confirmados: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+@require_login
+def pedidos_rechazados(request):
+    """Vista para mostrar pedidos rechazados del usuario"""
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        pedidos_historial = []
+        
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos rechazados de empresa
+            pedidos_empresa = pedido_empresa.objects.filter(
+                id_carrito_fk__id_empresa_fk=current_user,
+                estado_pedido='cancelado'
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_empresa:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'empresa',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None,
+                    'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None)
+                })
+        
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos rechazados de usuario
+            pedidos_usuario = pedido_usuario.objects.filter(
+                id_carrito_fk__id_usuario_fk=current_user,
+                estado_pedido='cancelado'
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_usuario:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'usuario',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None,
+                    'motivo_rechazo': getattr(pedido, 'comentario_rechazo', None)
+                })
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'pedidos_historial': pedidos_historial,
+            'total_pedidos': len(pedidos_historial)
+        }
+        
+        return render(request, 'ecommerce_app/pedidos_rechazados.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función pedidos_rechazados: {str(e)}")
+        return redirect('/ecommerce/carrito')
+
+@require_login
+def pedidos_pendientes(request):
+    """Vista para mostrar pedidos pendientes del usuario"""
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+    
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        pedidos_historial = []
+        
+        if account_type == 'empresa':
+            user_info = {
+                'id': current_user.id_empresa,
+                'nombre': current_user.nombre_empresa,
+                'email': current_user.correo_empresa,
+                'tipo': current_user.rol_empresa,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos pendientes de empresa
+            pedidos_empresa = pedido_empresa.objects.filter(
+                id_carrito_fk__id_empresa_fk=current_user,
+                estado_pedido='pendiente'
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_empresa:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_empresa.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'empresa',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None
+                })
+        
+        else:
+            user_info = {
+                'id': current_user.id_usuario,
+                'nombre': current_user.nombre_usuario,
+                'email': current_user.correo_usuario,
+                'tipo': current_user.rol_usuario,
+                'is_authenticated': True
+            }
+            
+            # Obtener pedidos pendientes de usuario
+            pedidos_usuario = pedido_usuario.objects.filter(
+                id_carrito_fk__id_usuario_fk=current_user,
+                estado_pedido='pendiente'
+            ).order_by('-fecha_pedido')
+            
+            for pedido in pedidos_usuario:
+                # Obtener detalles del pedido
+                detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido)
+                
+                detalles_list = []
+                for detalle in detalles:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                        imagen = imagen_producto_empresa.objects.filter(
+                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                    elif detalle.idproducto_fk_usuario:
+                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen = imagen_producto_usuario.objects.filter(
+                            id_producto_fk=detalle.idproducto_fk_usuario
+                        ).first()
+                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                    else:
+                        nombre_producto = "Producto no disponible"
+                        sucursal = "Sin sucursal"
+                        empresa = "Sin empresa"
+                        imagen_url = None
+                    
+                    detalles_list.append({
+                        'nombre_producto': nombre_producto,
+                        'cantidad': detalle.cantidad_detalle_pedido,
+                        'precio_unitario': float(detalle.precio_unitario_pedido),
+                        'subtotal': float(detalle.subtotal_detalle_pedido),
+                        'imagen': imagen_url,
+                        'sucursal': sucursal,
+                        'empresa': empresa
+                    })
+                
+                pedidos_historial.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha_pedido': pedido.fecha_pedido,
+                    'estado_pedido': pedido.estado_pedido,
+                    'total_pedido': float(pedido.total_pedido),
+                    'metodo_pago': pedido.metodo_pago,
+                    'direccion_entrega': pedido.direccion_envio,
+                    'notas_pedido': pedido.notas_pedido,
+                    'detalles': detalles_list,
+                    'tipo_pedido': 'usuario',
+                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None
+                })
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'pedidos_pendientes': pedidos_historial,
+            'total_pedidos': len(pedidos_historial)
+        }
+        
+        return render(request, 'ecommerce_app/pedidos_pendientes.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en función pedidos_pendientes: {str(e)}")
+        return redirect('/ecommerce/carrito')

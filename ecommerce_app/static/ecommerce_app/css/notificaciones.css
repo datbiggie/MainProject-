@@ -1,0 +1,186 @@
+/* Estilos para la página de notificaciones */
+.notifications-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+}
+
+.notification-card {
+    transition: transform 0.2s ease-in-out;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 0.8rem;
+    overflow: hidden;
+    max-height: 120px;
+}
+
+/* Ajustar el padding del card-body para eliminar espacios vacíos */
+.notification-card .card-body {
+    padding: 0.5rem !important;
+}
+
+/* Asegurar que el contenido esté bien alineado */
+.notification-card .d-flex.align-items-start {
+    margin: 0;
+    padding: 0;
+}
+
+.notification-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.notification-card.unread {
+    border-left: 4px solid #007bff;
+    background-color: #f8f9ff;
+}
+
+.notification-card.read {
+    background-color: #ffffff;
+    opacity: 0.8;
+}
+
+.notification-header {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.notification-icon.pedido {
+    background-color: #28a745;
+    color: white;
+}
+
+.notification-icon.pago {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.notification-icon.servicio {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.notification-icon.sistema {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Estilos específicos para notificaciones de ventas pendientes */
+.notification-card.venta-pendiente {
+    border-left: 4px solid #28a745;
+    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+}
+
+.notification-card.venta-pendiente:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(40, 167, 69, 0.3);
+}
+
+.notification-card.venta-pendiente.unread {
+    border-left: 6px solid #28a745;
+    background: linear-gradient(135deg, #f0fff4 0%, #d4edda 100%);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+    }
+    50% {
+        box-shadow: 0 6px 25px rgba(40, 167, 69, 0.4);
+    }
+    100% {
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+    }
+}
+
+.notification-icon.venta-pendiente {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.notification-card.venta-pendiente .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 20px;
+}
+
+.notification-card.venta-pendiente .btn-success {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.notification-card.venta-pendiente .btn-success:hover {
+    background: linear-gradient(45deg, #218838, #1e7e34);
+    transform: scale(1.05);
+}
+
+.empty-notifications-icon {
+    color: #6c757d;
+    opacity: 0.5;
+}
+
+.notification-time {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.mark-read-btn {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+}
+
+/* Mejoras adicionales para eliminar espacios vacíos */
+.notification-card .card-body {
+    padding: 0.5rem !important;
+}
+
+.notification-card .d-flex {
+    align-items: center;
+}
+
+.notification-card .flex-grow-1 {
+    min-height: auto;
+}
+
+/* Asegurar que no haya espacios vacíos en los elementos */
+.notification-card h6,
+.notification-card p,
+.notification-card small {
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.notification-card .badge {
+    white-space: nowrap;
+}
+
+/* Mejorar la alineación de elementos */
+.notification-card .d-flex.gap-2 {
+    gap: 0.5rem !important;
+    flex-wrap: nowrap;
+}
+
+.notification-card .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}

@@ -1,0 +1,147 @@
+{% load static %}
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Mis Notificaciones</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <link rel="stylesheet" href="{% static 'sucursal/css/main.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'ecommerce_app/css/notificaciones.css' %}">
+</head>
+
+<body>
+    <div class="notifications-container py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="notification-header text-center mb-4">
+                        <h2><i class="fas fa-bell me-2"></i>Mis Notificaciones</h2>
+                        {% if total_no_leidas > 0 %}
+                            <p class="mb-0">Tienes {{ total_no_leidas }} notificación{{ total_no_leidas|pluralize:"es" }} sin leer</p>
+                        {% else %}
+                            <p class="mb-0">Todas las notificaciones están al día</p>
+                        {% endif %}
+                        {% if ventas_pendientes_count > 0 %}
+                            <div class="alert alert-success mt-3" role="alert">
+                                <i class="fas fa-shopping-bag me-2"></i>
+                                <strong>¡Tienes {{ ventas_pendientes_count }} venta{{ ventas_pendientes_count|pluralize:"s" }} pendiente{{ ventas_pendientes_count|pluralize:"s" }}!</strong>
+                                Revisa tus notificaciones para confirmar las ventas.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if notificaciones %}
+                        {% for notificacion in notificaciones %}
+                            {% if notificacion.es_venta_pendiente %}
+                                <!-- Notificación de Venta Pendiente -->
+                                <div class="notification-card venta-pendiente {% if notificacion.estado == 'no_leida' %}unread{% else %}read{% endif %} card" data-id="{{ notificacion.id_notificacion }}">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start">
+                                            <div class="notification-icon venta-pendiente">
+                                                <i class="fas fa-shopping-bag"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="mb-1 fw-bold text-success">
+                                                        <i class="fas fa-dollar-sign me-1"></i>
+                                                        {{ notificacion.titulo }}
+                                                    </h6>
+                                                    <div class="d-flex gap-2">
+                                                        <span class="badge bg-success">${{ notificacion.total_venta }}</span>
+                                                        <a href="{% url 'ventas_pendientes' %}" class="btn btn-success btn-sm">
+                                                            <i class="fas fa-eye me-1"></i>Ver Detalles
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <p class="mb-2 text-dark">{{ notificacion.mensaje }}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="notification-time text-success">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ notificacion.fecha_creacion|date:"d/m/Y H:i" }}
+                                                    </small>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-hashtag me-1"></i>
+                                                        Pedido #{{ notificacion.numero_pedido }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Notificación Regular -->
+                                <div class="notification-card {% if notificacion.estado == 'no_leida' %}unread{% else %}read{% endif %} card" data-id="{{ notificacion.id_notificacion }}">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start">
+                                            <div class="notification-icon {{ notificacion.tipo_notificacion }}">
+                                                {% if notificacion.tipo_notificacion == 'pedido_confirmado' or notificacion.tipo_notificacion == 'nuevo_pedido' %}
+                                                    <i class="fas fa-shopping-cart"></i>
+                                                {% elif notificacion.tipo_notificacion == 'pago' %}
+                                                    <i class="fas fa-credit-card"></i>
+                                                {% elif notificacion.tipo_notificacion == 'servicio' %}
+                                                    <i class="fas fa-tools"></i>
+                                                {% else %}
+                                                    <i class="fas fa-info-circle"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="mb-1 fw-bold">{{ notificacion.titulo }}</h6>
+                                                    {% if notificacion.estado == 'no_leida' %}
+                                                        <button class="btn btn-outline-primary btn-sm mark-read-btn" data-notificacion-id="{{ notificacion.id_notificacion }}">
+                                                            <i class="fas fa-check"></i> Marcar como leída
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                                <p class="mb-2 text-muted">{{ notificacion.mensaje }}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="notification-time">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ notificacion.fecha_creacion|date:"d/m/Y H:i" }}
+                                                    </small>
+                                                    {% if notificacion.fecha_leida %}
+                                                        <small class="text-success">
+                                                            <i class="fas fa-check-circle me-1"></i>
+                                                            Leída el {{ notificacion.fecha_leida|date:"d/m/Y H:i" }}
+                                                        </small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-notifications-icon mb-3">
+                                <i class="fas fa-bell-slash" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-muted">No tienes notificaciones</h4>
+                            <p class="text-muted">Cuando recibas notificaciones, aparecerán aquí.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- El JavaScript de notificaciones se incluye automáticamente desde barra_superior_index.html -->
+</body>
+</html>

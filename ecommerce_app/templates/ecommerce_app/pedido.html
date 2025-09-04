@@ -142,7 +142,7 @@
                             <div class="col-lg-4">
                                 <div class="payment-section">
                                     <h6 class="text-muted mb-3"><i class="fas fa-credit-card me-2"></i>Método de Pago</h6>
-                                    <form class="vendor-form" data-vendor-id="{{ primer_producto.vendedor_id }}" data-vendor-type="{% if vendedor_clave|slice:":7" == "usuario" %}usuario{% else %}empresa{% endif %}">
+                                    <form class="vendor-form" data-vendor-id="{{ primer_producto.vendedor_id }}" data-vendor-type="{% if vendedor_clave|slice:":7" == "usuario" %}usuario{% else %}sucursal{% endif %}">
                                         <div class="mb-3">
                                             <select class="form-select" name="metodo_pago" required>
                                                 <option value="">Seleccionar método</option>
@@ -167,8 +167,9 @@
                                         <!-- Botón Individual -->
                                         <button type="button" class="btn btn-success btn-finalizar-individual w-100 mb-2" 
                                                 data-vendor-id="{{ primer_producto.vendedor_id }}" 
-                                                data-vendor-type="{% if vendedor_clave|slice:":7" == "usuario" %}usuario{% else %}empresa{% endif %}" 
-                                                data-vendor-name="{{ primer_producto.vendedor_nombre }}">
+                                                data-vendor-type="{% if vendedor_clave|slice:":7" == "usuario" %}usuario{% else %}sucursal{% endif %}" 
+                                                data-vendor-name="{{ primer_producto.vendedor_nombre }}" 
+                                                data-vendor-key="{{ vendedor_clave }}">
                                             <i class="fas fa-check-circle me-2"></i>
                                             <span class="btn-text">Finalizar Pedido</span>
                                             <span class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>

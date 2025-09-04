@@ -1,7 +1,8 @@
 // Archivo JavaScript limpio para categ_producto_config
 // Solo contiene funciones auxiliares que no interfieren con el template
 
-
+// Definir URL de eliminación
+window.DELETE_URL = '/ecommerce/eliminar_categoria_producto/';
 
 // Función de eliminación de categorías
 function confirmarEliminacion(idCategoria) {

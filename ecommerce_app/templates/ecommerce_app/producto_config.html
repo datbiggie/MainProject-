@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="{% static 'producto_sucursal/css/tiny-slider.css' %}" />
     <link rel="stylesheet" href="{% static 'producto_sucursal/css/glightbox.min.css' %}" />
     <link rel="stylesheet" href="{% static 'producto_sucursal/css/main.css' %}" />
+    <link rel="stylesheet" href="{% static 'producto_sucursal/css/producto_config.css' %}" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     
     <!-- SweetAlert2 JS -->
@@ -31,97 +32,216 @@
    
     
     <!-- Start Features Area -->
-    <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
-        <div class="card shadow-lg productos-bg-main border-0" style="border-radius: 1.2rem; padding: 2.2rem 1.5rem 2.2rem 1.5rem; box-shadow: 0 6px 32px rgba(44,62,80,0.10);">
-            <h3 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Gestión de Productos</h3>
-            <div class="search-section mb-4 w-100 d-flex justify-content-center" style="max-width: 700px; margin-left:auto; margin-right:auto;">
-              <div class="card shadow-sm productos-bg-search" style="border-radius: 1rem; max-width: 1100px; margin: 0 auto;">
-                <div class="card-body py-3 px-4">
-                  <div class="row g-2 align-items-center flex-wrap justify-content-center" style="max-width:100%; margin:0 auto;">
-                    <div class="col-lg-8 col-md-8 col-12 d-flex align-items-center gap-2 flex-wrap justify-content-center mb-2 mb-lg-0">
-                      <input type="text" id="busqueda-producto" class="form-control productos-input" placeholder="Buscar producto por nombre..." style="min-width:320px; max-width: 520px; width:100%;">
+    <div class="container-fluid">
+        <div class="floating-header">
+            <h1 class="page-title">Gestión de Productos</h1>
+            <p class="page-subtitle">Administra y organiza tus productos de manera eficiente</p>
+        </div>
+        
+        <!-- Contenedor Principal -->
+        <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
+            <div class="glass-card">
+                <!-- Sección de Búsqueda y Filtros -->
+                <div class="search-container">
+                    <div class="row g-3 align-items-center justify-content-center">
+                        <div class="col-md-5 col-lg-4">
+                            <div class="position-relative">
+                                <input type="text" id="busqueda-producto" class="modern-input w-100" placeholder="Buscar producto por nombre..." data-tooltip="Busca productos por nombre o descripción">
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <a href="{% url 'producto_funcion' %}" class="modern-btn btn-primary-modern w-100">
+                                <i class="lni lni-plus"></i>
+                                Nuevo Producto
+                            </a>
+                        </div>
                     </div>
-                    <div class="col-lg-4 col-md-4 col-12 d-flex align-items-center justify-content-center mb-2 mb-lg-0">
-                      <a href="{% url 'producto_funcion' %}" class="btn btn-sm d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
-                        <i class="lni lni-plus me-1"></i> Agregar Producto
-                      </a>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            </div>
-<div class="row" id="contenedor-productos">
+                <!-- Grid de Productos -->
+                <div class="product-grid" id="contenedor-productos">
                 {% for producto_all in producto_sucursal_all %}
-                <div class="col-lg-4 col-md-6 col-12 wow fadeInUp" data-wow-delay=".2s">
-                    <!-- Start Single Feature -->
-                    <div class="single-featuer" style="max-width: 240px; min-width: 180px; width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.7rem 0.5rem 0.7rem; margin: 0 auto; box-shadow: 0 2px 12px rgba(0,0,0,0.07);">
-                        <img class="shape" src="{% static 'producto_sucursal/images/features/shape.svg' %}" alt="#" style="max-width: 32px;">
-                        <img class="shape2" src="{% static 'producto_sucursal/images/features/shape2.svg' %}" alt="#" style="max-width: 32px;">
-                        <span class="serial" style="font-size: 0.95rem;">{{ forloop.counter }}</span>
-                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 8px;">
-                            {% if producto_all.primera_imagen %}
+                    <!-- Tarjeta de Producto Moderna -->
+                    <div class="product-card animate-card" data-nombre="{% if user_info.tipo == 'empresa' %}{{ producto_all.nombre_producto_empresa|lower }}{% elif user_info.tipo == 'sucursal' %}{{ producto_all.nombre_producto_sucursal|lower }}{% else %}{{ producto_all.nombre_producto|lower }}{% endif %}" >
+                        <div class="modern-product-wrapper">
+                            <!-- Número de Producto -->
+                            <div class="product-number">{{ forloop.counter }}</div>
+                            <!-- Contenedor de Imagen Mejorado -->
+                            <div class="product-image-container">
                                 {% if user_info.tipo == 'empresa' %}
-                                    <img src="{{ producto_all.primera_imagen.ruta_imagen_producto_empresa.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                    {% if producto_all.primera_imagen_empresa %}
+                                        <img src="{{ producto_all.primera_imagen_empresa.ruta_imagen_producto_empresa.url }}" 
+                                             alt="{{ producto_all.nombre_producto_empresa }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% else %}
+                                        <i class="lni lni-package product-image-fallback"></i>
+                                    {% endif %}
+                                {% elif user_info.tipo == 'sucursal' %}
+                                    {% if producto_all.primera_imagen_sucursal %}
+                                        <img src="{{ producto_all.primera_imagen_sucursal.ruta_imagen_producto_sucursal.url }}" 
+                                             alt="{{ producto_all.nombre_producto_sucursal }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% else %}
+                                        <i class="lni lni-package product-image-fallback"></i>
+                                    {% endif %}
                                 {% else %}
-                                    <img src="{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}" alt="Imagen del producto" class="img-producto-hover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.7rem; background: #f8f9fa; border: 1.5px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.08); display: block;">
+                                    {% if producto_all.primera_imagen %}
+                                        <img src="{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}" 
+                                             alt="{{ producto_all.nombre_producto_usuario }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% elif producto_all.primera_imagen_cliente %}
+                                        <img src="{{ producto_all.primera_imagen_cliente.ruta_imagen_producto_cliente.url }}" 
+                                             alt="{{ producto_all.nombre_producto_cliente }}" 
+                                             class="product-image loaded"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <i class="lni lni-package product-image-fallback" style="display: none;"></i>
+                                    {% else %}
+                                        <i class="lni lni-package product-image-fallback"></i>
+                                    {% endif %}
                                 {% endif %}
+                            </div>
+                            {% if user_info.tipo == 'empresa' %}
+                                <!-- Información del Producto para Empresa -->
+                                <div class="product-content">
+                                    <h3 class="product-title">{{ producto_all.nombre_producto_empresa }}</h3>
+                                    <div class="product-meta">
+                                        <span class="product-type">Empresa</span>
+                                    </div>
+                                    <div class="product-branches">
+                                        <strong>Sucursales asignadas:</strong>
+                                        {% if producto_all.sucursales_asignadas %}
+                                            <ul class="branches-list">
+                                                {% for sucursal in producto_all.sucursales_asignadas %}
+                                                    <li>{{ sucursal.nombre_sucursal }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <span class="no-branches">Sin sucursales asignadas</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Acciones del Producto -->
+                                <div class="product-actions">
+                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                                            data-id="{{ producto_all.id_producto_empresa }}"
+                                            data-nombre="{{ producto_all.nombre_producto_empresa }}"
+                                            data-marca="{{ producto_all.marca_producto_empresa|default:'' }}"
+                                            data-modelo="{{ producto_all.modelo_producto_empresa|default:'' }}"
+                                            data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_empresa|default:'' }}"
+                                            data-descripcion="{{ producto_all.descripcion_producto_empresa|default:'' }}"
+                                            data-caracteristicas="{{ producto_all.caracteristicas_generales_empresa|default:'' }}"
+                                            data-stock="{{ producto_all.stock_producto_empresa|default:'0' }}"
+                                            data-precio="{{ producto_all.precio_producto_empresa|default:'0' }}"
+                                            data-condicion="{{ producto_all.condicion_producto_empresa|default:'Nuevo' }}"
+                                            data-estatus="{{ producto_all.estatus_producto_empresa|default:'Activo' }}"
+                                            data-imagen="{% if producto_all.primera_imagen_empresa %}{{ producto_all.primera_imagen_empresa.ruta_imagen_producto_empresa.url }}{% endif %}"
+                                            data-tooltip="Editar producto">
+                                        <i class="lni lni-pencil"></i>
+                                    </button>
+                                    <button class="action-btn btn-delete" data-id="{{ producto_all.id_producto_empresa }}" data-nombre="{{ producto_all.nombre_producto_empresa }}" data-tooltip="Eliminar producto">
+                                        <i class="lni lni-trash-can"></i>
+                                    </button>
+                                </div>
+                            {% elif user_info.tipo == 'sucursal' %}
+                                <!-- Información del Producto para Sucursal -->
+                                <div class="product-content">
+                                    <h3 class="product-title">{{ producto_all.nombre_producto_sucursal }}</h3>
+                                    <div class="product-meta">
+                                        <span class="product-type">Sucursal</span>
+                                    </div>
+                                </div>
+                                    
+                                <!-- Acciones del Producto -->
+                                <div class="product-actions">
+                                        <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                                                data-id="{{ producto_all.id_producto_sucursal }}"
+                                                data-nombre="{{ producto_all.nombre_producto_sucursal }}"
+                                                data-marca="{{ producto_all.marca_producto_sucursal|default:'' }}"
+                                                data-modelo="{{ producto_all.modelo_producto_sucursal|default:'' }}"
+                                                data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_sucursal|default:'' }}"
+                                                data-descripcion="{{ producto_all.descripcion_producto_sucursal|default:'' }}"
+                                                data-caracteristicas="{{ producto_all.caracteristicas_generales_sucursal|default:'' }}"
+                                                data-stock="{{ producto_all.stock_producto_sucursal|default:'0' }}"
+                                                data-precio="{{ producto_all.precio_producto_sucursal|default:'0' }}"
+                                                data-condicion="{{ producto_all.condicion_producto_sucursal|default:'Nuevo' }}"
+                                                data-estatus="{{ producto_all.estatus_producto_sucursal|default:'Activo' }}"
+                                                data-imagen="{% if producto_all.primera_imagen_sucursal %}{{ producto_all.primera_imagen_sucursal.ruta_imagen_producto_sucursal.url }}{% endif %}"
+                                                data-tooltip="Editar producto">
+                                            <i class="lni lni-pencil"></i>
+                                        </button>
+                                        <button class="action-btn btn-delete" data-id="{{ producto_all.id_producto_sucursal }}" data-nombre="{{ producto_all.nombre_producto_sucursal }}" data-tooltip="Eliminar producto">
+                                            <i class="lni lni-trash-can"></i>
+                                        </button>
+                                    </div>
                             {% else %}
-                                <i class="lni lni-package" style="font-size: 2rem; color: #b0b0b0;"></i>
+                <!-- Información del Producto para Usuario -->
+                <div class="product-content">
+                    <h3 class="product-title">{{ producto_all.nombre_producto_usuario }}</h3>
+                    <div class="product-details">
+                        <div class="product-info-item">
+                            <strong>Categoría:</strong>
+                            <span>{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'Sin categoría' }}</span>
+                        </div>
+                        <div class="product-info-item">
+                            <strong>Condición:</strong>
+                            <span class="condition-badge condition-{{ producto_all.condicion_producto_usuario|lower|default:'nuevo' }}">{{ producto_all.condicion_producto_usuario|default:'Nuevo' }}</span>
+                        </div>
+                        <div class="product-info-item">
+                            <strong>Estado:</strong>
+                            <span class="status-badge status-{{ producto_all.estatus_producto_usuario|lower|default:'activo' }}">{{ producto_all.estatus_producto_usuario|default:'Activo' }}</span>
+                        </div>
+                        <div class="product-info-item price-item">
+                            <strong>Precio:</strong>
+                            <span class="product-price">${{ producto_all.precio_producto_usuario|default:'0'|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                    <div class="product-meta">
+                        <span class="product-type">Usuario</span>
+                    </div>
+                </div>
+                                    
+                                <!-- Acciones del Producto -->
+                                <div class="product-actions">
+                                        <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                                                data-id="{{ producto_all.id_producto_usuario }}"
+                                                data-nombre="{{ producto_all.nombre_producto_usuario }}"
+                                                data-marca="{{ producto_all.marca_producto_usuario|default:'' }}"
+                                                data-modelo="{{ producto_all.modelo_producto_usuario|default:'' }}"
+                                                data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
+                                                data-descripcion="{{ producto_all.descripcion_producto_usuario|default:'' }}"
+                                                data-caracteristicas="{{ producto_all.caracteristicas_generales_usuario|default:'' }}"
+                                                data-stock="{{ producto_all.stock_producto_usuario|default:'0' }}"
+                                                data-precio="{{ producto_all.precio_producto_usuario|default:'0' }}"
+                                                data-condicion="{{ producto_all.condicion_producto_usuario|default:'Nuevo' }}"
+                                                data-estatus="{{ producto_all.estatus_producto_usuario|default:'Activo' }}"
+                                                data-latitud="{% if producto_all.latitud_entrega_producto %}{{ producto_all.latitud_entrega_producto }}{% else %}None{% endif %}"
+                                                data-longitud="{% if producto_all.longitud_entrega_producto %}{{ producto_all.longitud_entrega_producto }}{% else %}None{% endif %}"
+                                                data-imagen="{% if producto_all.primera_imagen %}{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}{% endif %}"
+                                                data-tooltip="Editar producto">
+                                            <i class="lni lni-pencil"></i>
+                                        </button>
+                                        <button class="action-btn btn-delete" data-id="{{ producto_all.id_producto_usuario }}" data-nombre="{{ producto_all.nombre_producto_usuario }}" data-tooltip="Eliminar producto">
+                                            <i class="lni lni-trash-can"></i>
+                                        </button>
+                                    </div>
                             {% endif %}
                         </div>
-                        {% if user_info.tipo == 'empresa' %}
-                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ producto_all.nombre_producto_empresa }}</h3>
-                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                                <button href="#EditProductModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
-                                        data-id="{{ producto_all.id_producto_empresa }}"
-                                        data-nombre="{{ producto_all.nombre_producto_empresa }}"
-                                        data-marca="{{ producto_all.marca_producto_empresa|default:'' }}"
-                                        data-modelo="{{ producto_all.modelo_producto_empresa|default:'' }}"
-                                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_empresa|default:'' }}"
-                                        data-descripcion="{{ producto_all.descripcion_producto_empresa|default:'' }}"
-                                        data-caracteristicas="{{ producto_all.caracteristicas_generales_empresa|default:'' }}"
-                                        data-imagen="{% if producto_all.primera_imagen %}{{ producto_all.primera_imagen.ruta_imagen_producto_empresa.url }}{% endif %}">
-                                    <i class="lni lni-pencil"></i> Editar
-                                </button>
-                                <button class="btn btn-delete" data-id="{{ producto_all.id_producto_empresa }}" data-nombre="{{ producto_all.nombre_producto_empresa }}">
-                                    <i class="lni lni-trash"></i> Eliminar
-                                </button>
-                            </div>
-                        {% else %}
-                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 0.2rem; text-align: center;">{{ producto_all.nombre_producto_usuario }}</h3>
-                            <div class="feature-buttons" style="display: flex; justify-content: center; gap: 0.3rem;">
-                                <button href="#EditProductModal" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
-                                        data-id="{{ producto_all.id_producto_usuario }}"
-                                        data-nombre="{{ producto_all.nombre_producto_usuario }}"
-                                        data-marca="{{ producto_all.marca_producto_usuario|default:'' }}"
-                                        data-modelo="{{ producto_all.modelo_producto_usuario|default:'' }}"
-                                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
-                                        data-descripcion="{{ producto_all.descripcion_producto_usuario|default:'' }}"
-                                        data-caracteristicas="{{ producto_all.caracteristicas_generales_usuario|default:'' }}"
-                                        data-stock="{{ producto_all.stock_producto_usuario|default:'0' }}"
-                                        data-precio="{{ producto_all.precio_producto_usuario|default:'0' }}"
-                                        data-condicion="{{ producto_all.condicion_producto_usuario|default:'Nuevo' }}"
-                                        data-estatus="{{ producto_all.estatus_producto_usuario|default:'Activo' }}"
-                                        data-imagen="{% if producto_all.primera_imagen %}{{ producto_all.primera_imagen.ruta_imagen_producto_usuario.url }}{% endif %}">
-                                    <i class="lni lni-pencil"></i> Editar
-                                </button>
-                                <button class="btn btn-delete" data-id="{{ producto_all.id_producto_usuario }}" data-nombre="{{ producto_all.nombre_producto_usuario }}">
-                                    <i class="lni lni-trash"></i> Eliminar
-                                </button>
-                            </div>
-                        {% endif %}
                     </div>
-                    <!-- End Single Feature -->
-                </div>
                 {% endfor %}
-            </div>
-                    </div>
-                  </div>
                 </div>
-              </div>
             </div>
-            
         </div>
+    </div>
     <!-- /End Features Area -->
 
     <!-- Modal de Edición de Producto ------->
@@ -216,6 +336,22 @@
                                         <option value="Inactivo">Inactivo</option>
                                     </select>
                                 </div>
+                                
+                                <!-- Sección de Mapa para Punto de Entrega -->
+                                <div class="form-group">
+                                    <label>Punto de Entrega del Producto</label>
+                                    <div id="edit_map_container" style="height: 300px; width: 100%; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
+                                        <div id="edit_map" style="height: 100%; width: 100%;"></div>
+                                    </div>
+                                    <div id="edit_map_status" class="alert alert-info" style="display: none; margin-top: 10px;">
+                                        <span id="edit_map_status_text">Cargando mapa...</span>
+                                    </div>
+                                    <button type="button" id="edit_retry_map" class="btn btn-secondary btn-sm" style="display: none; margin-top: 10px;">
+                                        Reintentar cargar mapa
+                                    </button>
+                                    <input type="hidden" id="edit_latitud_entrega" name="latitud_entrega_producto">
+                                    <input type="hidden" id="edit_longitud_entrega" name="longitud_entrega_producto">
+                                </div>
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
@@ -256,48 +392,7 @@
         </div>
     </div>
 
-    <!-- ========================= Enhanced Input Styles ========================= -->
-    <style>
-        .enhanced-input {
-            border: 1px solid #e0e0e0 !important;
-            border-radius: 6px !important;
-            padding: 12px 15px !important;
-            font-size: 14px !important;
-            transition: all 0.3s ease !important;
-            box-shadow: none !important;
-            color: #333 !important;
-        }
-        
-        .enhanced-input:focus {
-            border-color: #2196F3 !important;
-            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.1) !important;
-            outline: none !important;
-        }
-        
-        .enhanced-input::placeholder {
-            color: #999 !important;
-        }
-        
-        .enhanced-input[type="select"], select.enhanced-input {
-            appearance: none !important;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23333' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
-            background-repeat: no-repeat !important;
-            background-position: right 15px center !important;
-            padding-right: 35px !important;
-        }
-        
-        textarea.enhanced-input {
-            resize: vertical !important;
-            min-height: 100px !important;
-        }
-        
-        .modal label {
-            color: #000 !important;
-            font-weight: 500 !important;
-            margin-bottom: 8px !important;
-            font-size: 14px !important;
-        }
-    </style>
+
     
     <!-- ========================= JS here ========================= -->
     <script src="{% static 'producto_sucursal/js/wow.min.js' %}"></script>
@@ -306,7 +401,81 @@
     <script src="{% static 'producto_sucursal/js/count-up.min.js' %}"></script>
     <script src="{% static 'producto_sucursal/js/main.js' %}"></script>
     <script src="{% static 'producto_sucursal/js/producto_config.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/producto_config_modal.js' %}"></script>
     <script src="{% static 'producto_sucursal/js/filtrado.js' %}"></script>
-</body>
+    
+    <!-- Scripts para Google Maps solo para usuarios persona -->
+    {% if user_info.tipo == 'persona' %}
+        <script src="{% static 'producto_sucursal/js/producto_config_maps.js' %}"></script>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDaeWicvigtP9xPv919E-RNoxfvC-Hqik&callback=initEditMap&libraries=geometry"></script>
+    {% endif %}
+<script>
+// Script para mejorar la carga de imágenes y animaciones
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para manejar carga de imágenes
+    function handleImageLoad() {
+        const images = document.querySelectorAll('.product-image');
+        
+        images.forEach(img => {
+            // Asegurar que las imágenes sean visibles desde el inicio
+            img.classList.add('loaded');
+            img.style.opacity = '1';
+            img.style.display = 'block';
+            
+            img.addEventListener('error', function() {
+                this.style.display = 'none';
+                const fallback = this.nextElementSibling;
+                if (fallback && fallback.classList.contains('product-image-fallback')) {
+                    fallback.style.display = 'flex';
+                }
+            });
+        });
+    }
+    
+    // Ejecutar inmediatamente al cargar la página
+    handleImageLoad();
+    
+    // También ejecutar después de un pequeño delay para asegurar que todas las imágenes se procesen
+    setTimeout(handleImageLoad, 100);
+    
+    // Observar cambios en el contenedor de productos para manejar filtrado
+    const contenedorProductos = document.getElementById('contenedor-productos');
+    if (contenedorProductos) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    // Re-ejecutar manejo de imágenes cuando se agregan nuevos productos
+                    setTimeout(handleImageLoad, 50);
+                }
+            });
+        });
+        
+        observer.observe(contenedorProductos, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    // Animación de entrada para las tarjetas existentes
+    const cards = document.querySelectorAll('.product-card');
+    const intersectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.classList.add('animate-card');
+                }, index * 100);
+                intersectionObserver.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+    
+    cards.forEach(card => {
+        intersectionObserver.observe(card);
+    });
+});
+</script>
 
+</body>
 </html>

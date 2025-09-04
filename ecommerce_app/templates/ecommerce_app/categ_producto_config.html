@@ -10,86 +10,117 @@
     <meta name="description" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="shortcut icon" type="image/x-icon"  href="{% static 'categ_producto_config/images/favicon.svg' %}" />
-    <link rel="stylesheet" href="{% static 'categ_producto_config/css/LineIcons.3.0.css' %}" />
-    <link rel="stylesheet" href="{% static 'categ_producto_config/css/animate.css' %}" />
-    <link rel="stylesheet" href="{% static 'categ_producto_config/css/tiny-slider.css' %}" />
-    <link rel="stylesheet" href="{% static 'categ_producto_config/css/glightbox.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'categ_producto_config/css/main.css' %}" />
-    <link rel="stylesheet" href="{% static 'categ_producto_config/css/modal.css' %}" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.lineicons.com/4.0/lineicons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'categ_producto_config/css/modern-design.css' %}" />
     </head>
-<body style="background-color:#E9ECEF;">
+<body>
     {% include 'ecommerce_app/barra_superior_operaciones.html' %}
-    <div class="container pt-2 pb-4 d-flex justify-content-center" style="margin-top: 2rem;" >
-        <div class="card shadow-lg bg-white border-0" style="border-radius: 1rem; max-width: 1200px; width: 100%; min-height: 600px; display: flex; flex-direction: column; align-items: center;">
-            <div class="card-body w-100 d-flex flex-column align-items-center" style="margin-top: 0; padding-top: 0.5rem;">
-                <h2 class="mb-4 text-center fw-bold" style="color: #2c3e50;">Gestión de Productos</h2>
-                <div class="search-section mb-4 w-100 d-flex justify-content-center" style="max-width: 700px; margin-left:auto; margin-right:auto;">
-                  <div class="card shadow-sm w-100" style="background: #f8f9fa; border-radius: 1rem; border: none;">
-                    <div class="card-body py-3 px-4">
-                      <div class="row g-2 align-items-center" style="width:100%;">
-                        <div class="col-auto d-flex align-items-center gap-2 flex-wrap">
-                          <input type="text" id="busqueda" class="form-control" placeholder="Buscar categoría por nombre..." style="max-width: 260px; border-radius: 2rem; font-size: 1.08rem; padding: 0.7rem 1.2rem; border-width: 1.5px; box-shadow: 0 1px 6px rgba(0,0,0,0.04);">
-                        </div>
-                        
-                        <div class="col-auto d-flex align-items-center gap-2">
-                          <select id="filtroEstatus" class="form-select" style="border-radius:2rem; min-width:140px; font-size: 1.08rem; padding: 0.7rem 1.2rem; border-width: 1.5px; box-shadow: 0 1px 6px rgba(0,0,0,0.04);">
-                            <option value="todos">Todos</option>
-                            <option value="activo">Activas</option>
-                            <option value="inactivo">Inactivas</option>
-                          </select>
-                          <a href="{% url 'categoria_producto_funcion' %}" class="btn btn-sm ms-1 d-inline-flex align-items-center btn-agregar-categoria" style="border-radius:2rem; font-size:0.98rem; padding: 0.35rem 1rem; font-weight:500;">
-                            <i class="lni lni-plus me-1"></i> Agregar Categoría
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+    
+    <!-- Encabezado Principal -->
+    <div class="container-fluid">
+        <div class="floating-header">
+            <h1 class="page-title">Gestión de Categorías Productos</h1>
+            <p class="page-subtitle">Administra y organiza las categorías de productos de manera eficiente</p>
+        </div>
+        
+        <!-- Estadísticas -->
+        <div class="container">
+            <div class="stats-container">
+                <div class="stats-card">
+                    <div class="stats-number" data-stat="total">{{ total_categorias }}</div>
+                    <div class="stats-label">Total Categorías</div>
                 </div>
-                <div class="d-flex flex-wrap justify-content-center gap-3 w-100">
+                <div class="stats-card">
+                    <div class="stats-number" data-stat="active">{{ categorias_activas }}</div>
+                    <div class="stats-label">Categorías Activas</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-number" data-stat="inactive">{{ categorias_inactivas }}</div>
+                    <div class="stats-label">Categorías Inactivas</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenedor Principal -->
+        <div class="container">
+            <div class="glass-card">
+                <!-- Sección de Búsqueda y Filtros -->
+                <div class="search-container">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <div class="position-relative">
+                                <input type="text" id="busqueda" class="modern-input w-100" placeholder="Buscar categoría por nombre..." data-tooltip="Busca categorías por nombre o descripción">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filtroEstatus" class="modern-input w-100">
+                                <option value="todos">📋 Todas las categorías</option>
+                                <option value="Activo">✅ Categorías activas</option>
+                      <option value="Inactivo">⏸️ Categorías inactivas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'categoria_producto_funcion' %}" class="modern-btn btn-primary-modern w-100">
+                                <i class="lni lni-plus"></i>
+                                Nueva Categoría
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grid de Categorías -->
+                <div class="category-grid">
                     {% for categoria in categoria_producto %}
                     {% if categoria.id_categoria_prod_empresa %}
-                    <div class="card shadow-sm bg-white wow fadeInUp" data-wow-delay=".2s" data-estatus="{{ categoria.estatus_categoria_prod_empresa }}" style="max-width:300px; min-width:200px; width:100%; border-radius: 0.7rem;">
-                        <div class="card-body p-2 d-flex flex-row align-items-center h-100" style="gap: 0.7rem; min-height: 90px;">
-                            <div class="d-flex flex-column align-items-center justify-content-center" style="min-width:48px; max-width:60px;">
-                                <div style="width:38px; height:38px; background:#e9ecef; border-radius:0.4rem; display:flex; align-items:center; justify-content:center; color:#0d6efd; font-size:1.3rem;">
-                                    <i class="lni lni-folder"></i>
-                                </div>
+                    <div class="category-card animate-card" data-nombre="{{ categoria.nombre_categoria_prod_empresa|lower }}" data-estatus="{{ categoria.estatus_categoria_prod_empresa|lower }}" data-type="empresa">
+                        <div class="category-icon">
+                            <i class="lni lni-cog"></i>
+                        </div>
+                        <div class="category-content">
+                            <h3 class="category-title">{{ categoria.nombre_categoria_prod_empresa }}</h3>
+                            <div class="category-meta">
+                                {% if categoria.estatus_categoria_prod_empresa == 'Activo' %}
+                                <span class="status-badge status-active">✅ Activa</span>
+                                {% else %}
+                                <span class="status-badge status-inactive">⏸️ Inactiva</span>
+                                {% endif %}
+                                <span class="category-type">🏢 Empresa</span>
                             </div>
-                            <div style="border-left:1px solid #dee2e6; height:45px; margin-right:0.7rem;"></div>
-                            <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-between h-100">
-                                <h3 class="mb-2 fs-6 text-center w-100" style="margin-top: 6px; font-size: 1rem;">{{ categoria.nombre_categoria_prod_empresa }}</h3>
-                                <div class="d-flex gap-1" style="margin-top:auto;">
-                                    <button class="btn btn-primary btn-edit btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="abrirModalEditar('{{ categoria.id_categoria_prod_empresa }}', '{{ categoria.nombre_categoria_prod_empresa|escapejs }}', '{{ categoria.descripcion_categoria_prod_empresa|escapejs }}', '{{ categoria.estatus_categoria_prod_empresa|escapejs }}')">
-                                        <i class="lni lni-pencil"></i> Editar
-                                    </button>
-                                    <button class="btn btn-danger btn-delete btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="confirmarEliminacion('{{ categoria.id_categoria_prod_empresa }}')">
-                                        <i class="lni lni-trash"></i> Eliminar
-                                    </button>
-                                </div>
-                            </div>
+                        </div>
+                        <div class="category-actions">
+                            <button class="action-btn btn-edit" onclick="abrirModalEditar('{{ categoria.id_categoria_prod_empresa }}', '{{ categoria.nombre_categoria_prod_empresa|escapejs }}', '{{ categoria.descripcion_categoria_prod_empresa|escapejs }}', '{{ categoria.estatus_categoria_prod_empresa|escapejs }}')" data-tooltip="Editar categoría">
+                                <i class="lni lni-pencil"></i>
+                            </button>
+                            <button class="action-btn btn-delete" onclick="confirmarEliminacion('{{ categoria.id_categoria_prod_empresa }}')" data-tooltip="Eliminar categoría">
+                                <i class="lni lni-trash-can"></i>
+                            </button>
                         </div>
                     </div>
                     {% else %}
-                    <div class="card shadow-sm bg-white wow fadeInUp" data-wow-delay=".2s" data-estatus="{{ categoria.estatus_categoria_prod_usuario }}" style="max-width:300px; min-width:200px; width:100%; border-radius: 0.7rem;">
-                        <div class="card-body p-2 d-flex flex-row align-items-center h-100" style="gap: 0.7rem; min-height: 90px;">
-                            <div class="d-flex flex-column align-items-center justify-content-center" style="min-width:48px; max-width:60px;">
-                                <div style="width:38px; height:38px; background:#e9ecef; border-radius:0.4rem; display:flex; align-items:center; justify-content:center; color:#0d6efd; font-size:1.3rem;">
-                                    <i class="lni lni-folder"></i>
-                                </div>
+                    <div class="category-card animate-card" data-nombre="{{ categoria.nombre_categoria_prod_usuario|lower }}" data-estatus="{{ categoria.estatus_categoria_prod_usuario|lower }}" data-type="usuario">
+                        <div class="category-icon">
+                            <i class="lni lni-cog"></i>
+                        </div>
+                        <div class="category-content">
+                            <h3 class="category-title">{{ categoria.nombre_categoria_prod_usuario }}</h3>
+                            <div class="category-meta">
+                                {% if categoria.estatus_categoria_prod_usuario == 'Activo' %}
+                                <span class="status-badge status-active">✅ Activa</span>
+                                {% else %}
+                                <span class="status-badge status-inactive">⏸️ Inactiva</span>
+                                {% endif %}
+                                <span class="category-type">👤 Usuario</span>
                             </div>
-                            <div style="border-left:1px solid #dee2e6; height:45px; margin-right:0.7rem;"></div>
-                            <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-between h-100">
-                                <h3 class="mb-2 fs-6 text-center w-100" style="margin-top: 6px; font-size: 1rem;">{{ categoria.nombre_categoria_prod_usuario }}</h3>
-                                <div class="d-flex gap-1" style="margin-top:auto;">
-                                    <button class="btn btn-primary btn-edit btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="abrirModalEditar('{{ categoria.id_categoria_prod_usuario }}', '{{ categoria.nombre_categoria_prod_usuario|escapejs }}', '{{ categoria.descripcion_categoria_prod_usuario|escapejs }}', '{{ categoria.estatus_categoria_prod_usuario|escapejs }}')">
-                                        <i class="lni lni-pencil"></i> Editar
-                                    </button>
-                                    <button class="btn btn-danger btn-delete btn-sm px-2 py-1" style="font-size:0.9rem;" onclick="confirmarEliminacion('{{ categoria.id_categoria_prod_usuario }}')">
-                                        <i class="lni lni-trash"></i> Eliminar
-                                    </button>
-                                </div>
-                            </div>
+                        </div>
+                        <div class="category-actions">
+                            <button class="action-btn btn-edit" onclick="abrirModalEditar('{{ categoria.id_categoria_prod_usuario }}', '{{ categoria.nombre_categoria_prod_usuario|escapejs }}', '{{ categoria.descripcion_categoria_prod_usuario|escapejs }}', '{{ categoria.estatus_categoria_prod_usuario|escapejs }}')" data-tooltip="Editar categoría">
+                                <i class="lni lni-pencil"></i>
+                            </button>
+                            <button class="action-btn btn-delete" onclick="confirmarEliminacion('{{ categoria.id_categoria_prod_usuario }}')" data-tooltip="Eliminar categoría">
+                                <i class="lni lni-trash-can"></i>
+                            </button>
                         </div>
                     </div>
                     {% endif %}
@@ -101,46 +132,94 @@
 
     <!-- Modal de Edición de Categoría -->
     <div id="editCategoriaModal" class="modal fade" tabindex="-1" aria-labelledby="editCategoriaModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <form method="POST" action="{% url 'editar_categoria_producto' %}" id="editCategoriaForm">
-                    {% csrf_token %}
-                    <input type="hidden" name="id_categoria" id="edit_id_categoria">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editCategoriaModalLabel">Editar Categoría de Producto</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group mb-3">
-                                    <label for="edit_nombre_categoria">Nombre de Categoría *</label>
-                                    <input type="text" class="form-control" name="nombre_categoria" id="edit_nombre_categoria" required>
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="edit_descripcion_categoria">Descripción Categoría</label>
-                                    <textarea class="form-control" name="descripcion_categoria" id="edit_descripcion_categoria" rows="3" placeholder="Ingrese la descripción de la categoría"></textarea>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <label for="edit_estatus_categoria">Estatus Categoría *</label>
-                                            <select class="form-control" name="estatus_categoria" id="edit_estatus_categoria" required>
-                                                <option value="">Seleccione un estatus</option>
-                                                <option value="Activo">Activo</option>
-                                                <option value="Inactivo">Inactivo</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCategoriaModalLabel">
+                        <i class="lni lni-pencil"></i>
+                        Editar Categoría
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'editar_categoria_producto' %}" id="editCategoriaForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="id_categoria" id="edit_id_categoria">
+                        
+                        <div class="form-group mb-3">
+                            <label for="edit_nombre_categoria" class="form-label">
+                                <i class="lni lni-tag"></i>
+                                Nombre de la Categoría
+                            </label>
+                            <input type="text" class="modern-input w-100" name="nombre_categoria" id="edit_nombre_categoria" required placeholder="Ingresa el nombre de la categoría">
                         </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="edit_descripcion_categoria" class="form-label">
+                                <i class="lni lni-text"></i>
+                                Descripción
+                            </label>
+                            <textarea class="modern-input w-100" name="descripcion_categoria" id="edit_descripcion_categoria" rows="3" placeholder="Describe la categoría (opcional)"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="edit_estatus_categoria" class="form-label">
+                                <i class="lni lni-checkmark-circle"></i>
+                                Estado
+                            </label>
+                            <select class="modern-input w-100" name="estatus_categoria" id="edit_estatus_categoria" required>
+                                <option value="">Seleccione un estatus</option>
+                                <option value="Activo">✅ Activo</option>
+                                <option value="Inactivo">⏸️ Inactivo</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1.5rem;">
+                            <button type="button" class="modern-btn btn-secondary-modern" data-bs-dismiss="modal">
+                                <i class="lni lni-close"></i>
+                                Cancelar
+                            </button>
+                            <button type="submit" class="modern-btn btn-primary-modern">
+                                <i class="lni lni-checkmark"></i>
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div id="deleteConfirmModal" class="modal fade" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modern-modal">
+                <div class="modal-header modern-modal-header" style="background: linear-gradient(135deg, var(--danger-color), #dc3545);">
+                    <h5 class="modal-title" id="deleteConfirmModalLabel">
+                        <i class="lni lni-warning"></i>
+                        Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body modern-modal-body text-center">
+                    <div class="mb-4">
+                        <i class="lni lni-trash-can" style="font-size: 4rem; color: var(--danger-color); opacity: 0.7;"></i>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                    </div>
-                </form>
+                    <h4 class="mb-3" style="color: var(--text-dark);">¿Estás seguro?</h4>
+                    <p class="mb-2" style="color: var(--text-muted);">Esta acción eliminará permanentemente la categoría seleccionada.</p>
+                    <p class="fw-bold" style="color: var(--danger-color);">⚠️ Esta acción no se puede deshacer</p>
+                </div>
+                <div class="modal-footer modern-modal-footer">
+                    <button type="button" class="modern-btn btn-secondary-modern" data-bs-dismiss="modal">
+                        <i class="lni lni-close"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="modern-btn btn-danger-modern" id="confirmDeleteBtn">
+                        <i class="lni lni-trash-can"></i>
+                        Sí, Eliminar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -155,14 +234,11 @@
         };
         window.CSRF_TOKEN = '{{ csrf_token }}';
     </script>
-    <script src="{% static 'categ_producto_config/js/wow.min.js' %}"></script>
-    <script src="{% static 'categ_producto_config/js/tiny-slider.js' %}"></script>
-    <script src="{% static 'categ_producto_config/js/glightbox.min.js' %}"></script>
-    <script src="{% static 'categ_producto_config/js/count-up.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{% static 'categ_producto_config/js/main.js' %}?v=6"></script>
-    <script src="{% static 'categ_producto_config/js/modal.js' %}?v=3"></script>
-    <script src="{% static 'categ_producto_config/js/filtrado.js' %}?v=3"></script>
+    <script src="{% static 'categ_producto_config/js/modal.js' %}?v=1"></script>
+    <script src="{% static 'categ_producto_config/js/filtrado.js' %}"></script>
 
 </body>
 

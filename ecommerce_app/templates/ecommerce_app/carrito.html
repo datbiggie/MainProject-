@@ -18,30 +18,8 @@
     <link rel="stylesheet" href="{% static 'sucursal/css/main.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <style>
-        .cart-container {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            min-height: 100vh;
-        }
-        .cart-card {
-            transition: transform 0.2s ease-in-out;
-        }
-        .cart-card:hover {
-            transform: translateY(-2px);
-        }
-        .empty-cart-icon {
-            color: #6c757d;
-            opacity: 0.5;
-        }
-        .total-section {
-            background: linear-gradient(45deg, #007bff, #0056b3);
-            color: white;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="{% static 'carrito/css/carrito.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 
 
@@ -114,7 +92,7 @@
 					<i class="fas fa-exclamation-triangle me-2"></i>
 					<strong>¡Tienes pedidos pendientes!</strong>
 				</div>
-				<a href="{% url 'mis_pedidos' %}" class="btn btn-warning btn-lg">
+				<a href="{% url 'pedidos_pendientes' %}" class="btn btn-warning btn-lg">
 					<i class="fas fa-clock me-2"></i>Ver Mis Pedidos Pendientes
 				</a>
 			</div>
@@ -138,67 +116,17 @@
     <script src="{% static 'index/js/plugins.js' %}"></script>
     <script src="{% static 'index/js/script.js' %}"></script>
     <script src="{% static 'index/js/rating-system.js' %}"></script>
+    <script src="{% static 'carrito/js/carrito.js' %}"></script>
     
+    {% if cambios_precio %}
+    {{ cambios_precio|json_script:"cambios-precio-data" }}
     <script>
-        // Funciones para manejar el carrito
-        function increaseQuantity(itemId) {
-            const quantityInput = document.getElementById('quantity-' + itemId);
-            let currentValue = parseInt(quantityInput.value);
-            quantityInput.value = currentValue + 1;
-            // Aquí se puede agregar lógica para actualizar en el servidor
-        }
-        
-        function decreaseQuantity(itemId) {
-            const quantityInput = document.getElementById('quantity-' + itemId);
-            let currentValue = parseInt(quantityInput.value);
-            if (currentValue > 1) {
-                quantityInput.value = currentValue - 1;
-                // Aquí se puede agregar lógica para actualizar en el servidor
-            }
-        }
-        
-        function removeItem(itemId, type) {
-            if (confirm('¿Estás seguro de que deseas eliminar este elemento del carrito?')) {
-                // Aquí se puede agregar lógica para eliminar del servidor
-                console.log('Eliminando item:', itemId, 'tipo:', type);
-            }
-        }
-        
-        function clearCart() {
-            if (confirm('¿Estás seguro de que deseas limpiar todo el carrito?')) {
-                // Aquí se puede agregar lógica para limpiar el carrito en el servidor
-                console.log('Limpiando carrito');
-            }
-        }
-        
-        function proceedToCheckout() {
-            // Aquí se puede agregar lógica para proceder al checkout
-            console.log('Procediendo al checkout');
-        }
-        
-        function viewItem(itemId) {
-            // Aquí se puede agregar lógica para ver los detalles del producto
-            console.log('Viendo detalles del producto:', itemId);
-            // Ejemplo: redirigir a la página de detalles del producto
-            // window.location.href = '/ecommerce/producto/' + itemId;
-        }
-        
-        function verDetalleCarrito() {
-            // Redirigir a la página de detalle del carrito
-            console.log('Viendo detalle del carrito');
-            window.location.href = '/ecommerce/detalle_carrito/';
-        }
-        
-        // Manejar selección de todos los productos
-        // Comentado porque el elemento 'selectAllProducts' no existe en este template
-        /*
-        document.getElementById('selectAllProducts').addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.product-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
+        // Mostrar notificación de cambios de precio si existen
+        document.addEventListener('DOMContentLoaded', function() {
+            const cambiosPrecios = JSON.parse(document.getElementById('cambios-precio-data').textContent);
+            mostrarCambiosPrecios(cambiosPrecios);
         });
-        */
     </script>
+    {% endif %}
   </body>
 </html>

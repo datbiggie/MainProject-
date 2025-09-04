@@ -1,31 +1,29 @@
-// Archivo JavaScript limpio para categ_producto_config
-// Solo contiene funciones auxiliares que no interfieren con el template
+// Configuración de categorías de servicios - JavaScript principal
 
-// Variables globales
-window.CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-window.DELETE_URL = '/ecommerce/eliminar_categoria_servicio/';
+// Variables globales para el manejo de sesión
+window.USER_INFO = {
+    account_type: document.querySelector('meta[name="account-type"]').getAttribute('content'),
+    user_id: document.querySelector('meta[name="user-id"]').getAttribute('content'),
+    is_authenticated: document.querySelector('meta[name="is-authenticated"]').getAttribute('content')
+};
+window.CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-// Función de eliminación de categorías
-function confirmarEliminacion(idCategoria) {
-    console.log('Función confirmarEliminacion llamada con ID:', idCategoria);
-    console.log('Tipo de ID:', typeof idCategoria);
+// Función para abrir modal de edición
+function abrirModalEditar(id, nombre, descripcion, estatus) {
+    document.getElementById('edit_id_categoria').value = id;
+    document.getElementById('edit_nombre_categoria').value = nombre;
+    document.getElementById('edit_descripcion_categoria').value = descripcion;
+    document.getElementById('edit_estatus_categoria').value = estatus;
     
-    // Validar que el ID no sea nulo o vacío
-    if (!idCategoria || idCategoria === 'null' || idCategoria === 'undefined' || idCategoria === '') {
-        console.error('ID de categoría inválido:', idCategoria);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'ID de categoría inválido. No se puede eliminar esta categoría.',
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Aceptar'
-        });
-        return;
-    }
-    
+    const modal = new bootstrap.Modal(document.getElementById('editCategoriaModal'));
+    modal.show();
+}
+
+// Función para confirmar eliminación
+function confirmarEliminacion(id) {
     Swal.fire({
         title: '¿Estás seguro?',
-        text: "¿Realmente quieres eliminar esta categoría? Esta acción no se puede deshacer.",
+        text: "Esta acción no se puede deshacer",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -34,104 +32,110 @@ function confirmarEliminacion(idCategoria) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            console.log('Usuario confirmó eliminación');
-            
-            // Crear FormData para enviar los datos
-            const formData = new FormData();
-            formData.append('id_categoriaservicio', idCategoria);
-            formData.append('csrfmiddlewaretoken', window.CSRF_TOKEN);
-            
-            console.log('FormData creado, enviando a:', window.DELETE_URL);
-            console.log('ID a enviar:', idCategoria);
-            
-            // Mostrar indicador de carga
-            Swal.fire({
-                title: 'Eliminando...',
-                text: 'Por favor espera mientras se elimina la categoría',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+            eliminarCategoria(id);
+        }
+    });
+}
+
+// Función para eliminar categoría
+function eliminarCategoria(id) {
+    const formData = new FormData();
+    formData.append('id_categoriaservicio', id);
+    
+    fetch('/ecommerce/eliminar_categoria_servicio/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire('Eliminado', data.message, 'success').then(() => {
+                location.reload();
             });
+        } else {
+            Swal.fire('Error', data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error', 'Ocurrió un error al eliminar la categoría', 'error');
+    });
+}
+
+// Función para filtrar categorías
+function filtrarCategorias() {
+    const busqueda = document.getElementById('busqueda');
+    const filtroEstatus = document.getElementById('filtroEstatus');
+    const categorias = document.querySelectorAll('.category-card');
+    
+    const textoBusqueda = busqueda.value.toLowerCase();
+    const estatusFiltro = filtroEstatus.value.toLowerCase();
+
+    categorias.forEach(categoria => {
+        const nombre = categoria.dataset.nombre;
+        const estatus = categoria.dataset.estatus;
+        
+        const coincideTexto = nombre.includes(textoBusqueda);
+        const coincideEstatus = estatusFiltro === 'todos' || estatus === estatusFiltro;
+        
+        if (coincideTexto && coincideEstatus) {
+            categoria.style.display = 'block';
+        } else {
+            categoria.style.display = 'none';
+        }
+    });
+}
+
+// Inicialización cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar filtrado en tiempo real
+    const busqueda = document.getElementById('busqueda');
+    const filtroEstatus = document.getElementById('filtroEstatus');
+    
+    if (busqueda) {
+        busqueda.addEventListener('input', filtrarCategorias);
+    }
+    
+    if (filtroEstatus) {
+        filtroEstatus.addEventListener('change', filtrarCategorias);
+    }
+    
+    // Manejo del formulario de edición
+    const editForm = document.getElementById('editCategoriaForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            // Enviar solicitud de eliminación
-            fetch(window.DELETE_URL, {
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-CSRFToken': window.CSRF_TOKEN
                 }
             })
-            .then(response => {
-                console.log('Respuesta recibida:', response);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Datos recibidos:', data);
                 if (data.success) {
-                    // Éxito
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Categoría Eliminada!',
-                        text: data.message,
-                        confirmButtonColor: '#3085d6',
-                        confirmButtonText: 'Aceptar'
-                    }).then((result) => {
-                        // Recargar página para mostrar cambios
-                        window.location.reload();
+                    Swal.fire('Éxito', data.message, 'success').then(() => {
+                        location.reload();
                     });
                 } else {
-                    // Error
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message,
-                        confirmButtonColor: '#d33',
-                        confirmButtonText: 'Aceptar'
-                    });
+                    Swal.fire('Error', data.message, 'error');
                 }
             })
             .catch(error => {
-                console.error('Error al eliminar categoría:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error al eliminar la categoría. Por favor, inténtalo de nuevo.',
-                    confirmButtonColor: '#d33',
-                    confirmButtonText: 'Aceptar'
-                });
+                console.error('Error:', error);
+                Swal.fire('Error', 'Ocurrió un error al guardar los cambios', 'error');
             });
-        }
-    });
-}
-
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    // Obtener el token CSRF del template
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-    if (csrfToken) {
-        window.CSRF_TOKEN = csrfToken;
-    }
-    
-    console.log('Template cargado - DELETE_URL:', window.DELETE_URL);
-    console.log('CSRF_TOKEN:', window.CSRF_TOKEN);
-    
-    // Manejar mensajes de éxito/error de URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('deleted')) {
-        Swal.fire({
-            title: '¡Éxito!',
-            text: 'La categoría ha sido eliminada correctamente',
-            icon: 'success',
-            confirmButtonText: 'Aceptar'
-        });
-    } else if (urlParams.has('error')) {
-        Swal.fire({
-            title: 'Error',
-            text: 'Ha ocurrido un error al procesar la solicitud',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
         });
     }
-
 });
+
+// Exponer funciones globalmente para uso en HTML
+window.abrirModalEditar = abrirModalEditar;
+window.confirmarEliminacion = confirmarEliminacion;

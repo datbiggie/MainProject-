@@ -1,0 +1,269 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <title>Productos por Sucursal</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/css/vendor.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'producto_sucursal/css/productos_sucursal.css' %}">
+  </head>
+  <body>
+    {% include 'ecommerce_app/barra_superior_index.html' %}
+    
+    <div class="main-container">
+        <div class="page-header">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <h1 class="page-title">
+                            <i class="fas fa-store me-2"></i>
+                            Productos por Sucursal
+                        </h1>
+                        <p class="page-subtitle">
+                            Administra el inventario de tus sucursales
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sección de búsqueda y filtros -->
+        <div class="container mb-4">
+            <div class="search-section">
+                <form method="GET" class="search-form">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="nombre_producto" class="form-label">
+                                <i class="fas fa-search me-1"></i>
+                                Buscar por nombre
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="nombre_producto" 
+                                   name="nombre_producto" 
+                                   value="{{ filtros.nombre_producto }}" 
+                                   placeholder="Nombre del producto...">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="sucursal_filtro" class="form-label">
+                                <i class="fas fa-store me-1"></i>
+                                Sucursal
+                            </label>
+                            <select class="form-select" id="sucursal_filtro" name="sucursal_filtro">
+                                <option value="">Todas las sucursales</option>
+                                {% for sucursal in sucursales_list %}
+                                    <option value="{{ sucursal.id_sucursal }}" 
+                                            {% if filtros.sucursal_filtro == sucursal.id_sucursal|stringformat:"s" %}selected{% endif %}>
+                                        {{ sucursal.nombre_sucursal }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="estado_filtro" class="form-label">
+                                <i class="fas fa-toggle-on me-1"></i>
+                                Estado
+                            </label>
+                            <select class="form-select" id="estado_filtro" name="estado_filtro">
+                                <option value="">Todos los estados</option>
+                                <option value="Activo" {% if filtros.estado_filtro == 'Activo' %}selected{% endif %}>Activo</option>
+                                <option value="Inactivo" {% if filtros.estado_filtro == 'Inactivo' %}selected{% endif %}>Inactivo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-fill">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <a href="{% url 'productos_sucursal' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="container">
+            {% if productos_sucursales %}
+                <div class="products-grid">
+                    {% for producto in productos_sucursales %}
+                        <div class="product-card">
+                            <div class="product-image">
+                                {% if producto.imagen_url %}
+                                    <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre_producto }}" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div style="display: none; align-items: center; justify-content: center; height: 100%; color: #999; font-size: 2.5em; background: #f8f9fa;">
+                                        📦
+                                    </div>
+                                {% else %}
+                                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999; font-size: 2.5em; background: #f8f9fa;">
+                                        📦
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="product-body">
+                                <div class="price-section">
+                                    <div class="price">${{ producto.precio|floatformat:2 }}</div>
+                                    <div class="stock-info">
+                                        <i class="fas fa-cubes me-1"></i>
+                                        Stock: {{ producto.stock }}
+                                    </div>
+                                </div>
+                                
+                                <h3 class="product-title">{{ producto.nombre_producto }}</h3>
+                                
+                                <div class="product-meta">
+                                    <span class="meta-badge">
+                                        <i class="fas fa-tag me-1"></i>
+                                        {{ producto.categoria }}
+                                    </span>
+                                    {% if producto.marca_producto %}
+                                        <span class="meta-badge">
+                                            <i class="fas fa-industry me-1"></i>
+                                            {{ producto.marca_producto }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="sucursal-info">
+                                    <div class="sucursal-name">
+                                        <i class="fas fa-store me-2"></i>
+                                        {{ producto.nombre_sucursal }}
+                                    </div>
+                                </div>
+                                
+                                <div class="product-details">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Estado:</span>
+                                        <span class="status-badge {% if producto.estatus == 'Activo' %}status-activo{% else %}status-inactivo{% endif %}">
+                                            {{ producto.estatus }}
+                                        </span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Condición:</span>
+                                        <span class="condition-badge {% if producto.condicion == 'Nuevo' %}condition-nuevo{% else %}condition-usado{% endif %}">
+                                            {{ producto.condicion }}
+                                        </span>
+                                    </div>
+                                    {% if producto.modelo_producto %}
+                                        <div class="detail-row">
+                                            <span class="detail-label">Modelo:</span>
+                                            <span class="detail-value">{{ producto.modelo_producto }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="action-buttons">
+                                    <button class="btn btn-edit" 
+                                            data-id="{{ producto.id_producto_sucursal }}"
+                                            data-precio="{{ producto.precio }}"
+                                            data-stock="{{ producto.stock }}"
+                                            data-estatus="{{ producto.estatus }}"
+                                            data-condicion="{{ producto.condicion }}"
+                                            onclick="editarProducto(this)">
+                                        <i class="fas fa-edit me-2"></i>
+                                        Editar
+                                    </button>
+                                    <button class="btn btn-delete" 
+                                            data-id="{{ producto.id_producto_sucursal }}"
+                                            data-nombre="{{ producto.nombre_producto }}"
+                                            onclick="eliminarProducto(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-products">
+                    <i class="fas fa-box-open"></i>
+                    <h3>No hay productos asociados a sucursales</h3>
+                    <p>Aún no tienes productos asociados a tus sucursales. Ve a la sección de sucursales para agregar productos.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Modal para editar producto -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Producto
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editProductoId">
+                        
+                        <div class="mb-3">
+                            <label for="editPrecio" class="form-label">Precio</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="editPrecio" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="editStock" class="form-label">Stock</label>
+                            <input type="number" class="form-control" id="editStock" min="0" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="editEstatus" class="form-label">Estado</label>
+                            <select class="form-select" id="editEstatus" required>
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="editCondicion" class="form-label">Condición</label>
+                            <select class="form-select" id="editCondicion" required>
+                                <option value="Nuevo">Nuevo</option>
+                                <option value="Usado">Usado</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarCambios()">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{% static 'index/js/rating-system.js' %}"></script>
+    <script src="{% static 'producto_sucursal/js/productos_sucursal.js' %}"></script>
+    
+    {% csrf_token %}
+  </body>
+</html>

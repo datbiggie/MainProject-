@@ -94,7 +94,7 @@
                           <div class="ml-horizontal-card">
                             <div class="ml-horizontal-card-img">
                               {% if user_info.tipo == 'empresa' %}
-                                <a href="{% url 'vista_items' %}?id={{ producto.id_producto_empresa }}&tipo=producto&origen=empresa" style="text-decoration: none;">
+                                <a href="{% url 'vista_items' %}?id={{ producto.producto_sucursal_id }}&tipo=producto&origen=empresa" style="text-decoration: none;">
                                   {% if producto.primera_imagen and producto.primera_imagen.ruta_imagen_producto_empresa %}
                                     <img src="{{ producto.primera_imagen.ruta_imagen_producto_empresa.url }}" alt="{{ producto.nombre_producto_empresa }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;">
                                   {% else %}
@@ -122,7 +122,7 @@
                             <div class="ml-horizontal-card-body">
                               {% if user_info.tipo == 'empresa' %}
                                 <h5 class="ml-horizontal-card-title">
-                                  <a href="{% url 'vista_items' %}?id={{ producto.id_producto_empresa }}&tipo=producto&origen=empresa" style="text-decoration: none; color: inherit;">
+                                  <a href="{% url 'vista_items' %}?id={{ producto.producto_sucursal_id }}&tipo=producto&origen=empresa" style="text-decoration: none; color: inherit;">
                                     {{ producto.nombre_producto_empresa }}
                                   </a>
                                 </h5>

@@ -94,17 +94,15 @@
                           <div class="ml-horizontal-card">
                             <div class="ml-horizontal-card-img">
                               {% if user_info.tipo == 'empresa' %}
-                                <a href="{% url 'vista_items' %}?id={{ servicio.id_servicio_empresa }}&tipo=servicio&origen=empresa" style="text-decoration: none;">
-                                  {% if servicio.primera_imagen and servicio.primera_imagen.ruta_imagen_servicio_empresa %}
-                                    <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}" alt="{{ servicio.nombre_servicio_empresa }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;">
-                                  {% else %}
-                                    <!-- Imagen por defecto para servicios -->
-                                    <svg width="60" height="60" fill="#6b7280" viewBox="0 0 24 24" style="cursor: pointer;">
-                                      <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
-                                      <path d="M19.5 3.5L20.4 6.5L23.5 7.4L20.4 8.3L19.5 11.3L18.6 8.3L15.5 7.4L18.6 6.5L19.5 3.5Z"/>
-                                    </svg>
-                                  {% endif %}
-                                </a>
+                                {% if servicio.primera_imagen and servicio.primera_imagen.ruta_imagen_servicio_empresa %}
+                                  <img src="{{ servicio.primera_imagen.ruta_imagen_servicio_empresa.url }}" alt="{{ servicio.nombre_servicio_empresa }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                {% else %}
+                                  <!-- Imagen por defecto para servicios -->
+                                  <svg width="60" height="60" fill="#6b7280" viewBox="0 0 24 24">
+                                    <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"/>
+                                    <path d="M19.5 3.5L20.4 6.5L23.5 7.4L20.4 8.3L19.5 11.3L18.6 8.3L15.5 7.4L18.6 6.5L19.5 3.5Z"/>
+                                  </svg>
+                                {% endif %}
                               {% else %}
                                 <a href="{% url 'vista_items' %}?id={{ servicio.id_servicio_usuario }}&tipo=servicio&origen=usuario" style="text-decoration: none;">
                                   {% if servicio.primera_imagen and servicio.primera_imagen.ruta_imagen_servicio_usuario %}
@@ -122,9 +120,7 @@
                             <div class="ml-horizontal-card-body">
                               {% if user_info.tipo == 'empresa' %}
                                 <h5 class="ml-horizontal-card-title">
-                                  <a href="{% url 'vista_items' %}?id={{ servicio.id_servicio_empresa }}&tipo=servicio&origen=empresa" style="text-decoration: none; color: inherit;">
-                                    {{ servicio.nombre_servicio_empresa }}
-                                  </a>
+                                  {{ servicio.nombre_servicio_empresa }}
                                 </h5>
                                 <p class="ml-horizontal-card-description">{{ servicio.descripcion_servicio_empresa|default:'Sin descripción' }}</p>
                                 <div class="ml-horizontal-card-info">
@@ -135,29 +131,53 @@
                                     <i class="fas fa-check-circle"></i> Empresa
                                   </span>
                                 </div>
+                                
+                                <!-- Botones de sucursales -->
+                                {% if servicio.sucursales_asociadas %}
+                                  <div class="mt-3">
+                                    <h6 class="mb-2"><i class="fas fa-store"></i> Disponible en:</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                      {% for sucursal_servicio in servicio.sucursales_asociadas %}
+                                        <a href="{% url 'vista_items' %}?id={{ sucursal_servicio.id_servicio_sucursal }}&tipo=servicio&origen=empresa" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           style="text-decoration: none;">
+                                          <i class="fas fa-map-marker-alt me-1"></i>
+                                          {{ sucursal_servicio.id_sucursal_fk.nombre_sucursal }}
+                                          {% if sucursal_servicio.precio_servicio_sucursal %}
+                                            <span class="badge bg-success ms-1">${{ sucursal_servicio.precio_servicio_sucursal }}</span>
+                                          {% endif %}
+                                        </a>
+                                      {% endfor %}
+                                    </div>
+                                  </div>
+                                {% else %}
+                                  <div class="mt-3">
+                                    <small class="text-muted"><i class="fas fa-info-circle"></i> Sin sucursales asociadas</small>
+                                  </div>
+                                {% endif %}
                               {% else %}
-                                <h5 class="ml-horizontal-card-title">
-                                  <a href="{% url 'vista_items' %}?id={{ servicio.id_servicio_usuario }}&tipo=servicio&origen=usuario" style="text-decoration: none; color: inherit;">
-                                    {{ servicio.nombre_servicio_usuario }}
-                                  </a>
-                                </h5>
-                                <p class="ml-horizontal-card-description">{{ servicio.descripcion_servicio_usuario|default:'Sin descripción' }}</p>
-                                <div class="ml-horizontal-card-info">
-                                  {% if servicio.id_categoria_servicios_fk %}
-                                    <span><i class="fas fa-tag"></i> {{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario }}</span>
-                                  {% endif %}
-                                  {% if servicio.precio_servicio_usuario %}
-                                    <span><i class="fas fa-dollar-sign"></i> ${{ servicio.precio_servicio_usuario }}</span>
-                                  {% endif %}
-                                  <span class="ml-horizontal-card-status {% if servicio.estatus_servicio_usuario == 'Activo' %}activo{% else %}inactivo{% endif %}">
-                                    {% if servicio.estatus_servicio_usuario == 'Activo' %}
-                                      <i class="fas fa-check-circle"></i> Activo
-                                    {% else %}
-                                      <i class="fas fa-times-circle"></i> Inactivo
-                                    {% endif %}
-                                  </span>
-                                </div>
-                              {% endif %}
+                <h5 class="ml-horizontal-card-title">
+                  <a href="{% url 'vista_items' %}?id={{ servicio.id_servicio_usuario }}&tipo=servicio&origen=usuario" style="text-decoration: none; color: inherit;">
+                    {{ servicio.nombre_servicio_usuario }}
+                  </a>
+                </h5>
+                <p class="ml-horizontal-card-description">{{ servicio.descripcion_servicio_usuario|default:'Sin descripción' }}</p>
+                <div class="ml-horizontal-card-info">
+                  {% if servicio.id_categoria_servicios_fk %}
+                    <span><i class="fas fa-tag"></i> {{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario }}</span>
+                  {% endif %}
+                  {% if servicio.precio_servicio_usuario %}
+                    <span><i class="fas fa-dollar-sign"></i> ${{ servicio.precio_servicio_usuario }}</span>
+                  {% endif %}
+                  <span class="ml-horizontal-card-status {% if servicio.estatus_servicio_usuario == 'Activo' %}activo{% else %}inactivo{% endif %}">
+                    {% if servicio.estatus_servicio_usuario == 'Activo' %}
+                      <i class="fas fa-check-circle"></i> Activo
+                    {% else %}
+                      <i class="fas fa-times-circle"></i> Inactivo
+                    {% endif %}
+                  </span>
+                </div>
+              {% endif %}
                             </div>
                           </div>
                         </div>

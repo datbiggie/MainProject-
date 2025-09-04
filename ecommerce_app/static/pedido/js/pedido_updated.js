@@ -145,6 +145,7 @@ function setupIndividualOrderButtons() {
             const vendorId = this.getAttribute('data-vendor-id');
             const vendorType = this.getAttribute('data-vendor-type');
             const vendorName = this.getAttribute('data-vendor-name');
+            const vendorKey = this.getAttribute('data-vendor-key');
             
             processIndividualOrder(vendorId, vendorType, vendorName, this);
         });
@@ -301,15 +302,29 @@ function mostrarExito(mensaje) {
 
 // Process individual order
 function processIndividualOrder(vendorId, vendorType, vendorName, button) {
+     // Extract vendor key from button attributes
+     const vendorKey = button.getAttribute('data-vendor-key');
+     
+     console.log('DEBUG processIndividualOrder - Parámetros recibidos:', {
+         vendorId: vendorId,
+         vendorType: vendorType,
+         vendorName: vendorName,
+         vendorKey: vendorKey
+     });
+    
     // Validate general info first
-    if (!validateGeneralInfo()) {
+    const generalInfoValid = validateGeneralInfo();
+    console.log('General info validation result:', generalInfoValid);
+    if (!generalInfoValid) {
         showAlert('Por favor, complete la información general antes de continuar.', 'warning');
         return;
     }
     
     // Validate vendor form
     const vendorForm = button.closest('.vendor-form');
-    if (!validateVendorForm(vendorForm)) {
+    const vendorFormValid = validateVendorForm(vendorForm);
+    console.log('Vendor form validation result:', vendorFormValid);
+    if (!vendorFormValid) {
         showAlert('Por favor, complete todos los campos requeridos para este vendedor.', 'warning');
         return;
     }
@@ -317,18 +332,23 @@ function processIndividualOrder(vendorId, vendorType, vendorName, button) {
     // Show loading state
     setButtonLoading(button, true);
     
-    // Collect order data
-    const orderData = collectOrderData([vendorId], [vendorType]);
+    // Collect order data using vendor key
+    const orderData = collectOrderData([vendorId], [vendorType], [vendorKey]);
+    
+    console.log('Order data collected:', orderData);
+    console.log('Selected vendors:', orderData.selected_vendors);
     
     // Create FormData for backend compatibility
     const formData = new FormData();
     formData.append('nombre', orderData.general_info.nombre);
     formData.append('email', orderData.general_info.email);
     formData.append('telefono', orderData.general_info.telefono);
-    formData.append('direccion_envio', orderData.general_info.direccion_envio);
-    formData.append('notas_adicionales', orderData.general_info.notas_pedido);
-    formData.append('vendedoresSeleccionados', JSON.stringify(orderData.selected_vendors));
+    formData.append('direccionEntrega', orderData.general_info.direccion_envio);
+    formData.append('notasAdicionales', orderData.general_info.notas_pedido);
+    formData.append('vendedoresSeleccionados', JSON.stringify([vendorKey]));
     formData.append('finalizarTodos', 'false');
+    
+    console.log('FormData vendedoresSeleccionados:', JSON.stringify([vendorKey]));
     
     // Add vendor-specific data
     if (orderData.vendor_data.length > 0) {
@@ -479,13 +499,15 @@ function processAllOrders(button) {
 }
 
 // Collect order data
-function collectOrderData(vendorIds, vendorTypes) {
+function collectOrderData(vendorIds, vendorTypes, vendorKeys = null) {
+    console.log('collectOrderData called with:', { vendorIds, vendorTypes, vendorKeys });
+    
     const generalInfo = {
         nombre: document.getElementById('nombre_general').value,
         email: document.getElementById('email_general').value,
         telefono: document.getElementById('telefono_general').value,
         direccion_envio: document.getElementById('direccion_general').value,
-        notas_pedido: document.getElementById('notas_general').value
+        notas_pedido: document.getElementById('notas_adicionales').value
     };
     
     const vendorData = [];
@@ -503,15 +525,24 @@ function collectOrderData(vendorIds, vendorTypes) {
         });
     });
     
-    // Format vendor IDs with type prefix for backend compatibility
-    const formattedVendorIds = vendorIds.map((vendorId, index) => {
-        return `${vendorTypes[index]}_${vendorId}`;
-    });
+    // Use vendor keys if provided, otherwise format vendor IDs with type prefix
+    let selectedVendors;
+    if (vendorKeys && vendorKeys.length > 0) {
+        selectedVendors = vendorKeys;
+        console.log('Using provided vendor keys:', selectedVendors);
+    } else {
+        selectedVendors = vendorIds.map((vendorId, index) => {
+            const formatted = `${vendorTypes[index]}_${vendorId}`;
+            console.log(`Formatting vendor: ${vendorTypes[index]}_${vendorId} -> ${formatted}`);
+            return formatted;
+        });
+        console.log('Final formattedVendorIds:', selectedVendors);
+    }
     
     return {
         general_info: generalInfo,
         vendor_data: vendorData,
-        selected_vendors: formattedVendorIds
+        selected_vendors: selectedVendors
     };
 }
 
