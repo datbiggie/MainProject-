@@ -268,6 +268,9 @@
                     <i class="fas fa-concierge-bell me-2"></i>
                     Solicitar servicio
                   </button>
+                  <button class="btn btn-outline-danger btn-lg" type="button" onclick="agregarAFavoritos('{{ item.id }}', '{{ item.tipo_propietario }}')">
+                    <i class="fas fa-heart me-1"></i>Agregar a favoritos
+                  </button>
                 </div>
                 <script>
                   function solicitarServicioConSucursal(servicioId, tipoPropietario, sucursalId) {
@@ -282,6 +285,9 @@
                 <button class="btn btn-primary btn-lg" type="button" onclick="solicitarServicio('{{ item.id }}', '{{ item.tipo_propietario }}')">
                   <i class="fas fa-concierge-bell me-2"></i>
                   Solicitar servicio
+                </button>
+                <button class="btn btn-outline-danger btn-lg" type="button" onclick="agregarAFavoritos('{{ item.id }}', '{{ item.tipo_propietario }}')">
+                  <i class="fas fa-heart me-1"></i>Agregar a favoritos
                 </button>
               </div>
             {% endif %}
@@ -507,12 +513,84 @@
 
   // Función para agregar a favoritos
   function agregarAFavoritos(itemId, tipoPropietario) {
-    Swal.fire({
-      title: 'Agregar a Favoritos',
-      text: 'Esta funcionalidad estará disponible próximamente',
-      icon: 'info',
-      confirmButtonText: 'Entendido',
-      confirmButtonColor: '#3b82f6'
+    // Determinar el tipo de item basado en la URL actual
+    const tipoItem = window.location.href.includes('tipo=servicio') ? 'servicio' : 'producto';
+    
+    const data = {
+      item_id: itemId,
+      tipo_propietario: tipoPropietario,
+      tipo_item: tipoItem
+    };
+
+    fetch('{% url "agregar_quitar_favorito" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const icon = data.action === 'added' ? 'success' : 'info';
+        const title = data.action === 'added' ? '¡Agregado a favoritos!' : 'Eliminado de favoritos';
+        
+        Swal.fire({
+          title: title,
+          text: data.message,
+          icon: icon,
+          confirmButtonText: 'Continuar',
+          confirmButtonColor: '#10b981'
+        });
+        
+        // Actualizar el botón visualmente
+        const botonFavorito = document.querySelector(`button[onclick*="agregarAFavoritos('${itemId}', '${tipoPropietario}')"]`);
+        if (botonFavorito) {
+          const icono = botonFavorito.querySelector('i');
+          if (data.action === 'added') {
+            icono.style.color = '#ef4444';
+            botonFavorito.innerHTML = '<i class="fas fa-heart me-1" style="color: #ef4444;"></i>Quitar de favoritos';
+          } else {
+            icono.style.color = '';
+            botonFavorito.innerHTML = '<i class="fas fa-heart me-1"></i>Agregar a favoritos';
+          }
+        }
+      } else {
+        if (data.message === 'Debes iniciar sesión para agregar favoritos') {
+          Swal.fire({
+            title: 'Sesión requerida',
+            text: 'Debes iniciar sesión para agregar productos a favoritos',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Iniciar sesión',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3b82f6'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.href = '{% url "iniciar_sesion" %}';
+            }
+          });
+        } else {
+          Swal.fire({
+            title: 'Error',
+            text: data.message,
+            icon: 'error',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#ef4444'
+          });
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Ocurrió un error al procesar la solicitud',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444'
+      });
     });
   }
 </script>

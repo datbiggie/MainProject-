@@ -1,0 +1,652 @@
+{% load static %}
+<!-- Virtual Assistant Widget -->
+<div id="virtual-assistant-container">
+    <!-- Floating button to open/close chat -->
+    <div id="assistant-toggle-btn" class="assistant-toggle-button">
+        {% if user_info.avatar_chatbot %}
+            <img src="{% static '' %}{{ user_info.avatar_chatbot }}" alt="Avatar" class="assistant-welcome-image">
+        {% else %}
+            <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar" class="assistant-welcome-image">
+        {% endif %}
+    </div>
+    
+    <!-- Chat window -->
+    <div id="assistant-chat-window" class="assistant-chat-container">
+        <!-- Chat header -->
+        <div class="assistant-header">
+            <div class="assistant-header-content">
+                {% if user_info.avatar_chatbot %}
+                    <img src="{% static '' %}{{ user_info.avatar_chatbot }}" alt="Avatar" class="assistant-header-image">
+                {% else %}
+                    <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar" class="assistant-header-image">
+                {% endif %}
+                <h3>Asistente Virtual</h3>
+            </div>
+            <button id="assistant-close-btn" class="assistant-close-button">&times;</button>
+        </div>
+        
+        <!-- Messages area -->
+        <div id="assistant-messages-area" class="assistant-messages-container">
+            <div class="assistant-welcome-section">
+                {% if user_info.avatar_chatbot %}
+                    <img src="{% static '' %}{{ user_info.avatar_chatbot }}" alt="Avatar" class="assistant-welcome-image">
+                {% else %}
+                    <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar" class="assistant-welcome-image">
+                {% endif %}
+            </div>
+            <div class="message-item bot-message-item">
+                <div class="message-bubble">
+                    ¡Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?
+                </div>
+                <div class="message-timestamp"></div>
+            </div>
+        </div>
+        
+        <!-- Input area -->
+        <div class="assistant-input-container">
+            <button id="assistant-location-btn" class="assistant-location-button" title="Compartir ubicación">
+                📍
+            </button>
+            <input type="text" id="assistant-text-input" placeholder="Escribe tu mensaje..." maxlength="500">
+            <button id="assistant-send-btn" class="assistant-send-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="white"/>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Typing indicator -->
+        <div id="assistant-typing-indicator" class="assistant-typing-container" style="display: none;">
+            <div class="typing-animation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <span>El asistente está escribiendo...</span>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Virtual Assistant Widget Styles */
+#virtual-assistant-container {
+    position: fixed;
+    bottom: -40px;
+    right: -40px;
+    z-index: 1000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.assistant-toggle-button {
+    width: 200px;
+    height: 200px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.assistant-toggle-button.hidden {
+    display: none;
+}
+
+.assistant-avatar-image {
+    width: 190px;
+    height: 200px;
+    border-radius: 50%;
+    border: 3px solid white;
+    object-fit: cover;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    image-rendering: auto;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    image-orientation: from-image;
+}
+
+.assistant-chat-container {
+    width: 350px;
+    height: 500px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(23, 105, 170, 0.2);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 10px;
+    border: 2px solid #1769aa;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+}
+
+.assistant-header {
+    background: linear-gradient(135deg, #1769aa 0%, #3498db 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 15px 15px 0 0;
+}
+
+.assistant-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.assistant-header-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    image-rendering: auto;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    image-orientation: from-image;
+}
+
+.assistant-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: white !important;
+}
+
+.assistant-close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.assistant-close-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.assistant-messages-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f8f9fa;
+}
+
+.assistant-welcome-section {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    padding-top: 10px;
+}
+
+.assistant-welcome-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid white;
+    object-fit: cover;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    image-rendering: auto;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    image-orientation: from-image;
+}
+
+.message-item {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.bot-message-item {
+    align-items: flex-start;
+}
+
+.user-message-item {
+    align-items: flex-end;
+}
+
+.message-bubble {
+    max-width: 80%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.bot-message-item .message-bubble {
+    background: white;
+    color: #333;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.user-message-item .message-bubble {
+    background: linear-gradient(135deg, #1769aa 0%, #3498db 100%);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message-timestamp {
+    font-size: 11px;
+    color: #999;
+    margin-top: 5px;
+    padding: 0 5px;
+}
+
+.assistant-input-container {
+    padding: 15px 20px;
+    background: white;
+    border-top: 1px solid #e1e5e9;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.assistant-location-button {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #1769aa, #3498db);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.assistant-location-button:hover {
+    background: linear-gradient(135deg, #3498db, #1769aa);
+    transform: scale(1.1);
+    box-shadow: 0 2px 10px rgba(23, 105, 170, 0.3);
+}
+
+.assistant-location-button:active {
+    transform: scale(0.95);
+}
+
+.assistant-location-button.loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#assistant-text-input {
+    flex: 1;
+    border: 2px solid #1769aa;
+    border-radius: 25px;
+    padding: 12px 16px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+#assistant-text-input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(23, 105, 170, 0.3);
+}
+
+.assistant-send-button {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #1769aa, #3498db);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.assistant-send-button:hover {
+    background: linear-gradient(135deg, #3498db, #1769aa);
+    transform: scale(1.1);
+    box-shadow: 0 2px 10px rgba(23, 105, 170, 0.3);
+}
+
+.assistant-send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.assistant-typing-container {
+    padding: 10px 20px;
+    background: white;
+    border-top: 1px solid #e1e5e9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.typing-animation {
+    display: flex;
+    gap: 3px;
+}
+
+.typing-animation span {
+    width: 6px;
+    height: 6px;
+    background: #1769aa;
+    border-radius: 50%;
+    animation: typing-bounce 1.4s infinite;
+}
+
+.typing-animation span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-animation span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-10px); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .assistant-chat-container {
+        width: calc(100vw - 40px);
+        height: calc(100vh - 100px);
+        bottom: 80px;
+        right: 20px;
+    }
+    
+    #virtual-assistant-container {
+        bottom: 10px;
+        right: 10px;
+    }
+}
+</style>
+
+<script>
+class VirtualAssistantWidget {
+    constructor() {
+        this.isOpen = false;
+        this.conversationId = null;
+        this.userLocation = null;
+        this.init();
+    }
+    
+    init() {
+        this.bindEvents();
+        this.loadConversation();
+        this.requestLocationPermission();
+    }
+    
+    async requestLocationPermission() {
+        if (navigator.geolocation) {
+            try {
+                const position = await this.getCurrentPosition();
+                this.userLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                };
+                console.log('Ubicación obtenida:', this.userLocation);
+            } catch (error) {
+                console.log('No se pudo obtener la ubicación:', error.message);
+            }
+        }
+    }
+    
+    getCurrentPosition() {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000
+            });
+        });
+    }
+    
+    async shareLocation() {
+        const locationBtn = document.getElementById('assistant-location-btn');
+        
+        if (!navigator.geolocation) {
+            this.addMessage('Tu navegador no soporta geolocalización. Puedes compartir tu ubicación escribiendo las coordenadas manualmente.', 'bot');
+            return;
+        }
+        
+        locationBtn.classList.add('loading');
+        
+        try {
+            const position = await this.getCurrentPosition();
+            this.userLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+            
+            this.addMessage(`📍 Ubicación compartida: ${this.userLocation.latitude.toFixed(6)}, ${this.userLocation.longitude.toFixed(6)}`, 'user');
+            this.addMessage('¡Perfecto! Ahora puedo ayudarte a encontrar productos cerca de tu ubicación. Pregúntame sobre productos cercanos.', 'bot');
+            
+        } catch (error) {
+            let errorMessage = 'No se pudo obtener tu ubicación. ';
+            
+            if (error.code === error.PERMISSION_DENIED) {
+                errorMessage += 'Por favor, permite el acceso a la ubicación en tu navegador.';
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+                errorMessage += 'La información de ubicación no está disponible.';
+            } else if (error.code === error.TIMEOUT) {
+                errorMessage += 'La solicitud de ubicación ha expirado. Intenta de nuevo.';
+            } else {
+                errorMessage += 'Puedes compartir tu ubicación escribiendo las coordenadas manualmente.';
+            }
+            
+            this.addMessage(errorMessage, 'bot');
+        } finally {
+            locationBtn.classList.remove('loading');
+        }
+    }
+    
+    bindEvents() {
+        const toggle = document.getElementById('assistant-toggle-btn');
+        const close = document.getElementById('assistant-close-btn');
+        const sendBtn = document.getElementById('assistant-send-btn');
+        const input = document.getElementById('assistant-text-input');
+        const locationBtn = document.getElementById('assistant-location-btn');
+        
+        toggle.addEventListener('click', () => this.toggleChat());
+        close.addEventListener('click', () => this.closeChat());
+        sendBtn.addEventListener('click', () => this.sendMessage());
+        locationBtn.addEventListener('click', () => this.shareLocation());
+        
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+    }
+    
+    toggleChat() {
+        if (this.isOpen) {
+            this.closeChat();
+        } else {
+            this.openChat();
+        }
+    }
+    
+    openChat() {
+        const window = document.getElementById('assistant-chat-window');
+        const toggle = document.getElementById('assistant-toggle-btn');
+        window.style.display = 'flex';
+        toggle.classList.add('hidden');
+        this.isOpen = true;
+        
+        setTimeout(() => {
+            document.getElementById('assistant-text-input').focus();
+        }, 100);
+    }
+    
+    closeChat() {
+        const window = document.getElementById('assistant-chat-window');
+        const toggle = document.getElementById('assistant-toggle-btn');
+        window.style.display = 'none';
+        toggle.classList.remove('hidden');
+        this.isOpen = false;
+    }
+    
+    async sendMessage() {
+        const input = document.getElementById('assistant-text-input');
+        let message = input.value.trim();
+        
+        if (!message) return;
+        
+        const palabrasProximidad = ['cerca', 'cercano', 'cercanos', 'proximidad', 'distancia', 'ubicacion', 'ubicación', 'alrededor', 'radio'];
+        const esConsultaProximidad = palabrasProximidad.some(palabra => message.toLowerCase().includes(palabra));
+        
+        if (esConsultaProximidad && this.userLocation) {
+            message += ` Mi ubicación es ${this.userLocation.latitude},${this.userLocation.longitude}`;
+        } else if (esConsultaProximidad && !this.userLocation) {
+            try {
+                const position = await this.getCurrentPosition();
+                this.userLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                };
+                message += ` Mi ubicación es ${this.userLocation.latitude},${this.userLocation.longitude}`;
+            } catch (error) {
+                this.addMessage('Para buscar productos cerca de ti, necesito acceso a tu ubicación. Por favor, permite el acceso a la ubicación en tu navegador o comparte tus coordenadas manualmente.', 'bot');
+                this.setLoading(false);
+                return;
+            }
+        }
+        
+        input.value = '';
+        this.setLoading(true);
+        
+        const mensajeOriginal = message.split(' Mi ubicación es')[0];
+        this.addMessage(mensajeOriginal, 'user');
+        
+        try {
+            const response = await fetch('/chatbot/enviar-mensaje/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({ mensaje: message })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.addMessage(data.respuesta, 'bot');
+                this.conversationId = data.conversacion_id;
+            } else {
+                this.addMessage('Lo siento, hubo un error. Por favor, intenta de nuevo.', 'bot');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            this.addMessage('Lo siento, hubo un error de conexión. Por favor, intenta de nuevo.', 'bot');
+        } finally {
+            this.setLoading(false);
+        }
+    }
+    
+    addMessage(content, type) {
+        const messagesContainer = document.getElementById('assistant-messages-area');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message-item ${type}-message-item`;
+        
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('es-ES', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        messageDiv.innerHTML = `
+            <div class="message-bubble">${this.escapeHtml(content)}</div>
+            <div class="message-timestamp">${timeString}</div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    setLoading(loading) {
+        const sendBtn = document.getElementById('assistant-send-btn');
+        const input = document.getElementById('assistant-text-input');
+        const typing = document.getElementById('assistant-typing-indicator');
+        
+        sendBtn.disabled = loading;
+        input.disabled = loading;
+        typing.style.display = loading ? 'flex' : 'none';
+    }
+    
+    async loadConversation() {
+        try {
+            const response = await fetch('/chatbot/obtener-conversacion/');
+            const data = await response.json();
+            
+            if (response.ok && data.mensajes.length > 0) {
+                const messagesContainer = document.getElementById('assistant-messages-area');
+                messagesContainer.innerHTML = '';
+                
+                data.mensajes.forEach(mensaje => {
+                    this.addMessage(mensaje.contenido, mensaje.tipo === 'usuario' ? 'user' : 'bot');
+                });
+                
+                this.conversationId = data.conversacion_id;
+            }
+        } catch (error) {
+            console.error('Error loading conversation:', error);
+        }
+    }
+    
+    getCSRFToken() {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') {
+                return value;
+            }
+        }
+        return '';
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
+// Initialize widget when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    new VirtualAssistantWidget();
+});
+</script>

@@ -153,6 +153,9 @@
                                 window.csrfToken || 
                                 document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                 
+                // Detectar si es empresa basado en el tipo de cuenta
+                const esEmpresa = window.accountType === 'empresa';
+                
                 const response = await fetch(window.marcarNotificacionUrl || '/ecommerce/marcar_notificacion_leida/', {
                     method: 'POST',
                     headers: {
@@ -161,7 +164,8 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({
-                        notificacion_id: notificationId
+                        notificacion_id: notificationId,
+                        es_empresa: esEmpresa
                     })
                 });
                 

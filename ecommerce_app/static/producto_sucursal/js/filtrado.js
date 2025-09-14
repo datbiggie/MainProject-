@@ -39,8 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const productoNombre = esEmpresa ? producto.nombre_producto_empresa : producto.nombre_producto_usuario;
                         const productoDescripcion = esEmpresa ? producto.descripcion_producto_empresa : producto.descripcion_producto_usuario;
                         const productoCaracteristicas = esEmpresa ? producto.caracteristicas_generales_empresa : producto.caracteristicas_generales_usuario;
-                        const productoMarca = esEmpresa ? producto.marca_producto_empresa : producto.marca_producto_usuario;
-                        const productoModelo = esEmpresa ? producto.modelo_producto_empresa : producto.modelo_producto_usuario;
+                        const productoCategoria = producto.categoria_producto || 'Sin categoría';
+                        const imagenUrl = producto.imagen_url || '/static/images/default-product.png';
+
                         const userType = esEmpresa ? 'empresa' : 'persona';
                         
                         const productoHTML = `
@@ -63,10 +64,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <!-- Contenido del Producto -->
                                 <div class="product-content">
                                     <h3 class="product-title">${productoNombre}</h3>
-                                    <div class="product-meta">
-                                        <span class="product-type">${esEmpresa ? 'Empresa' : 'Usuario'}</span>
-                                    </div>
                                     ${esEmpresa ? `
+                                    <div class="product-meta">
+                                        <span class="product-type">Empresa</span>
+                                    </div>
                                     <div class="product-branches">
                                         <strong>Sucursales asignadas:</strong>
                                         ${producto.sucursales_asignadas && producto.sucursales_asignadas.length > 0 ? 
@@ -75,7 +76,25 @@ document.addEventListener('DOMContentLoaded', function() {
                                             </ul>` : 
                                             '<span class="no-branches">Sin sucursales asignadas</span>'
                                         }
-                                    </div>` : ''}
+                                    </div>` : `
+                                    <div class="product-details">
+                                        <div class="product-info-item">
+                                            <strong>Categoría:</strong>
+                                            <span>${producto.categoria_producto || 'Sin categoría'}</span>
+                                        </div>
+                                        <div class="product-info-item">
+                                            <strong>Condición:</strong>
+                                            <span class="condition-badge condition-${(producto.condicion_producto_usuario || 'nuevo').toLowerCase()}">${producto.condicion_producto_usuario || 'Nuevo'}</span>
+                                        </div>
+                                        <div class="product-info-item">
+                                            <strong>Estado:</strong>
+                                            <span class="status-badge status-${(producto.estatus_producto_usuario || 'activo').toLowerCase()}">${producto.estatus_producto_usuario || 'Activo'}</span>
+                                        </div>
+                                        <div class="product-info-item price-item">
+                                            <strong>Precio:</strong>
+                                            <span class="product-price">$${producto.precio_producto_usuario || '0'}</span>
+                                        </div>
+                                    </div>`}
                                 </div>
                                 <!-- Acciones del Producto -->
                                 <div class="product-actions">
@@ -84,11 +103,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                             data-nombre="${productoNombre}"
                                             data-descripcion="${productoDescripcion || ''}"
                                             data-caracteristicas="${productoCaracteristicas || ''}"
-                                            data-marca="${productoMarca || ''}"
-                                            data-modelo="${productoModelo || ''}"
-                                            data-categoria="${producto.categoria || ''}"
+                                            data-categoria="${producto.categoria_producto || ''}"
                                             data-imagen="${producto.imagen_url || ''}"
                                             data-user-type="${userType}"
+                                            ${esUsuario ? `
+                                            data-stock="${producto.stock_producto_usuario || '0'}"
+                                            data-precio="${producto.precio_producto_usuario || '0'}"
+                                            data-condicion="${producto.condicion_producto_usuario || 'Nuevo'}"
+                                            data-estatus="${producto.estatus_producto_usuario || 'Activo'}"
+                                            data-latitud="${producto.latitud_producto_usuario || ''}"
+                                            data-longitud="${producto.longitud_producto_usuario || ''}"` : ''}
                                             data-tooltip="Editar producto">
                                         <i class="lni lni-pencil"></i>
                                     </button>

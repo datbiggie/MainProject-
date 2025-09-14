@@ -8,12 +8,20 @@ $(document).ready(function() {
 });
 
 function marcarComoLeida(notificacionId) {
+    // Detectar si es empresa basado en el tipo de cuenta
+    const esEmpresa = window.accountType === 'empresa';
+    
     $.ajax({
         url: marcarNotificacionUrl, // Esta variable debe ser definida en el template
         type: 'POST',
-        data: {
+        contentType: 'application/json',
+        data: JSON.stringify({
             'notificacion_id': notificacionId,
-            'csrfmiddlewaretoken': csrfToken // Esta variable debe ser definida en el template
+            'es_empresa': esEmpresa
+        }),
+        headers: {
+            'X-CSRFToken': csrfToken, // Esta variable debe ser definida en el template
+            'X-Requested-With': 'XMLHttpRequest'
         },
         success: function(response) {
             if (response.success) {

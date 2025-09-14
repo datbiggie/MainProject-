@@ -145,6 +145,17 @@ $(document).ready(function() {
             return false;
         }
 
+        // Validar atributos duplicados antes del envío
+        if (typeof validarFormularioCompleto === 'function' && !validarFormularioCompleto()) {
+            Swal.fire({
+                title: 'Error de validación',
+                text: 'Por favor, corrija los errores en los nombres de atributos antes de continuar.',
+                icon: 'error',
+                confirmButtonText: 'Entendido'
+            });
+            return false;
+        }
+
         const submitButton = form.find('input[type="submit"]');
         submitButton.prop('disabled', true);
         isSubmitting = true;

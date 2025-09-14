@@ -210,19 +210,54 @@ document.addEventListener('DOMContentLoaded', updateCategoryCounters);
 const additionalStyles = `
 <style>
 .search-container .input-group {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
     overflow: hidden;
+    border: 2px solid #d1d5db;
+    background: white;
 }
 
 .search-container .form-control {
     border: none;
     box-shadow: none;
+    background-color: rgba(255, 255, 255, 0.95);
+    font-weight: 500;
+    color: #374151;
+    padding: 0.75rem;
+    font-size: 0.95rem;
 }
 
 .search-container .form-control:focus {
-    box-shadow: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     border-color: transparent;
+    background-color: white;
+    outline: none;
+}
+
+.search-container .form-control::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.search-container .input-group-text {
+    background-color: #f8fafc;
+    border: none;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.search-container .btn-outline-secondary {
+    border: none;
+    background-color: #f8fafc;
+    color: #6b7280;
+    transition: all 0.3s ease;
+}
+
+.search-container .btn-outline-secondary:hover {
+    background-color: #e5e7eb;
+    color: #374151;
+    transform: scale(1.05);
 }
 
 .accordion-button.clicking {

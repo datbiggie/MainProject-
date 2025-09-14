@@ -23,6 +23,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('ecommerce/', include('ecommerce_app.urls')),  # Esto enlaza todas las rutas de la app 
+    path('chatbot/', include('chatbot.urls')),  # URLs del chatbot
 ]
 
 if settings.DEBUG:

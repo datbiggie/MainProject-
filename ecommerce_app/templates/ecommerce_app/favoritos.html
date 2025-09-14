@@ -1,6 +1,4 @@
 {% load static %}
-    {% include 'ecommerce_app/barra_superior_index.html' %}
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,9 +9,334 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{% static 'index/css/vendor.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'favoritos/favoritos.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --secondary-blue: #1e40af;
+            --light-blue: #dbeafe;
+            --white: #ffffff;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            background: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .favorites-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: var(--white);
+            padding: 4rem 0 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .favorites-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .header-content {
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .header-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+        
+        .favorites-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .product-card {
+            background: var(--white);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            border: 1px solid var(--border-color);
+        }
+        
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .product-image {
+            position: relative;
+            height: 250px;
+            overflow: hidden;
+            background: linear-gradient(45deg, #f1f5f9, #e2e8f0);
+        }
+        
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .product-card:hover .product-image img {
+            transform: scale(1.05);
+        }
+        
+        .favorite-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .favorite-badge:hover {
+            transform: scale(1.1);
+        }
+        
+        .product-info {
+            padding: 1.5rem;
+        }
+        
+        .product-category {
+            color: var(--primary-blue);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+        
+        .product-description {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+        
+        .product-price {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .current-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary-custom {
+            background: var(--primary-blue);
+            border: none;
+            color: var(--white);
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+        
+        .btn-primary-custom:hover {
+            background: var(--secondary-blue);
+            transform: translateY(-2px);
+            color: var(--white);
+        }
+        
+        .btn-secondary-custom {
+            background: var(--white);
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+            padding: 0.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 50px;
+        }
+        
+        .btn-secondary-custom:hover {
+            background: var(--primary-blue);
+            color: var(--white);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+        
+        .empty-description {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+        
+        .btn-explore {
+            background: var(--primary-blue);
+            color: var(--white);
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-explore:hover {
+            background: var(--secondary-blue);
+            transform: translateY(-2px);
+            color: var(--white);
+        }
+        
+        .propietario-info {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+        
+        .tipo-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tipo-producto {
+            background: #dbeafe;
+            color: var(--primary-blue);
+        }
+        
+        .tipo-servicio {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        /* Funciones JavaScript para favoritos */
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
 <body>
+    {% include 'ecommerce_app/barra_superior_index.html' %}
 
     <!-- Header Section -->
     <div class="favorites-header">
@@ -24,56 +347,23 @@
                     Mis Favoritos
                 </h1>
                 <p class="header-subtitle">
-                    Descubre y gestiona todos tus productos favoritos en un solo lugar
+                    Descubre y gestiona todos tus productos y servicios favoritos en un solo lugar
                 </p>
                 
                 <div class="favorites-stats">
                     <div class="stat-item">
-                        <span class="stat-number">{{ favoritos.count }}</span>
+                        <span class="stat-number">{{ favoritos|length }}</span>
+                        <span class="stat-label">Items</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="productos-count">0</span>
                         <span class="stat-label">Productos</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number">5</span>
-                        <span class="stat-label">Categorías</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">$2,450</span>
-                        <span class="stat-label">Valor Total</span>
+                        <span class="stat-number" id="servicios-count">0</span>
+                        <span class="stat-label">Servicios</span>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search Section -->
-    <div class="search-section">
-        <div class="container">
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" class="search-input" placeholder="Buscar en mis favoritos..." id="searchInput">
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="filters-section">
-        <div class="container">
-            <div class="filter-buttons">
-                <button class="filter-btn active" data-category="all">
-                    <i class="fas fa-th-large me-2"></i>Todos
-                </button>
-                <button class="filter-btn" data-category="electronics">
-                    <i class="fas fa-laptop me-2"></i>Electrónicos
-                </button>
-                <button class="filter-btn" data-category="fashion">
-                    <i class="fas fa-tshirt me-2"></i>Moda
-                </button>
-                <button class="filter-btn" data-category="home">
-                    <i class="fas fa-home me-2"></i>Hogar
-                </button>
-                <button class="filter-btn" data-category="sports">
-                    <i class="fas fa-dumbbell me-2"></i>Deportes
-                </button>
             </div>
         </div>
     </div>
@@ -83,48 +373,46 @@
         <div class="container">
             {% if favoritos %}
                 <div class="products-grid" id="productsGrid">
-                    {% for producto in favoritos %}
-                    <div class="product-card" data-category="{{ producto.categoria.nombre|lower }}">
+                    {% for item in favoritos %}
+                    <div class="product-card" data-item-id="{{ item.id }}">
                         <div class="product-image">
-                            {% if producto.imagen %}
-                                <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}">
+                            {% if item.imagen %}
+                                <img src="{{ item.imagen }}" alt="{{ item.nombre }}">
                             {% else %}
-                                <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400" alt="{{ producto.nombre }}">
+                                <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400" alt="{{ item.nombre }}">
                             {% endif %}
-                            <div class="favorite-badge" onclick="toggle">
+                            <div class="favorite-badge" onclick="quitarDeFavoritos('{{ item.id }}', '{{ item.tipo_propietario }}', '{{ item.tipo }}')">
                                 <i class="fas fa-heart" style="color: #ef4444;"></i>
                             </div>
-                            {% if producto.descuento %}
-                                <div class="discount-badge">-{{ producto.descuento }}%</div>
-                            {% endif %}
                         </div>
                         <div class="product-info">
-                            <div class="product-category">{{ producto.categoria.nombre }}</div>
-                            <h3 class="product-title">{{ producto.nombre }}</h3>
-                            <p class="product-description">{{ producto.descripcion|truncatewords:15 }}</p>
-                            <div class="product-rating">
-                                <div class="stars">
-                                    {% for i in "12345" %}
-                                        {% if forloop.counter <= producto.rating|default:4 %}
-                                            <i class="fas fa-star"></i>
-                                        {% else %}
-                                            <i class="far fa-star"></i>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                                <span class="rating-text">{{ producto.rating|default:"4.5" }} ({{ producto.reviews|default:"50" }} reseñas)</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="product-category">{{ item.categoria }}</div>
+                                <span class="tipo-badge tipo-{{ item.tipo }}">{{ item.tipo }}</span>
                             </div>
+                            <h3 class="product-title">{{ item.nombre }}</h3>
+                            <div class="propietario-info">
+                                <i class="fas fa-store me-1"></i>
+                                {{ item.propietario }}
+                                {% if item.sucursal %} - {{ item.sucursal }}{% endif %}
+                            </div>
+                            <p class="product-description">{{ item.descripcion|truncatewords:15 }}</p>
                             <div class="product-price">
-                                <span class="current-price">${{ producto.precio }}</span>
-                                {% if producto.precio_original %}
-                                    <span class="original-price">${{ producto.precio_original }}</span>
-                                {% endif %}
+                                <span class="current-price">
+                                    {% if item.precio == 'Consultar' or item.precio == 'consultar' %}
+                                        Precio a consultar
+                                    {% else %}
+                                        ${{ item.precio }}
+                                    {% endif %}
+                                </span>
                             </div>
                             <div class="product-actions">
-                                
-                                    <i class="fas fa-shopping-cart me-2"></i>Agregar al Carrito
-                                </button>
-                                <a href="{% url 'vista_items' %}" class="btn-secondary">
+                                {% if item.tipo == 'producto' %}
+                                    <button class="btn-primary-custom" onclick="agregarAlCarrito('{{ item.id }}', '{{ item.tipo_propietario }}')">
+                                        <i class="fas fa-shopping-cart me-2"></i>Agregar al Carrito
+                                    </button>
+                                {% endif %}
+                                <a href="{% url 'vista_items' %}?id={{ item.id }}&tipo={{ item.tipo }}&origen={{ item.tipo_propietario }}" class="btn-secondary-custom">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             </div>
@@ -141,7 +429,7 @@
                     <p class="empty-description">
                         Explora nuestro catálogo y agrega productos a tus favoritos para verlos aquí
                     </p>
-                    <a href="{% url 'vista_items' %}" class="btn-explore">
+                    <a href="{% url 'busquedad' %}" class="btn-explore">
                         <i class="fas fa-search me-2"></i>Explorar Productos
                     </a>
                 </div>
@@ -175,6 +463,9 @@
                         card.style.display = 'none';
                     }
                 });
+                
+                // Actualizar contadores después del filtrado
+                actualizarContadores();
             });
         }
 
@@ -196,6 +487,9 @@
                         card.style.display = 'none';
                     }
                 });
+                
+                // Actualizar contadores después del filtrado
+                actualizarContadores();
             });
         });
 
@@ -231,18 +525,87 @@
             });
         }
 
+        // Función para quitar de favoritos
+        function quitarDeFavoritos(itemId, tipoPropietario, tipo) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: 'Este item será removido de tus favoritos',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#ef4444',
+                confirmButtonText: 'Sí, remover',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/ecommerce/agregar_quitar_favorito/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': window.CSRF_TOKEN
+                        },
+                        body: JSON.stringify({
+                            item_id: itemId,
+                            tipo_propietario: tipoPropietario,
+                            tipo_item: tipo
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Animar la eliminación de la tarjeta
+                            const productCard = document.querySelector(`[data-item-id="${itemId}"]`);
+                            if (productCard) {
+                                productCard.classList.add('fade-out');
+                                setTimeout(() => {
+                                    productCard.remove();
+                                    // Recargar página para actualizar contadores
+                                    location.reload();
+                                }, 500);
+                            }
+                            
+                            Swal.fire({
+                                title: '¡Removido!',
+                                text: 'El item ha sido removido de tus favoritos',
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error',
+                                text: data.message || 'No se pudo remover el item',
+                                icon: 'error'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Ocurrió un error al procesar la solicitud',
+                            icon: 'error'
+                        });
+                    });
+                }
+            });
+        }
+
         // Add to cart function
-        function agregarAlCarrito(productId) {
-            const button = event.target.closest('.btn-primary');
+        function agregarAlCarrito(productId, tipoPropietario) {
+            const button = event.target.closest('.btn-primary-custom');
             const originalText = button.innerHTML;
             
             fetch('/ecommerce/agregar_al_carrito/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': window.CSRF_TOKEN
                 },
-                body: JSON.stringify({producto_id: productId})
+                body: JSON.stringify({
+                    producto_id: productId,
+                    tipo_propietario: tipoPropietario
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -250,16 +613,36 @@
                     button.innerHTML = '<i class="fas fa-check me-2"></i>¡Agregado!';
                     button.style.background = '#10b981';
                     
+                    Swal.fire({
+                        title: '¡Agregado al carrito!',
+                        text: 'El producto ha sido agregado a tu carrito',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    
                     setTimeout(() => {
                         button.innerHTML = originalText;
                         button.style.background = '';
                     }, 2000);
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'No se pudo agregar al carrito',
+                        icon: 'error'
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 button.innerHTML = '<i class="fas fa-times me-2"></i>Error';
                 button.style.background = '#ef4444';
+                
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ocurrió un error al procesar la solicitud',
+                    icon: 'error'
+                });
                 
                 setTimeout(() => {
                     button.innerHTML = originalText;
@@ -281,6 +664,36 @@
                 }, index * 100);
             });
         });
+
+        // Contar productos y servicios correctamente
+        function actualizarContadores() {
+            // Contar basándose en los elementos del DOM visibles
+            const productCards = document.querySelectorAll('.product-card');
+            let productosCount = 0;
+            let serviciosCount = 0;
+            
+            productCards.forEach(card => {
+                // Solo contar si el elemento está visible
+                if (card.style.display !== 'none') {
+                    const tipoBadge = card.querySelector('.tipo-badge');
+                    if (tipoBadge) {
+                        const tipo = tipoBadge.textContent.trim().toLowerCase();
+                        if (tipo === 'producto') {
+                            productosCount++;
+                        } else if (tipo === 'servicio') {
+                            serviciosCount++;
+                        }
+                    }
+                }
+            });
+            
+            // Actualizar los contadores en el DOM
+            document.getElementById('productos-count').textContent = productosCount;
+            document.getElementById('servicios-count').textContent = serviciosCount;
+        }
+        
+        // Ejecutar al cargar la página
+        actualizarContadores();
     </script>
 
     <!-- Variables globales para el manejo de sesión -->

@@ -92,16 +92,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Verificar permisos para mostrar botones
                         const canEdit = canUserEditCategory(categoria, window.USER_INFO);
                         const actionButtons = canEdit ? `
-                                <button class="action-btn btn-edit" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${(descripcion || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${(estatus || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}')" data-tooltip="Editar categoría">
+                                <button class="action-btn btn-edit" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\\'")}', '${(descripcion || '').replace(/'/g, "\\'")}', '${(estatus || '').replace(/'/g, "\\'")}')" data-tooltip="Editar categoría">
                                     <i class="lni lni-pencil"></i>
                                 </button>
                                 <button class="action-btn btn-delete" onclick="confirmarEliminacion('${id}')" data-tooltip="Eliminar categoría">
                                     <i class="lni lni-trash-can"></i>
                                 </button>
+                                <button class="action-btn btn-info" onclick="verDetalles('${id}')" data-tooltip="Ver detalles">
+                                    <i class="lni lni-eye"></i>
+                                </button>
                         ` : '<small class="text-muted">Sin permisos</small>';
 
                         const categoriaHTML = `
-                        <div class="category-card animate-card" data-nombre="${(nombre || '').toLowerCase()}" data-estatus="${(estatus || '').toLowerCase()}" data-type="${isEmpresa ? 'empresa' : 'usuario'}">
+                        <div class="category-card animate-card" data-nombre="${(nombre || '').toString().toLowerCase()}" data-estatus="${(estatus || '').toString().toLowerCase()}" data-type="${isEmpresa ? 'empresa' : 'usuario'}">
                             <div class="category-icon">
                                 <i class="lni lni-cog"></i>
                             </div>

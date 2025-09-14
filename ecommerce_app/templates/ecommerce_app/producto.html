@@ -34,16 +34,7 @@
                 </div>
               </div>
 
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="marca" class="col-form-label">Marca </label>
-                  <input type="text" class="form-control" name="marca_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="marca" placeholder="Ingrese la marca del producto">
-                </div>
-                <div class="col-md-6 form-group mb-5">
-                  <label for="modelo" class="col-form-label">Modelo</label>
-                  <input type="text" class="form-control" name="modelo_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="modelo" placeholder="Ingrese el modelo del producto">
-                </div>
-              </div>
+
 
               <div class="row">
                 <div class="col-md-12 form-group mb-5">
@@ -74,6 +65,16 @@
                     
                   </select>
                 </div>
+              </div>
+
+              <!-- Contenedor para campos dinámicos de atributos -->
+              <div id="atributos-container" style="display: none;">
+                <div class="row">
+                  <div class="col-md-12">
+                    <h5 class="mb-4" style="color: #495057; font-weight: 600;">Atributos Específicos de la Categoría</h5>
+                  </div>
+                </div>
+                <div id="atributos-fields"></div>
               </div>
 
               <!-- Campos adicionales solo para usuarios con rol 'persona' -->
@@ -202,6 +203,129 @@
   <script src="{% static 'producto/js/jquery.validate.min.js' %}"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="{% static 'producto/js/main.js' %}"></script>
+  
+  <!-- Script para manejar atributos dinámicos -->
+  <script>
+  $(document).ready(function() {
+      // Manejar cambio de categoría
+      $('#categoria').change(function() {
+          const categoriaId = $(this).val();
+          const atributosContainer = $('#atributos-container');
+          const atributosFields = $('#atributos-fields');
+          
+          if (categoriaId) {
+              // Hacer petición AJAX para obtener atributos
+              $.ajax({
+                  url: '{% url "api_obtener_atributos_categoria" %}',
+                  type: 'GET',
+                  data: {
+                      'categoria_id': categoriaId
+                  },
+                  success: function(response) {
+                      if (response.success && response.atributos.length > 0) {
+                          // Limpiar campos anteriores
+                          atributosFields.empty();
+                          
+                          // Generar campos dinámicos
+                          response.atributos.forEach(function(atributo) {
+                              const fieldHtml = generarCampoAtributo(atributo);
+                              atributosFields.append(fieldHtml);
+                          });
+                          
+                          // Mostrar el contenedor
+                          atributosContainer.show();
+                      } else {
+                          // Ocultar contenedor si no hay atributos
+                          atributosContainer.hide();
+                          atributosFields.empty();
+                      }
+                  },
+                  error: function(xhr, status, error) {
+                      console.error('Error al obtener atributos:', error);
+                      atributosContainer.hide();
+                      atributosFields.empty();
+                  }
+              });
+          } else {
+              // Ocultar contenedor si no hay categoría seleccionada
+              atributosContainer.hide();
+              atributosFields.empty();
+          }
+      });
+      
+      // Función para generar HTML de campo de atributo
+      function generarCampoAtributo(atributo) {
+          const fieldId = 'atributo_' + atributo.id;
+          const fieldName = 'atributo_' + atributo.id;
+          const required = atributo.obligatorio ? 'required' : '';
+          const asterisco = atributo.obligatorio ? ' *' : '';
+          
+          let fieldHtml = `
+              <div class="row mb-3">
+                  <div class="col-md-6 form-group">
+                      <label for="${fieldId}" class="col-form-label">${atributo.nombre}${asterisco}</label>`;
+          
+          switch (atributo.tipo_dato) {
+              case 'texto':
+                  fieldHtml += `
+                      <input type="text" class="form-control" name="${fieldName}" id="${fieldId}" 
+                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+                  break;
+                  
+              case 'numero':
+                  fieldHtml += `
+                      <input type="number" class="form-control" name="${fieldName}" id="${fieldId}" 
+                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+                  break;
+                  
+              case 'decimal':
+                  fieldHtml += `
+                      <input type="number" step="0.01" class="form-control" name="${fieldName}" id="${fieldId}" 
+                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+                  break;
+                  
+              case 'fecha':
+                  fieldHtml += `
+                      <input type="date" class="form-control" name="${fieldName}" id="${fieldId}" ${required}>`;
+                  break;
+                  
+              case 'booleano':
+                  fieldHtml += `
+                      <select class="form-control" name="${fieldName}" id="${fieldId}" ${required}>
+                          <option value="">Seleccione una opción</option>
+                          <option value="true">Sí</option>
+                          <option value="false">No</option>
+                      </select>`;
+                  break;
+                  
+              case 'lista':
+                  fieldHtml += `
+                      <select class="form-control" name="${fieldName}" id="${fieldId}" ${required}>
+                          <option value="">Seleccione una opción</option>`;
+                  if (atributo.opciones && Array.isArray(atributo.opciones)) {
+                      atributo.opciones.forEach(function(opcion) {
+                          fieldHtml += `<option value="${opcion}">${opcion}</option>`;
+                      });
+                  }
+                  fieldHtml += `</select>`;
+                  break;
+                  
+              default:
+                  fieldHtml += `
+                      <input type="text" class="form-control" name="${fieldName}" id="${fieldId}" 
+                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+          }
+          
+
+          
+          fieldHtml += `
+                  </div>
+              </div>`;
+          
+          return fieldHtml;
+      }
+  });
+  </script>
   {% if user_info.tipo == 'persona' %}
   <script src="{% static 'producto/js/producto_maps.js' %}"></script>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initProductoMap" async defer></script>

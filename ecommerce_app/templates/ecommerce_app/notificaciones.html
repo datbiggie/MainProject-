@@ -142,6 +142,29 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
+    <!-- Variables JavaScript para notificaciones -->
+    <script>
+        // Variables globales necesarias para el sistema de notificaciones
+        window.marcarNotificacionUrl = '{% url "marcar_notificacion_leida_vista" %}';
+        window.csrfToken = '{{ csrf_token }}';
+        window.accountType = '{{ account_type }}';
+        
+        // Meta tag para CSRF
+        const csrfMeta = document.createElement('meta');
+        csrfMeta.name = 'csrf-token';
+        csrfMeta.content = '{{ csrf_token }}';
+        document.head.appendChild(csrfMeta);
+        
+        // Meta tag para autenticación
+        const authMeta = document.createElement('meta');
+        authMeta.name = 'user-authenticated';
+        authMeta.content = 'true';
+        document.head.appendChild(authMeta);
+    </script>
+    
+    <!-- JavaScript específico para notificaciones -->
+    <script src="{% static 'ecommerce_app/js/notificaciones.js' %}"></script>
+    
     <!-- El JavaScript de notificaciones se incluye automáticamente desde barra_superior_index.html -->
 </body>
 </html>

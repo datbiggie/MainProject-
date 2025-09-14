@@ -6,11 +6,41 @@ let userType = null;
 
 // Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
-    // Obtener el tipo de usuario del contenedor
-    const container = document.querySelector('[data-user-type]');
-    if (container) {
-        userType = container.getAttribute('data-user-type');
+    // Función para detectar el tipo de usuario de manera robusta
+    function detectarTipoUsuario() {
+        // Método 1: Desde el current_images_container
+        const currentImagesContainer = document.getElementById('current_images_container');
+        if (currentImagesContainer) {
+            const userTypeFromContainer = currentImagesContainer.getAttribute('data-user-type');
+            if (userTypeFromContainer && userTypeFromContainer.trim()) {
+                return userTypeFromContainer.trim();
+            }
+        }
+        
+        // Método 2: Desde cualquier contenedor con data-user-type
+        const container = document.querySelector('[data-user-type]');
+        if (container) {
+            const userTypeFromGeneral = container.getAttribute('data-user-type');
+            if (userTypeFromGeneral && userTypeFromGeneral.trim()) {
+                return userTypeFromGeneral.trim();
+            }
+        }
+        
+        // Método 3: Detectar desde los campos del formulario
+        const stockField = document.getElementById('edit_stock');
+        const precioField = document.getElementById('edit_precio');
+        const condicionField = document.getElementById('edit_condicion');
+        
+        if (stockField || precioField || condicionField) {
+            return 'persona';
+        }
+        
+        // Método 4: Fallback por defecto
+        return 'empresa';
     }
+    
+    userType = detectarTipoUsuario();
+    console.log('🔍 Tipo de usuario detectado en modal:', userType);
     
     // Inicializar eventos
     initializeModalEvents();
@@ -33,8 +63,7 @@ function initializeModalEvents() {
         const productData = {
             id: button.getAttribute('data-id'),
             nombre: button.getAttribute('data-nombre'),
-            marca: button.getAttribute('data-marca'),
-            modelo: button.getAttribute('data-modelo'),
+
             categoria: button.getAttribute('data-categoria'),
             descripcion: button.getAttribute('data-descripcion'),
             caracteristicas: button.getAttribute('data-caracteristicas'),
@@ -72,8 +101,7 @@ function initializeModalEvents() {
 function populateEditForm(data) {
     // Campos comunes
     setFieldValue('edit_nombre', data.nombre);
-    setFieldValue('edit_marca', data.marca);
-    setFieldValue('edit_modelo', data.modelo);
+
     setFieldValue('edit_descripcion', data.descripcion);
     setFieldValue('edit_caracteristicas', data.caracteristicas);
     
@@ -128,29 +156,89 @@ function setSelectValue(fieldId, value) {
 // ========================= Load Current Images =========================
 function loadCurrentImages(productId) {
     const container = document.getElementById('current_images_container');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ Container current_images_container no encontrado');
+        return;
+    }
+    
+    // Verificar que userType esté definido, si no, re-detectarlo
+    if (!userType) {
+        console.warn('⚠️ userType no definido, re-detectando...');
+        // Función para detectar el tipo de usuario de manera robusta
+        function detectarTipoUsuario() {
+            // Método 1: Desde el current_images_container
+            const currentImagesContainer = document.getElementById('current_images_container');
+            if (currentImagesContainer) {
+                const userTypeFromContainer = currentImagesContainer.getAttribute('data-user-type');
+                if (userTypeFromContainer && userTypeFromContainer.trim()) {
+                    return userTypeFromContainer.trim();
+                }
+            }
+            
+            // Método 2: Desde cualquier contenedor con data-user-type
+            const containerWithUserType = document.querySelector('[data-user-type]');
+            if (containerWithUserType) {
+                const userTypeFromGeneral = containerWithUserType.getAttribute('data-user-type');
+                if (userTypeFromGeneral && userTypeFromGeneral.trim()) {
+                    return userTypeFromGeneral.trim();
+                }
+            }
+            
+            // Método 3: Detectar desde los campos del formulario
+            const stockField = document.getElementById('edit_stock');
+            const precioField = document.getElementById('edit_precio');
+            const condicionField = document.getElementById('edit_condicion');
+            
+            if (stockField || precioField || condicionField) {
+                return 'persona';
+            }
+            
+            // Método 4: Fallback por defecto
+            return 'empresa';
+        }
+        
+        userType = detectarTipoUsuario();
+    }
+    
+    console.log('🔍 Cargando imágenes para producto:', productId, 'con userType:', userType);
     
     // Mostrar loading
     container.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Cargando imágenes...</div>';
     
+    // Determinar el parámetro correcto según el tipo de usuario
+    let urlParam;
+    if (userType === 'persona') {
+        urlParam = `id_producto_usuario=${productId}`;
+    } else {
+        urlParam = `id_producto_empresa=${productId}`;
+    }
+    
+    const fullUrl = `/ecommerce/api/obtener_imagenes_producto/?${urlParam}`;
+    console.log('🌐 URL de petición:', fullUrl);
+    
     // Hacer petición AJAX para obtener las imágenes
-    fetch(`/ecommerce/get_product_images/${productId}/`, {
+    fetch(fullUrl, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/json',
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('📡 Respuesta recibida:', response.status);
+        return response.json();
+    })
     .then(data => {
-        if (data.success && data.images) {
-            displayCurrentImages(data.images);
+        console.log('📦 Datos recibidos:', data);
+        if (data.success && data.imagenes) {
+            displayCurrentImages(data.imagenes);
         } else {
+            console.warn('⚠️ No se encontraron imágenes o error en la respuesta:', data.message || 'Sin mensaje');
             container.innerHTML = '<p class="text-muted">No hay imágenes disponibles</p>';
         }
     })
     .catch(error => {
-        console.error('Error loading images:', error);
+        console.error('❌ Error loading images:', error);
         container.innerHTML = '<p class="text-danger">Error al cargar las imágenes</p>';
     });
 }
@@ -167,12 +255,21 @@ function displayCurrentImages(images) {
     
     let html = '';
     images.forEach((image, index) => {
+        // Determinar el ID correcto según el tipo de usuario
+        let imageId;
+        if (userType === 'persona') {
+            imageId = image.id_imagen_producto_usuario;
+        } else {
+            imageId = image.id_imagen_producto_empresa;
+        }
+        
         html += `
             <div class="col-4 mb-2">
                 <div class="position-relative">
                     <img src="${image.url}" alt="Imagen ${index + 1}" class="img-fluid" style="width: 100%; height: 80px; object-fit: cover; border-radius: 0.5rem; border: 2px solid #e1e5e9;">
                     <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 delete-image-btn" 
-                            data-image-id="${image.id}" 
+                            data-image-id="${imageId}" 
+                            data-user-type="${userType}"
                             style="padding: 0.2rem 0.4rem; font-size: 0.7rem; border-radius: 50%;">
                         <i class="lni lni-close"></i>
                     </button>
@@ -187,24 +284,33 @@ function displayCurrentImages(images) {
     container.querySelectorAll('.delete-image-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const imageId = this.getAttribute('data-image-id');
-            deleteProductImage(imageId);
+            const userType = this.getAttribute('data-user-type');
+            deleteProductImage(imageId, userType);
         });
     });
 }
 
 // ========================= Delete Product Image =========================
-function deleteProductImage(imageId) {
+function deleteProductImage(imageId, userType) {
     if (!confirm('¿Estás seguro de que quieres eliminar esta imagen?')) {
         return;
     }
     
-    fetch(`/ecommerce/delete_product_image/${imageId}/`, {
+    // Preparar los datos según el tipo de usuario
+    const formData = new FormData();
+    if (userType === 'persona') {
+        formData.append('id_imagen_producto_usuario', imageId);
+    } else {
+        formData.append('id_imagen_producto_empresa', imageId);
+    }
+    
+    fetch('/ecommerce/api/eliminar_imagen_producto/', {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken()
-        }
+        },
+        body: formData
     })
     .then(response => response.json())
     .then(data => {
@@ -490,10 +596,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function filterProducts(searchTerm) {
-    const productCards = document.querySelectorAll('#contenedor-productos .col-lg-4');
+    const productCards = document.querySelectorAll('#contenedor-productos .product-card');
     
     productCards.forEach(card => {
-        const productName = card.querySelector('h3');
+        const productName = card.querySelector('.product-title');
         if (productName) {
             const name = productName.textContent.toLowerCase();
             if (name.includes(searchTerm)) {
@@ -507,7 +613,7 @@ function filterProducts(searchTerm) {
     });
     
     // Mostrar mensaje si no hay resultados
-    const visibleCards = document.querySelectorAll('#contenedor-productos .col-lg-4[style="display: block;"]');
+    const visibleCards = document.querySelectorAll('#contenedor-productos .product-card[style="display: block;"]');
     const container = document.getElementById('contenedor-productos');
     
     // Remover mensaje anterior si existe

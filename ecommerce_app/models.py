@@ -24,6 +24,7 @@ class usuario(models.Model):
     estado = models.CharField(max_length=100)  
     rol_usuario = models.CharField(max_length=10, choices=OPCIONES_ROL, default='persona')
     foto_usuario = models.ImageField(upload_to='perfil_usuario/', blank=True, null=True)
+    avatar_chatbot = models.CharField(max_length=255, default='avatars/Cartoon Style Robot.jpg', help_text='Avatar para el chatbot')
     fecha_registro_usuario = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -117,8 +118,6 @@ class producto_empresa(models.Model):
     id_producto_empresa = models.AutoField(primary_key=True)
     nombre_producto_empresa = models.CharField(max_length=150)
     descripcion_producto_empresa = models.TextField(blank=True, null=True)
-    marca_producto_empresa = models.CharField(max_length=100, blank=True, null=True)
-    modelo_producto_empresa = models.CharField(max_length=100, blank=True, null=True)
     # El campo imagen_producto se ha movido a la tabla imagen_producto
     caracteristicas_generales_empresa = models.TextField(blank=True, null=True)
     # El campo estatus_producto se ha movido a producto_sucursal como estatus_producto_sucursal
@@ -261,8 +260,6 @@ class producto_usuario(models.Model):
     id_producto_usuario = models.AutoField(primary_key=True)
     nombre_producto_usuario = models.CharField(max_length=150)
     descripcion_producto_usuario = models.TextField(blank=True, null=True)
-    marca_producto_usuario = models.CharField(max_length=100, blank=True, null=True)
-    modelo_producto_usuario = models.CharField(max_length=100, blank=True, null=True)
     caracteristicas_generales_usuario = models.TextField(blank=True, null=True)
     stock_producto_usuario = models.PositiveIntegerField(default=0)
     precio_producto_usuario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -599,6 +596,301 @@ class notificacion_empresa(models.Model):
     
     def __str__(self):
         return f"Notificación {self.id_notificacion_empresa} - {self.titulo} - Empresa {self.id_empresa_fk.nombre_empresa}"
+
+
+class favorito_usuario(models.Model):
+    id_favorito_usuario = models.AutoField(primary_key=True)
+    id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='favoritos')
+    
+    # Items que puede guardar un usuario como favoritos
+    id_producto_usuario_fk = models.ForeignKey('producto_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_usuario')
+    id_producto_sucursal_fk = models.ForeignKey('producto_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_usuario')
+    id_servicio_usuario_fk = models.ForeignKey('servicio_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_usuario')
+    id_servicio_sucursal_fk = models.ForeignKey('servicio_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_usuario')
+    
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = [
+            ('id_usuario_fk', 'id_producto_usuario_fk'),
+            ('id_usuario_fk', 'id_producto_sucursal_fk'),
+            ('id_usuario_fk', 'id_servicio_usuario_fk'),
+            ('id_usuario_fk', 'id_servicio_sucursal_fk'),
+        ]
+        db_table = 'favoritos_usuarios'
+        verbose_name = 'Favorito de Usuario'
+        verbose_name_plural = 'Favoritos de Usuarios'
+        ordering = ['-fecha_agregado']
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Validar que solo uno de los items esté definido
+        items = [self.id_producto_usuario_fk, self.id_producto_sucursal_fk, 
+                self.id_servicio_usuario_fk, self.id_servicio_sucursal_fk]
+        if sum(x is not None for x in items) != 1:
+            raise ValidationError('Debe especificar exactamente un item como favorito')
+    
+    def __str__(self):
+        if self.id_producto_usuario_fk:
+            item = self.id_producto_usuario_fk.nombre_producto_usuario
+        elif self.id_producto_sucursal_fk:
+            item = self.id_producto_sucursal_fk.id_producto_fk.nombre_producto_empresa
+        elif self.id_servicio_usuario_fk:
+            item = self.id_servicio_usuario_fk.nombre_servicio_usuario
+        else:
+            item = self.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa
+        
+        return f'{self.id_usuario_fk.nombre_usuario} - {item}'
+
+
+class favorito_empresa_sucursal(models.Model):
+    id_favorito_empresa = models.AutoField(primary_key=True)
+    id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='favoritos')
+    
+    # Items que puede guardar una empresa como favoritos (solo de usuarios individuales)
+    id_producto_usuario_fk = models.ForeignKey('producto_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_empresa')
+    id_servicio_usuario_fk = models.ForeignKey('servicio_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_empresa')
+    
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = [
+            ('id_empresa_fk', 'id_producto_usuario_fk'),
+            ('id_empresa_fk', 'id_servicio_usuario_fk'),
+        ]
+        db_table = 'favoritos_empresas'
+        verbose_name = 'Favorito de Empresa'
+        verbose_name_plural = 'Favoritos de Empresas'
+        ordering = ['-fecha_agregado']
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Validar que solo uno de los items esté definido
+        items = [self.id_producto_usuario_fk, self.id_servicio_usuario_fk]
+        if sum(x is not None for x in items) != 1:
+            raise ValidationError('Debe especificar exactamente un item como favorito')
+    
+    def __str__(self):
+        if self.id_producto_usuario_fk:
+            item = self.id_producto_usuario_fk.nombre_producto_usuario
+        else:
+            item = self.id_servicio_usuario_fk.nombre_servicio_usuario
+        
+        return f'{self.id_empresa_fk.nombre_empresa} - {item}'
+
+
+# ===== MODELOS EAV (Entity-Attribute-Value) =====
+
+class AtributoProducto(models.Model):
+    """Tabla de atributos dinámicos para productos"""
+    TIPOS_DATO = [
+        ('texto', 'Texto'),
+        ('numero', 'Número'),
+        ('decimal', 'Decimal'),
+        ('fecha', 'Fecha'),
+        ('booleano', 'Booleano'),
+        ('lista', 'Lista de opciones')
+    ]
+    
+    id_atributo = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True)
+    tipo_dato = models.CharField(max_length=20, choices=TIPOS_DATO)
+    opciones = models.JSONField(null=True, blank=True, help_text='Para tipo lista: ["opcion1", "opcion2"]')
+    obligatorio = models.BooleanField(default=False)
+    descripcion = models.TextField(blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Atributo de Producto'
+        verbose_name_plural = 'Atributos de Productos'
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_dato_display()})"
+
+
+class CategoriaAtributo(models.Model):
+    """Tabla intermedia que asocia atributos con categorías"""
+    id_categoria_atributo = models.AutoField(primary_key=True)
+    
+    # FK a AtributoProducto
+    atributo = models.ForeignKey(AtributoProducto, on_delete=models.CASCADE, related_name='categorias_asociadas')
+    
+    # FK a categorías de usuario (opcional)
+    categoria_usuario = models.ForeignKey(
+        'categoria_producto_usuario', 
+        on_delete=models.CASCADE, 
+        null=True, blank=True,
+        related_name='atributos_asociados'
+    )
+    
+    # FK a categorías de empresa (opcional)
+    categoria_empresa = models.ForeignKey(
+        'categoria_producto_empresa', 
+        on_delete=models.CASCADE, 
+        null=True, blank=True,
+        related_name='atributos_asociados'
+    )
+    
+    orden = models.PositiveIntegerField(default=0, help_text='Orden de visualización del atributo')
+    fecha_asociacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Categoría-Atributo'
+        verbose_name_plural = 'Categorías-Atributos'
+        unique_together = [
+            ('atributo', 'categoria_usuario'),
+            ('atributo', 'categoria_empresa')
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(categoria_usuario__isnull=False, categoria_empresa__isnull=True) |
+                    models.Q(categoria_usuario__isnull=True, categoria_empresa__isnull=False)
+                ),
+                name='categoria_atributo_exclusiva'
+            )
+        ]
+        ordering = ['orden', 'fecha_asociacion']
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Validar que solo una categoría esté asignada
+        if not ((self.categoria_usuario and not self.categoria_empresa) or 
+                (self.categoria_empresa and not self.categoria_usuario)):
+            raise ValidationError('Debe asignar exactamente una categoría (usuario o empresa).')
+    
+    def __str__(self):
+        categoria = self.categoria_usuario or self.categoria_empresa
+        categoria_tipo = 'Usuario' if self.categoria_usuario else 'Empresa'
+        return f"{self.atributo.nombre} → {categoria} ({categoria_tipo})"
+
+
+class ValorAtributoProducto(models.Model):
+    """Tabla de valores de atributos para productos específicos"""
+    id_valor_atributo = models.AutoField(primary_key=True)
+    
+    # FK a productos (puede ser de usuario o empresa)
+    producto_usuario = models.ForeignKey(
+        'producto_usuario', 
+        on_delete=models.CASCADE, 
+        null=True, blank=True,
+        related_name='valores_atributos'
+    )
+    producto_empresa = models.ForeignKey(
+        'producto_empresa', 
+        on_delete=models.CASCADE, 
+        null=True, blank=True,
+        related_name='valores_atributos'
+    )
+    
+    # FK a atributo
+    atributo = models.ForeignKey(AtributoProducto, on_delete=models.CASCADE, related_name='valores')
+    
+    # Campos para diferentes tipos de datos
+    valor_texto = models.TextField(null=True, blank=True)
+    valor_numero = models.IntegerField(null=True, blank=True)
+    valor_decimal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    valor_fecha = models.DateField(null=True, blank=True)
+    valor_booleano = models.BooleanField(null=True, blank=True)
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Valor de Atributo'
+        verbose_name_plural = 'Valores de Atributos'
+        unique_together = [
+            ('producto_usuario', 'atributo'),
+            ('producto_empresa', 'atributo')
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(producto_usuario__isnull=False, producto_empresa__isnull=True) |
+                    models.Q(producto_usuario__isnull=True, producto_empresa__isnull=False)
+                ),
+                name='valor_atributo_producto_exclusivo'
+            )
+        ]
+        ordering = ['atributo__nombre']
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        
+        # Validar que solo un producto esté asignado
+        if not ((self.producto_usuario and not self.producto_empresa) or 
+                (self.producto_empresa and not self.producto_usuario)):
+            raise ValidationError('Debe asignar exactamente un producto (usuario o empresa).')
+        
+        # Validar que el valor corresponda al tipo de dato del atributo
+        tipo_dato = self.atributo.tipo_dato
+        valores_no_nulos = sum([
+            self.valor_texto is not None,
+            self.valor_numero is not None,
+            self.valor_decimal is not None,
+            self.valor_fecha is not None,
+            self.valor_booleano is not None
+        ])
+        
+        if valores_no_nulos != 1:
+            raise ValidationError('Debe asignar exactamente un valor según el tipo de dato del atributo.')
+        
+        # Validar tipo específico
+        if tipo_dato == 'texto' and self.valor_texto is None:
+            raise ValidationError('El atributo requiere un valor de texto.')
+        elif tipo_dato == 'numero' and self.valor_numero is None:
+            raise ValidationError('El atributo requiere un valor numérico.')
+        elif tipo_dato == 'decimal' and self.valor_decimal is None:
+            raise ValidationError('El atributo requiere un valor decimal.')
+        elif tipo_dato == 'fecha' and self.valor_fecha is None:
+            raise ValidationError('El atributo requiere un valor de fecha.')
+        elif tipo_dato == 'booleano' and self.valor_booleano is None:
+            raise ValidationError('El atributo requiere un valor booleano.')
+        elif tipo_dato == 'lista' and self.valor_texto is None:
+            raise ValidationError('El atributo de lista requiere un valor de texto.')
+    
+    def get_valor(self):
+        """Retorna el valor según el tipo de dato del atributo"""
+        tipo_dato = self.atributo.tipo_dato
+        if tipo_dato == 'texto' or tipo_dato == 'lista':
+            return self.valor_texto
+        elif tipo_dato == 'numero':
+            return self.valor_numero
+        elif tipo_dato == 'decimal':
+            return self.valor_decimal
+        elif tipo_dato == 'fecha':
+            return self.valor_fecha
+        elif tipo_dato == 'booleano':
+            return self.valor_booleano
+        return None
+    
+    def set_valor(self, valor):
+        """Establece el valor según el tipo de dato del atributo"""
+        # Limpiar todos los valores primero
+        self.valor_texto = None
+        self.valor_numero = None
+        self.valor_decimal = None
+        self.valor_fecha = None
+        self.valor_booleano = None
+        
+        # Asignar según tipo
+        tipo_dato = self.atributo.tipo_dato
+        if tipo_dato == 'texto' or tipo_dato == 'lista':
+            self.valor_texto = str(valor)
+        elif tipo_dato == 'numero':
+            self.valor_numero = int(valor)
+        elif tipo_dato == 'decimal':
+            self.valor_decimal = float(valor)
+        elif tipo_dato == 'fecha':
+            self.valor_fecha = valor
+        elif tipo_dato == 'booleano':
+            self.valor_booleano = bool(valor)
+    
+    def __str__(self):
+        producto = self.producto_usuario or self.producto_empresa
+        producto_tipo = 'Usuario' if self.producto_usuario else 'Empresa'
+        return f"{producto} - {self.atributo.nombre}: {self.get_valor()} ({producto_tipo})"
 
 
 

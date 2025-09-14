@@ -1,8 +1,33 @@
 import json
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
 from .models import producto_empresa, servicio_empresa, producto_sucursal, servicio_sucursal, sucursal, imagen_producto_empresa, imagen_servicio_empresa, categoria_servicio_usuario, categoria_servicio_empresa, imagen_producto_usuario, producto_usuario, categoria_producto_usuario, categoria_producto_empresa
+
+# Función auxiliar para generar user_info con avatar_chatbot
+def get_user_info_with_avatar(current_user, account_type, empresa_nombre=None):
+    """Genera el diccionario user_info con el campo avatar_chatbot incluido"""
+    if account_type == 'empresa':
+        return {
+            'id': current_user.id_empresa,
+            'nombre': current_user.nombre_empresa,
+            'email': current_user.correo_empresa,
+            'tipo': current_user.rol_empresa,
+            'is_authenticated': True,
+            'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
+        }
+    else:
+        user_info = {
+            'id': current_user.id_usuario,
+            'nombre': current_user.nombre_usuario,
+            'email': current_user.correo_usuario,
+            'tipo': current_user.rol_usuario,
+            'is_authenticated': True,
+            'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
+        }
+        if empresa_nombre:
+            user_info['empresa_nombre'] = empresa_nombre
+        return user_info
 
 # API para obtener productos y servicios NO asociados a una sucursal
 @require_GET
@@ -487,8 +512,6 @@ def api_filtrar_productos(request):
                     'id_producto_empresa': prod.id_producto_empresa,
                     'nombre_producto_empresa': prod.nombre_producto_empresa,
                     'descripcion_producto_empresa': prod.descripcion_producto_empresa or '',
-                    'marca_producto_empresa': prod.marca_producto_empresa or '',
-                    'modelo_producto_empresa': prod.modelo_producto_empresa or '',
                     'caracteristicas_generales_empresa': prod.caracteristicas_generales_empresa or '',
                     'categoria_producto': prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else '',
                     'serial': idx,
@@ -510,10 +533,14 @@ def api_filtrar_productos(request):
                     'id_producto_usuario': prod.id_producto_usuario,
                     'nombre_producto_usuario': prod.nombre_producto_usuario,
                     'descripcion_producto_usuario': prod.descripcion_producto_usuario or '',
-                    'marca_producto_usuario': prod.marca_producto_usuario or '',
-                    'modelo_producto_usuario': prod.modelo_producto_usuario or '',
                     'caracteristicas_generales_usuario': prod.caracteristicas_generales_usuario or '',
                     'categoria_producto': prod.id_categoria_prod_fk.nombre_categoria_prod_usuario if prod.id_categoria_prod_fk else '',
+                    'precio_producto_usuario': str(prod.precio_producto_usuario) if prod.precio_producto_usuario else '0',
+                    'stock_producto_usuario': prod.stock_producto_usuario or 0,
+                    'condicion_producto_usuario': prod.condicion_producto_usuario or '',
+                    'estatus_producto_usuario': prod.estatus_producto_usuario or '',
+                    'latitud_producto_usuario': str(prod.latitud_producto_usuario) if prod.latitud_producto_usuario else '',
+                    'longitud_producto_usuario': str(prod.longitud_producto_usuario) if prod.longitud_producto_usuario else '',
                     'serial': idx,
                     'imagen_url': imagen_url
                 })
@@ -1394,6 +1421,67 @@ def eliminar_sucursal(request):
 
 
 
+def procesar_atributos_producto(request, producto_empresa=None, producto_usuario=None, account_type='usuario'):
+    """
+    Procesa y guarda los valores de atributos dinámicos para un producto
+    """
+    try:
+        # Obtener todos los campos del formulario que empiecen con 'atributo_'
+        for key, value in request.POST.items():
+            if key.startswith('atributo_'):
+                # Extraer el ID del atributo del nombre del campo
+                atributo_id = key.replace('atributo_', '')
+                
+                try:
+                    # Obtener el atributo correspondiente
+                    atributo = AtributoProducto.objects.get(id=atributo_id)
+                    
+                    # Validar que el valor no esté vacío (solo si el atributo es obligatorio)
+                    if atributo.obligatorio and (not value or value.strip() == ''):
+                        continue
+                    
+                    # Procesar el valor según el tipo de dato
+                    valor_procesado = value
+                    
+                    if atributo.tipo_dato == 'numero':
+                        try:
+                            valor_procesado = int(value) if value else 0
+                        except ValueError:
+                            valor_procesado = 0
+                    elif atributo.tipo_dato == 'decimal':
+                        try:
+                            valor_procesado = float(value) if value else 0.0
+                        except ValueError:
+                            valor_procesado = 0.0
+                    elif atributo.tipo_dato == 'booleano':
+                        valor_procesado = value.lower() in ['true', '1', 'on', 'yes']
+                    
+                    # Crear el registro en ValorAtributoProducto
+                    if producto_empresa:
+                        ValorAtributoProducto.objects.create(
+                            id_atributo_fk=atributo,
+                            id_producto_empresa_fk=producto_empresa,
+                            valor=str(valor_procesado)
+                        )
+                    elif producto_usuario:
+                        ValorAtributoProducto.objects.create(
+                            id_atributo_fk=atributo,
+                            id_producto_usuario_fk=producto_usuario,
+                            valor=str(valor_procesado)
+                        )
+                    
+                    logger.info(f"Atributo {atributo.nombre} guardado con valor: {valor_procesado}")
+                    
+                except AtributoProducto.DoesNotExist:
+                    logger.warning(f"Atributo con ID {atributo_id} no encontrado")
+                    continue
+                except Exception as e:
+                    logger.error(f"Error al procesar atributo {atributo_id}: {str(e)}")
+                    continue
+                    
+    except Exception as e:
+        logger.error(f"Error general al procesar atributos: {str(e)}")
+
 @require_login
 def producto_funcion(request):
     current_user = get_current_user(request)
@@ -1430,13 +1518,9 @@ def producto_funcion(request):
             if account_type == 'empresa':
                 nombre_producto = request.POST.get('nombre_producto_empresa', '').strip()
                 descripcion_producto = request.POST.get('descripcion_producto_empresa', '').strip()
-                marca_producto = request.POST.get('marca_producto_empresa', '').strip()
-                modelo_producto = request.POST.get('modelo_producto_empresa', '').strip()
             else:
                 nombre_producto = request.POST.get('nombre_producto_usuario', '').strip()
                 descripcion_producto = request.POST.get('descripcion_producto_usuario', '').strip()
-                marca_producto = request.POST.get('marca_producto_usuario', '').strip()
-                modelo_producto = request.POST.get('modelo_producto_usuario', '').strip()
             # Obtener múltiples imágenes (hasta 5)
             imagenes_producto = request.FILES.getlist('imagenes_producto')
             caracteristicas_generales = request.POST.get('caracteristicas_generales', '').strip()
@@ -1466,8 +1550,6 @@ def producto_funcion(request):
                 nuevo_producto = producto_empresa(
                     nombre_producto_empresa=nombre_producto,
                     descripcion_producto_empresa=descripcion_producto,
-                    marca_producto_empresa=marca_producto,
-                    modelo_producto_empresa=modelo_producto,
                     caracteristicas_generales_empresa=caracteristicas_generales,
                     id_empresa_fk=empresa_obj,
                     id_categoria_prod_fk=categoria_producto_consul
@@ -1482,6 +1564,10 @@ def producto_funcion(request):
                         id_producto_fk=nuevo_producto
                     )
                 logger.info(f"Se guardaron {len(imagenes_producto)} imágenes para el producto {nuevo_producto.nombre_producto_empresa}")
+                
+                # Procesar y guardar atributos dinámicos para empresa
+                procesar_atributos_producto(request, nuevo_producto, None, account_type)
+                
             else:
                 categoria_producto_consul = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
                 
@@ -1512,8 +1598,6 @@ def producto_funcion(request):
                 nuevo_producto = producto_usuario(
                     nombre_producto_usuario=nombre_producto,
                     descripcion_producto_usuario=descripcion_producto,
-                    marca_producto_usuario=marca_producto,
-                    modelo_producto_usuario=modelo_producto,
                     caracteristicas_generales_usuario=caracteristicas_generales,
                     stock_producto_usuario=stock_producto,
                     precio_producto_usuario=precio_producto,
@@ -1534,6 +1618,9 @@ def producto_funcion(request):
                         id_producto_fk=nuevo_producto
                     )
                 logger.info(f"Se guardaron {len(imagenes_producto)} imágenes para el producto {nuevo_producto.nombre_producto_usuario}")
+                
+                # Procesar y guardar atributos dinámicos para usuario
+                procesar_atributos_producto(request, None, nuevo_producto, account_type)
             
             # Ya no guardamos el estatus en la sesión porque el campo se ha eliminado del formulario
             
@@ -1728,6 +1815,9 @@ def categoria_producto_funcion(request):
 
     account_type = request.session.get('account_type', 'usuario')
     
+    # Obtener todos los atributos disponibles
+    atributos_disponibles = AtributoProducto.objects.all().order_by('nombre')
+    
     if account_type == 'empresa':
         # Para empresas, usar categorías de empresa
         empresa_obj = current_user
@@ -1771,6 +1861,42 @@ def categoria_producto_funcion(request):
             if not estatus_categoria:
                 return JsonResponse({'success': False, 'message': 'Debe seleccionar un estatus.'}, content_type='application/json')
 
+            # Primero validar todos los nuevos atributos antes de crear la categoría
+            contador = 1
+            nuevos_atributos_data = []
+            while f'nuevo_atributo_nombre_{contador}' in request.POST:
+                nombre_attr = request.POST.get(f'nuevo_atributo_nombre_{contador}', '').strip()
+                tipo_attr = request.POST.get(f'nuevo_atributo_tipo_{contador}', '').strip()
+                descripcion_attr = request.POST.get(f'nuevo_atributo_descripcion_{contador}', '').strip()
+                obligatorio_attr = request.POST.get(f'nuevo_atributo_obligatorio_{contador}') == '1'
+                opciones_attr = request.POST.get(f'nuevo_atributo_opciones_{contador}', '').strip()
+                
+                if nombre_attr and tipo_attr:
+                    # Verificar si ya existe un atributo con ese nombre
+                    atributo_existente = AtributoProducto.objects.filter(nombre__iexact=nombre_attr).first()
+                    if atributo_existente:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'Ya existe un atributo con el nombre "{nombre_attr}". Por favor, use un nombre diferente o seleccione el atributo existente de la lista.'
+                        }, content_type='application/json')
+                    
+                    # Procesar opciones para tipo lista
+                    opciones_json = None
+                    if tipo_attr == 'lista' and opciones_attr:
+                        opciones_json = [opcion.strip() for opcion in opciones_attr.split(',') if opcion.strip()]
+                    
+                    # Guardar datos del atributo para crear después
+                    nuevos_atributos_data.append({
+                        'nombre': nombre_attr,
+                        'tipo_dato': tipo_attr,
+                        'descripcion': descripcion_attr,
+                        'obligatorio': obligatorio_attr,
+                        'opciones': opciones_json
+                    })
+                
+                contador += 1
+            
+            # Si llegamos aquí, todas las validaciones pasaron, ahora crear la categoría
             if account_type == 'empresa':
                 nueva_categoria = categoria_producto_empresa(
                     nombre_categoria_prod_empresa=nombre_categoria,
@@ -1789,9 +1915,50 @@ def categoria_producto_funcion(request):
                 )
             
             nueva_categoria.save()
+            
+            # Procesar atributos seleccionados existentes
+            atributos_existentes = request.POST.getlist('atributos_existentes')
+            for atributo_id in atributos_existentes:
+                try:
+                    atributo = AtributoProducto.objects.get(id_atributo=atributo_id)
+                    if account_type == 'empresa':
+                        CategoriaAtributo.objects.create(
+                            atributo=atributo,
+                            categoria_empresa=nueva_categoria
+                        )
+                    else:
+                        CategoriaAtributo.objects.create(
+                            atributo=atributo,
+                            categoria_usuario=nueva_categoria
+                        )
+                except AtributoProducto.DoesNotExist:
+                    continue
+            
+            # Crear los nuevos atributos validados
+            for atributo_data in nuevos_atributos_data:
+                nuevo_atributo = AtributoProducto.objects.create(
+                    nombre=atributo_data['nombre'],
+                    tipo_dato=atributo_data['tipo_dato'],
+                    descripcion=atributo_data['descripcion'],
+                    obligatorio=atributo_data['obligatorio'],
+                    opciones=atributo_data['opciones']
+                )
+                
+                # Asociar el nuevo atributo con la categoría
+                if account_type == 'empresa':
+                    CategoriaAtributo.objects.create(
+                        atributo=nuevo_atributo,
+                        categoria_empresa=nueva_categoria
+                    )
+                else:
+                    CategoriaAtributo.objects.create(
+                        atributo=nuevo_atributo,
+                        categoria_usuario=nueva_categoria
+                    )
+            
             return JsonResponse({
                 'success': True,
-                'message': 'Categoría registrada exitosamente'
+                'message': 'Categoría y atributos registrados exitosamente'
             }, content_type='application/json')
         except Exception as e:
             return JsonResponse({
@@ -1799,7 +1966,10 @@ def categoria_producto_funcion(request):
                 'message': str(e)
             }, content_type='application/json')
 
-    return render(request, 'ecommerce_app/categoria_producto.html', {'user_info': user_info})
+    return render(request, 'ecommerce_app/categoria_producto.html', {
+        'user_info': user_info,
+        'atributos_disponibles': atributos_disponibles
+    })
 
 @require_login
 def categoria_servicio_funcion(request):
@@ -2007,6 +2177,171 @@ def api_filtrar_categorias_producto(request):
             'message': f'Error al filtrar categorías: {str(e)}'
         })
 
+
+
+
+@require_POST
+def api_agregar_atributo_categoria(request):
+    """API para agregar un nuevo atributo a una categoría"""
+    try:
+        data = json.loads(request.body)
+        categoria_id = data.get('categoria_id')
+        nombre_atributo = data.get('nombre')
+        tipo_dato = data.get('tipo_dato')
+        opciones = data.get('opciones')
+        obligatorio = data.get('obligatorio', False)
+        descripcion = data.get('descripcion', '')
+        
+        if not all([categoria_id, nombre_atributo, tipo_dato]):
+            return JsonResponse({'error': 'Datos incompletos'}, status=400)
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Crear o obtener el atributo
+        atributo, created = AtributoProducto.objects.get_or_create(
+            nombre=nombre_atributo,
+            defaults={
+                'tipo_dato': tipo_dato,
+                'opciones': opciones,
+                'obligatorio': obligatorio,
+                'descripcion': descripcion
+            }
+        )
+        
+        # Crear la asociación categoría-atributo
+        if account_type == 'empresa':
+            categoria_atributo, created = CategoriaAtributo.objects.get_or_create(
+                atributo=atributo,
+                categoria_empresa_id=categoria_id,
+                defaults={'orden': 0}
+            )
+        else:
+            categoria_atributo, created = CategoriaAtributo.objects.get_or_create(
+                atributo=atributo,
+                categoria_usuario_id=categoria_id,
+                defaults={'orden': 0}
+            )
+        
+        if not created:
+            return JsonResponse({
+                'success': False,
+                'message': 'El atributo ya está asociado a esta categoría'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Atributo agregado exitosamente',
+            'atributo': {
+                'id_categoria_atributo': categoria_atributo.id_categoria_atributo,
+                'id_atributo': atributo.id_atributo,
+                'nombre': atributo.nombre,
+                'tipo_dato': atributo.tipo_dato,
+                'opciones': atributo.opciones,
+                'obligatorio': atributo.obligatorio,
+                'descripcion': atributo.descripcion,
+                'orden': categoria_atributo.orden
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error al agregar atributo: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al agregar atributo: {str(e)}'
+        })
+
+@require_POST
+def api_modificar_atributo_categoria(request):
+    """API para modificar un atributo de una categoría"""
+    try:
+        data = json.loads(request.body)
+        id_categoria_atributo = data.get('id_categoria_atributo')
+        nombre_atributo = data.get('nombre')
+        tipo_dato = data.get('tipo_dato')
+        opciones = data.get('opciones')
+        obligatorio = data.get('obligatorio', False)
+        descripcion = data.get('descripcion', '')
+        orden = data.get('orden', 0)
+        
+        if not all([id_categoria_atributo, nombre_atributo, tipo_dato]):
+            return JsonResponse({'error': 'Datos incompletos'}, status=400)
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
+        
+        # Obtener la asociación categoría-atributo
+        categoria_atributo = CategoriaAtributo.objects.get(
+            id_categoria_atributo=id_categoria_atributo
+        )
+        
+        # Actualizar el atributo
+        atributo = categoria_atributo.atributo
+        atributo.nombre = nombre_atributo
+        atributo.tipo_dato = tipo_dato
+        atributo.opciones = opciones
+        atributo.obligatorio = obligatorio
+        atributo.descripcion = descripcion
+        atributo.save()
+        
+        # Actualizar el orden
+        categoria_atributo.orden = orden
+        categoria_atributo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Atributo modificado exitosamente'
+        })
+    except CategoriaAtributo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Atributo no encontrado'
+        })
+    except Exception as e:
+        logger.error(f"Error al modificar atributo: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al modificar atributo: {str(e)}'
+        })
+
+@require_POST
+def api_eliminar_atributo_categoria(request):
+    """API para eliminar un atributo de una categoría"""
+    try:
+        data = json.loads(request.body)
+        id_categoria_atributo = data.get('id_categoria_atributo')
+        
+        if not id_categoria_atributo:
+            return JsonResponse({'error': 'ID de categoría-atributo requerido'}, status=400)
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
+        
+        # Eliminar la asociación categoría-atributo
+        categoria_atributo = CategoriaAtributo.objects.get(
+            id_categoria_atributo=id_categoria_atributo
+        )
+        categoria_atributo.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Atributo eliminado exitosamente'
+        })
+    except CategoriaAtributo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Atributo no encontrado'
+        })
+    except Exception as e:
+        logger.error(f"Error al eliminar atributo: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar atributo: {str(e)}'
+        })
 
 @require_GET
 def api_filtrar_categorias_servicio(request):
@@ -2256,6 +2591,86 @@ def editar_categoria_producto(request):
         'message': 'Método no permitido'
     })
 
+
+@require_login
+def obtener_atributos_categoria(request):
+    """Vista AJAX para obtener los atributos asociados a una categoría específica"""
+    if request.method == 'GET':
+        try:
+            # Obtener usuario actual y tipo de cuenta
+            current_user = get_current_user(request)
+            if not current_user:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Usuario no autenticado'
+                })
+            
+            account_type = request.session.get('account_type', 'usuario')
+            id_categoria = request.GET.get('id_categoria')
+            
+            if not id_categoria:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ID de categoría requerido'
+                })
+            
+            # Obtener atributos según el tipo de cuenta
+            atributos = []
+            
+            if account_type == 'empresa':
+                # Obtener atributos asociados a la categoría de empresa
+                categoria_atributos = CategoriaAtributo.objects.filter(
+                    categoria_empresa_id=id_categoria
+                ).select_related('atributo')
+                
+                for cat_attr in categoria_atributos:
+                    atributos.append({
+                        'id_categoria_atributo': cat_attr.id_categoria_atributo,
+                        'id_atributo': cat_attr.atributo.id_atributo,
+                        'nombre': cat_attr.atributo.nombre,
+                        'tipo_dato': cat_attr.atributo.tipo_dato,
+                        'obligatorio': cat_attr.atributo.obligatorio,
+                        'descripcion': cat_attr.atributo.descripcion,
+                        'opciones': cat_attr.atributo.opciones,
+                        'orden': cat_attr.orden
+                    })
+            else:
+                # Obtener atributos asociados a la categoría de usuario
+                categoria_atributos = CategoriaAtributo.objects.filter(
+                    categoria_usuario_id=id_categoria
+                ).select_related('atributo')
+                
+                for cat_attr in categoria_atributos:
+                    atributos.append({
+                        'id_categoria_atributo': cat_attr.id_categoria_atributo,
+                        'id_atributo': cat_attr.atributo.id_atributo,
+                        'nombre': cat_attr.atributo.nombre,
+                        'tipo_dato': cat_attr.atributo.tipo_dato,
+                        'obligatorio': cat_attr.atributo.obligatorio,
+                        'descripcion': cat_attr.atributo.descripcion,
+                        'opciones': cat_attr.atributo.opciones,
+                        'orden': cat_attr.orden
+                    })
+            
+            # Ordenar atributos por orden
+            atributos.sort(key=lambda x: x['orden'] if x['orden'] else 999)
+            
+            return JsonResponse({
+                'success': True,
+                'atributos': atributos
+            })
+            
+        except Exception as e:
+            logger.error(f"Error al obtener atributos de categoría: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al obtener atributos: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
 
 
 @require_login
@@ -2617,8 +3032,6 @@ def editar_producto(request):
                     # Actualizar los datos básicos
                     producto_obj.nombre_producto_empresa = request.POST.get('nombre_producto_empresa')
                     producto_obj.descripcion_producto_empresa = request.POST.get('descripcion_producto_empresa')
-                    producto_obj.marca_producto_empresa = request.POST.get('marca_producto_empresa')
-                    producto_obj.modelo_producto_empresa = request.POST.get('modelo_producto_empresa')
                     producto_obj.caracteristicas_generales_empresa = request.POST.get('caracteristicas_generales')
                     
                     # Actualizar categoría si se proporciona
@@ -2676,8 +3089,6 @@ def editar_producto(request):
                     # Actualizar los datos básicos
                     producto_obj.nombre_producto_usuario = request.POST.get('nombre_producto_usuario')
                     producto_obj.descripcion_producto_usuario = request.POST.get('descripcion_producto_usuario')
-                    producto_obj.marca_producto_usuario = request.POST.get('marca_producto_usuario')
-                    producto_obj.modelo_producto_usuario = request.POST.get('modelo_producto_usuario')
                     producto_obj.caracteristicas_generales_usuario = request.POST.get('caracteristicas_generales')
                     
                     # Actualizar campos adicionales para usuarios
@@ -2902,32 +3313,19 @@ def index(request):
         if current_user:
             account_type = request.session.get('account_type', 'usuario')
             
-            if account_type == 'empresa':
-                user_info = {
-                    'id': current_user.id_empresa,
-                    'nombre': current_user.nombre_empresa,
-                    'email': current_user.correo_empresa,
-                    'tipo': current_user.rol_empresa,
-                    'is_authenticated': True,
-                    'empresa_nombre': current_user.nombre_empresa
-                }
-            else:
-                # Buscar empresa asociada para usuarios
-                empresa_nombre = None
+            # Buscar empresa asociada para usuarios
+            empresa_nombre = None
+            if account_type == 'usuario':
                 try:
                     empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
                     if empresa_obj:
                         empresa_nombre = empresa_obj.nombre_empresa
                 except Exception as e:
                     empresa_nombre = None
-                user_info = {
-                    'id': current_user.id_usuario,
-                    'nombre': current_user.nombre_usuario,
-                    'email': current_user.correo_usuario,
-                    'tipo': current_user.rol_usuario,
-                    'is_authenticated': True,
-                    'empresa_nombre': empresa_nombre
-                }
+            elif account_type == 'empresa':
+                empresa_nombre = current_user.nombre_empresa
+            
+            user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
     
     return render(request, 'ecommerce_app/index.html', {'user_info': user_info})
 
@@ -3169,10 +3567,7 @@ def busquedad(request):
                 filtros_productos_sucursal['id_producto_fk__nombre_producto_empresa__icontains'] = query
             if condicion:
                 filtros_productos_sucursal['condicion_producto_sucursal'] = condicion
-            if marca:
-                filtros_productos_sucursal['id_producto_fk__marca_producto_empresa__icontains'] = marca
-            if modelo:
-                filtros_productos_sucursal['id_producto_fk__modelo_producto_empresa__icontains'] = modelo
+
             if categoria_producto:
                 filtros_productos_sucursal['id_producto_fk__id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
             
@@ -3198,10 +3593,7 @@ def busquedad(request):
                 filtros_productos_usuario['nombre_producto_usuario__icontains'] = query
             if condicion:
                 filtros_productos_usuario['condicion_producto_usuario'] = condicion
-            if marca:
-                filtros_productos_usuario['marca_producto_usuario__icontains'] = marca
-            if modelo:
-                filtros_productos_usuario['modelo_producto_usuario__icontains'] = modelo
+
             if categoria_producto:
                 filtros_productos_usuario['id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
             
@@ -4292,8 +4684,7 @@ def vista_items(request):
                         'id': producto_sucursal_obj.id_producto_sucursal,  # Usar ID del producto_sucursal
                         'nombre': producto.nombre_producto_empresa,
                         'descripcion': producto.descripcion_producto_empresa,
-                        'marca': producto.marca_producto_empresa,
-                        'modelo': producto.modelo_producto_empresa,
+
                         'caracteristicas': producto.caracteristicas_generales_empresa,
                         'tipo': 'producto',
                         'tipo_propietario': 'empresa',
@@ -4330,8 +4721,7 @@ def vista_items(request):
                                 'nombre': producto.nombre_producto_empresa,
                                 'descripcion': producto.descripcion_producto_empresa,
                                 'tipo_propietario': 'empresa',
-                                'marca': producto.marca_producto_empresa,
-                                'modelo': producto.modelo_producto_empresa,
+
                                 'caracteristicas': producto.caracteristicas_generales_empresa,
                                 'tipo': 'producto',
                                 'empresa': producto.id_empresa_fk.nombre_empresa,
@@ -4367,8 +4757,7 @@ def vista_items(request):
                         'id': producto.id_producto_usuario,
                         'nombre': producto.nombre_producto_usuario,
                         'descripcion': producto.descripcion_producto_usuario,
-                        'marca': producto.marca_producto_usuario,
-                        'modelo': producto.modelo_producto_usuario,
+
                         'caracteristicas': producto.caracteristicas_generales_usuario,
                         'tipo': 'producto',
                         'tipo_propietario': 'usuario',
@@ -4508,39 +4897,40 @@ def perfil_usuario(request):
     usuario_obj = None
     
     # Verificar si se está solicitando un perfil específico por ID
+    # Verificar si hay usuario autenticado primero
+    current_user = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+    
+    account_type = request.session.get('account_type', 'usuario')
+    
     usuario_id = request.GET.get('id')
     if usuario_id:
         try:
             usuario_obj = usuario.objects.get(id_usuario=usuario_id)
-            # Para perfiles públicos, no necesitamos user_info completo
-            user_info = {
-                'is_authenticated': False,
-                'is_public_profile': True
-            }
+            # Para perfiles públicos, verificar si hay usuario autenticado
+            if current_user:
+                user_info = get_user_info_with_avatar(current_user, account_type)
+                user_info['is_public_profile'] = True
+                user_info['avatar_chatbot'] = usuario_obj.avatar_chatbot if usuario_obj.avatar_chatbot else None
+            else:
+                user_info = {
+                    'is_authenticated': False,
+                    'is_public_profile': True,
+                    'avatar_chatbot': usuario_obj.avatar_chatbot if usuario_obj.avatar_chatbot else None
+                }
         except usuario.DoesNotExist:
             # Si no existe el usuario, redirigir o mostrar error
+            user_info = get_user_info_with_avatar(current_user, account_type) if current_user else {'is_authenticated': False}
             return render(request, 'ecommerce_app/perfil_usuario.html', {
                 'error': 'Usuario no encontrado',
-                'user_info': {'is_authenticated': False}
+                'user_info': user_info
             })
     else:
-        # Verificar si hay usuario autenticado
-        current_user = None
-        if is_user_authenticated(request):
-            current_user = get_current_user(request)
-        
-        account_type = request.session.get('account_type', 'usuario')
-        
         if current_user and account_type == 'usuario':
             # Para usuarios autenticados, current_user ya es el usuario
             usuario_obj = current_user
-            user_info = {
-                'id': current_user.id_usuario,
-                'nombre': current_user.nombre_usuario,
-                'email': current_user.correo_usuario,
-                'tipo': current_user.rol_usuario,
-                'is_authenticated': True
-            }
+            user_info = get_user_info_with_avatar(current_user, account_type)
         elif current_user and account_type == 'empresa':
             # Si es empresa autenticada, redirigir al perfil de empresa
             return redirect('/ecommerce/perfil_empresa/')
@@ -4723,23 +5113,30 @@ def perfil_productos(request):
             
             productos_con_imagenes = []
             productos_por_categoria = defaultdict(list)
+            productos_procesados = set()
             
             for prod_sucursal in productos_sucursal_query:
                 prod = prod_sucursal.id_producto_fk
-                primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
                 
-                # Agregar información de sucursal al producto
-                prod.primera_imagen = primera_imagen
-                prod.producto_sucursal_id = prod_sucursal.id_producto_sucursal
-                prod.sucursal_info = prod_sucursal.id_sucursal_fk
-                prod.precio_sucursal = prod_sucursal.precio_producto_sucursal
-                prod.stock_sucursal = prod_sucursal.stock_producto_sucursal
-                
-                productos_con_imagenes.append(prod)
-                
-                # Agrupar por categoría
-                categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else 'Sin categoría'
-                productos_por_categoria[categoria_nombre].append(prod)
+                # Solo procesar cada producto una vez
+                if prod.id_producto_empresa not in productos_procesados:
+                    primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
+                    prod.primera_imagen = primera_imagen
+                    
+                    # Obtener todas las sucursales asociadas al producto
+                    sucursales_producto = producto_sucursal.objects.filter(
+                        id_producto_fk=prod,
+                        id_sucursal_fk__id_empresa_fk=empresa_obj,
+                        estatus_producto_sucursal='Activo'
+                    ).select_related('id_sucursal_fk')
+                    prod.sucursales_asociadas = sucursales_producto
+                    
+                    productos_con_imagenes.append(prod)
+                    productos_procesados.add(prod.id_producto_empresa)
+                    
+                    # Agrupar por categoría
+                    categoria_nombre = prod.id_categoria_prod_fk.nombre_categoria_prod_empresa if prod.id_categoria_prod_fk else 'Sin categoría'
+                    productos_por_categoria[categoria_nombre].append(prod)
             
             entity_name = f'Productos de {empresa_obj.nombre_empresa}'
             
@@ -4841,6 +5238,11 @@ def perfil_productos(request):
         for prod in productos_query:
             primera_imagen = imagen_producto_empresa.objects.filter(id_producto_fk=prod).first()
             prod.primera_imagen = primera_imagen
+            
+            # Obtener sucursales asociadas al producto
+            sucursales_producto = producto_sucursal.objects.filter(id_producto_fk=prod).select_related('id_sucursal_fk')
+            prod.sucursales_asociadas = sucursales_producto
+            
             productos_con_imagenes.append(prod)
             
             # Agrupar por categoría
@@ -8914,30 +9316,91 @@ def favoritos(request):
     
     account_type = request.session.get('account_type', 'usuario')
     
-    if current_user and account_type == 'usuario':
-        user_info = {
-            'id': current_user.id_usuario,
-            'nombre': current_user.nombre_usuario,
-            'email': current_user.correo_usuario,
-            'tipo': current_user.rol_usuario,
-            'is_authenticated': True
-        }
-    elif current_user and account_type == 'empresa':
-        user_info = {
-            'id': current_user.id_empresa,
-            'nombre': current_user.nombre_empresa,
-            'email': current_user.correo_empresa,
-            'tipo': current_user.rol_empresa,
-            'is_authenticated': True
-        }
+    if current_user:
+        user_info = get_user_info_with_avatar(current_user, account_type)
     else:
         user_info = {
             'is_authenticated': False
         }
     
-    # TODO: Aquí se pueden agregar los productos favoritos del usuario
-    # Por ahora solo pasamos la información de sesión
+    # Obtener los favoritos del usuario
     favoritos = []
+    if current_user and account_type == 'usuario':
+        favoritos_query = favorito_usuario.objects.filter(id_usuario_fk=current_user)
+        
+        for favorito in favoritos_query:
+            item_data = None
+            
+            # Producto de usuario
+            if favorito.id_producto_usuario_fk:
+                producto = favorito.id_producto_usuario_fk
+                imagenes = imagen_producto_usuario.objects.filter(id_producto_fk=producto)
+                item_data = {
+                    'id': producto.id_producto_usuario,
+                    'nombre': producto.nombre_producto_usuario,
+                    'descripcion': producto.descripcion_producto_usuario,
+                    'precio': producto.precio_producto_usuario,
+                    'tipo': 'producto',
+                    'tipo_propietario': 'usuario',
+                    'propietario': producto.id_usuario_fk.nombre_usuario,
+                    'imagen': imagenes.first().ruta_imagen_producto_usuario.url if imagenes.exists() else None,
+                    'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_usuario if producto.id_categoria_prod_fk else 'Sin categoría'
+                }
+            
+            # Servicio de usuario
+            elif favorito.id_servicio_usuario_fk:
+                servicio = favorito.id_servicio_usuario_fk
+                imagenes = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio)
+                item_data = {
+                    'id': servicio.id_servicio_usuario,
+                    'nombre': servicio.nombre_servicio_usuario,
+                    'descripcion': servicio.descripcion_servicio_usuario,
+                    'precio': servicio.precio_servicio_usuario,
+                    'tipo': 'servicio',
+                    'tipo_propietario': 'usuario',
+                    'propietario': servicio.id_usuario_fk.nombre_usuario,
+                    'imagen': imagenes.first().ruta_imagen_servicio_usuario.url if imagenes.exists() else None,
+                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio.id_categoria_servicios_fk else 'Sin categoría'
+                }
+            
+            # Producto de sucursal
+            elif favorito.id_producto_sucursal_fk:
+                producto_suc = favorito.id_producto_sucursal_fk
+                producto = producto_suc.id_producto_fk
+                imagenes = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                item_data = {
+                    'id': producto_suc.id_producto_sucursal,
+                    'nombre': producto.nombre_producto_empresa,
+                    'descripcion': producto.descripcion_producto_empresa,
+                    'precio': producto_suc.precio_producto_sucursal,
+                    'tipo': 'producto',
+                    'tipo_propietario': 'empresa',
+                    'propietario': producto_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                    'sucursal': producto_suc.id_sucursal_fk.nombre_sucursal,
+                    'imagen': imagenes.first().ruta_imagen_producto_empresa.url if imagenes.exists() else None,
+                    'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_empresa if producto.id_categoria_prod_fk else 'Sin categoría'
+                }
+            
+            # Servicio de sucursal
+            elif favorito.id_servicio_sucursal_fk:
+                servicio_suc = favorito.id_servicio_sucursal_fk
+                servicio = servicio_suc.id_servicio_fk
+                imagenes = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                item_data = {
+                    'id': servicio_suc.id_servicio_sucursal,
+                    'nombre': servicio.nombre_servicio_empresa,
+                    'descripcion': servicio.descripcion_servicio_empresa,
+                    'precio': servicio_suc.precio_servicio_sucursal,
+                    'tipo': 'servicio',
+                    'tipo_propietario': 'empresa',
+                    'propietario': servicio_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                    'sucursal': servicio_suc.id_sucursal_fk.nombre_sucursal,
+                    'imagen': imagenes.first().ruta_imagen_servicio_empresa.url if imagenes.exists() else None,
+                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio.id_categoria_servicios_fk else 'Sin categoría'
+                }
+            
+            if item_data:
+                favoritos.append(item_data)
     
     context = {
         'user_info': user_info,
@@ -8946,6 +9409,114 @@ def favoritos(request):
     
     return render(request, 'ecommerce_app/favoritos.html', context)
 
+
+@require_http_methods(["POST"])
+def agregar_quitar_favorito(request):
+    """Vista para agregar o quitar un item de favoritos"""
+    try:
+        # Verificar autenticación
+        if not is_user_authenticated(request):
+            return JsonResponse({
+                'success': False,
+                'message': 'Debes iniciar sesión para agregar favoritos'
+            })
+        
+        current_user = get_current_user(request)
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Solo usuarios (no empresas) pueden agregar favoritos
+        if account_type != 'usuario':
+            return JsonResponse({
+                'success': False,
+                'message': 'Solo los usuarios pueden agregar favoritos'
+            })
+        
+        data = json.loads(request.body)
+        item_id = data.get('item_id')
+        tipo_propietario = data.get('tipo_propietario')
+        tipo_item = data.get('tipo_item', 'producto')  # 'producto' o 'servicio'
+        
+        if not item_id or not tipo_propietario:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan datos requeridos'
+            })
+        
+        # Determinar el campo correcto según el tipo de propietario y tipo de item
+        favorito_data = {'id_usuario_fk': current_user}
+        
+        if tipo_propietario == 'usuario':
+            if tipo_item == 'producto':
+                # Verificar que el producto existe
+                try:
+                    producto = producto_usuario.objects.get(id_producto_usuario=item_id)
+                    favorito_data['id_producto_usuario_fk'] = producto
+                except producto_usuario.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto no encontrado'
+                    })
+            else:  # servicio
+                try:
+                    servicio = servicio_usuario.objects.get(id_servicio_usuario=item_id)
+                    favorito_data['id_servicio_usuario_fk'] = servicio
+                except servicio_usuario.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Servicio no encontrado'
+                    })
+        
+        elif tipo_propietario == 'empresa':
+            if tipo_item == 'producto':
+                # Para productos de empresa, debe ser de una sucursal específica
+                try:
+                    producto_suc = producto_sucursal.objects.get(id_producto_sucursal=item_id)
+                    favorito_data['id_producto_sucursal_fk'] = producto_suc
+                except producto_sucursal.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Producto de sucursal no encontrado'
+                    })
+            else:  # servicio
+                try:
+                    servicio_suc = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
+                    favorito_data['id_servicio_sucursal_fk'] = servicio_suc
+                except servicio_sucursal.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Servicio de sucursal no encontrado'
+                    })
+        
+        # Verificar si ya existe en favoritos
+        favorito_existente = favorito_usuario.objects.filter(**favorito_data).first()
+        
+        if favorito_existente:
+            # Si existe, lo eliminamos
+            favorito_existente.delete()
+            return JsonResponse({
+                'success': True,
+                'action': 'removed',
+                'message': 'Eliminado de favoritos'
+            })
+        else:
+            # Si no existe, lo agregamos
+            favorito_usuario.objects.create(**favorito_data)
+            return JsonResponse({
+                'success': True,
+                'action': 'added',
+                'message': 'Agregado a favoritos'
+            })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos JSON inválidos'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error interno: {str(e)}'
+        })
 
 
 @require_login
@@ -8959,14 +9530,7 @@ def productos_sucursal(request):
         account_type = request.session.get('account_type', 'usuario')
         
         if account_type == 'empresa':
-            user_info = {
-                'id': current_user.id_empresa,
-                'nombre': current_user.nombre_empresa,
-                'email': current_user.correo_empresa,
-                'tipo': current_user.rol_empresa,
-                'is_authenticated': True,
-                'empresa_nombre': current_user.nombre_empresa
-            }
+            user_info = get_user_info_with_avatar(current_user, account_type, current_user.nombre_empresa)
             
             # Obtener parámetros de filtro
             nombre_producto = request.GET.get('nombre_producto', '').strip()
@@ -9012,8 +9576,7 @@ def productos_sucursal(request):
                     'id_producto_sucursal': prod_suc.id_producto_sucursal,
                     'nombre_producto': prod_suc.id_producto_fk.nombre_producto_empresa,
                     'descripcion_producto': prod_suc.id_producto_fk.descripcion_producto_empresa,
-                    'marca_producto': prod_suc.id_producto_fk.marca_producto_empresa,
-                    'modelo_producto': prod_suc.id_producto_fk.modelo_producto_empresa,
+
                     'precio': prod_suc.precio_producto_sucursal,
                     'stock': prod_suc.stock_producto_sucursal,
                     'condicion': prod_suc.condicion_producto_sucursal,
@@ -9846,39 +10409,7 @@ def gestion_servicio(request):
 @require_GET
 def api_obtener_filtros_busqueda(request):
     try:
-        # Obtener marcas únicas de productos
-        marcas_empresa = producto_empresa.objects.exclude(
-            marca_producto_empresa__isnull=True
-        ).exclude(
-            marca_producto_empresa__exact=''
-        ).values_list('marca_producto_empresa', flat=True).distinct()
-        
-        marcas_usuario = producto_usuario.objects.exclude(
-            marca_producto_usuario__isnull=True
-        ).exclude(
-            marca_producto_usuario__exact=''
-        ).values_list('marca_producto_usuario', flat=True).distinct()
-        
-        # Combinar y obtener marcas únicas
-        marcas = list(set(list(marcas_empresa) + list(marcas_usuario)))
-        marcas.sort()
-        
-        # Obtener modelos únicos de productos
-        modelos_empresa = producto_empresa.objects.exclude(
-            modelo_producto_empresa__isnull=True
-        ).exclude(
-            modelo_producto_empresa__exact=''
-        ).values_list('modelo_producto_empresa', flat=True).distinct()
-        
-        modelos_usuario = producto_usuario.objects.exclude(
-            modelo_producto_usuario__isnull=True
-        ).exclude(
-            modelo_producto_usuario__exact=''
-        ).values_list('modelo_producto_usuario', flat=True).distinct()
-        
-        # Combinar y obtener modelos únicos
-        modelos = list(set(list(modelos_empresa) + list(modelos_usuario)))
-        modelos.sort()
+
         
         # Obtener categorías de productos
         categorias_productos = categoria_producto_empresa.objects.values(
@@ -9947,8 +10478,6 @@ def api_obtener_filtros_busqueda(request):
         return JsonResponse({
             'success': True,
             'filtros': {
-                'marcas': marcas,
-                'modelos': modelos,
                 'categorias_productos': list(categorias_productos),
                 'categorias_servicios': list(categorias_servicios),
                 'rangos_precio': rangos_precio,
@@ -10027,31 +10556,7 @@ def api_obtener_conteos_filtros(request):
             elif producto.condicion_producto_usuario == 'Usado':
                 conteo_usado += 1
         
-        # Contar por marca
-        conteo_marcas = {}
-        
-        for producto in productos_empresa_query:
-            marca = producto.id_producto_fk.marca_producto_empresa
-            if marca:
-                conteo_marcas[marca] = conteo_marcas.get(marca, 0) + 1
-        
-        for producto in productos_usuario_query:
-            marca = producto.marca_producto_usuario
-            if marca:
-                conteo_marcas[marca] = conteo_marcas.get(marca, 0) + 1
-        
-        # Contar por modelo
-        conteo_modelos = {}
-        
-        for producto in productos_empresa_query:
-            modelo = producto.id_producto_fk.modelo_producto_empresa
-            if modelo:
-                conteo_modelos[modelo] = conteo_modelos.get(modelo, 0) + 1
-        
-        for producto in productos_usuario_query:
-            modelo = producto.modelo_producto_usuario
-            if modelo:
-                conteo_modelos[modelo] = conteo_modelos.get(modelo, 0) + 1
+
         
         return JsonResponse({
             'success': True,
@@ -10060,8 +10565,6 @@ def api_obtener_conteos_filtros(request):
                     'Nuevo': conteo_nuevo,
                     'Usado': conteo_usado
                 },
-                'marcas': conteo_marcas,
-                'modelos': conteo_modelos,
                 'total_productos': productos_empresa_query.count() + productos_usuario_query.count(),
                 'total_servicios': servicios_empresa_query.count() + servicios_usuario_query.count()
             }
@@ -10544,3 +11047,88 @@ def pedidos_pendientes(request):
     except Exception as e:
         logger.error(f"Error en función pedidos_pendientes: {str(e)}")
         return redirect('/ecommerce/carrito')
+
+
+# API para obtener atributos asociados a una categoría
+@require_GET
+def api_obtener_atributos_categoria(request):
+    """API para obtener los atributos de una categoría específica o un atributo individual"""
+    try:
+        categoria_id = request.GET.get('categoria_id')
+        id_categoria_atributo = request.GET.get('id_categoria_atributo')
+        account_type = request.session.get('account_type', 'usuario')
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
+        
+        # Importar los modelos necesarios
+        from .models import CategoriaAtributo, AtributoProducto
+        
+        # Si se solicita un atributo específico
+        if id_categoria_atributo:
+            try:
+                cat_attr = CategoriaAtributo.objects.select_related('atributo').get(
+                    id_categoria_atributo=id_categoria_atributo
+                )
+                atributo = cat_attr.atributo
+                atributo_data = {
+                    'id_categoria_atributo': cat_attr.id_categoria_atributo,
+                    'id_atributo': atributo.id_atributo,
+                    'nombre': atributo.nombre,
+                    'tipo_dato': atributo.tipo_dato,
+                    'opciones': atributo.opciones,
+                    'obligatorio': atributo.obligatorio,
+                    'descripcion': atributo.descripcion,
+                    'orden': cat_attr.orden
+                }
+                return JsonResponse({
+                    'success': True,
+                    'atributo': atributo_data
+                })
+            except CategoriaAtributo.DoesNotExist:
+                return JsonResponse({'error': 'Atributo no encontrado'}, status=404)
+        
+        # Si se solicitan todos los atributos de una categoría
+        if not categoria_id:
+            return JsonResponse({'error': 'ID de categoría requerido'}, status=400)
+        
+        # Obtener atributos según el tipo de cuenta
+        if account_type == 'empresa':
+            # Para empresas, buscar en categoria_empresa
+            atributos_categoria = CategoriaAtributo.objects.filter(
+                categoria_empresa_id=categoria_id
+            ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+        else:
+            # Para usuarios, buscar en categoria_usuario
+            atributos_categoria = CategoriaAtributo.objects.filter(
+                categoria_usuario_id=categoria_id
+            ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+        
+        # Construir la lista de atributos
+        atributos_list = []
+        for cat_attr in atributos_categoria:
+            atributo = cat_attr.atributo
+            atributo_data = {
+                'id_categoria_atributo': cat_attr.id_categoria_atributo,
+                'id_atributo': atributo.id_atributo,
+                'nombre': atributo.nombre,
+                'tipo_dato': atributo.tipo_dato,
+                'obligatorio': atributo.obligatorio,
+                'descripcion': atributo.descripcion,
+                'opciones': atributo.opciones if atributo.tipo_dato == 'lista' else None,
+                'orden': cat_attr.orden
+            }
+            atributos_list.append(atributo_data)
+        
+        return JsonResponse({
+            'success': True,
+            'atributos': atributos_list
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al obtener atributos de categoría: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error interno del servidor: {str(e)}'
+        })

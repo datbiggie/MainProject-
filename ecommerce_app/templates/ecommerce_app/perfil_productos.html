@@ -122,22 +122,37 @@
                             <div class="ml-horizontal-card-body">
                               {% if user_info.tipo == 'empresa' %}
                                 <h5 class="ml-horizontal-card-title">
-                                  <a href="{% url 'vista_items' %}?id={{ producto.producto_sucursal_id }}&tipo=producto&origen=empresa" style="text-decoration: none; color: inherit;">
-                                    {{ producto.nombre_producto_empresa }}
-                                  </a>
+                                  {{ producto.nombre_producto_empresa }}
                                 </h5>
                                 <p class="ml-horizontal-card-description">{{ producto.descripcion_producto_empresa|default:'Sin descripción' }}</p>
                                 <div class="ml-horizontal-card-info">
-                                  {% if producto.marca_producto_empresa %}
-                                    <span><i class="fas fa-tag"></i> {{ producto.marca_producto_empresa }}</span>
-                                  {% endif %}
-                                  {% if producto.modelo_producto_empresa %}
-                                    <span><i class="fas fa-cog"></i> {{ producto.modelo_producto_empresa }}</span>
-                                  {% endif %}
                                   <span class="ml-horizontal-card-status activo">
                                     <i class="fas fa-check-circle"></i> Empresa
                                   </span>
                                 </div>
+                                
+                                <!-- Sucursales asociadas -->
+                                {% if producto.sucursales_asociadas %}
+                                  <div class="mt-3">
+                                    <h6 class="text-muted mb-2"><i class="fas fa-store"></i> Disponible en:</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                      {% for sucursal_producto in producto.sucursales_asociadas %}
+                                        <a href="{% url 'vista_items' %}?id={{ sucursal_producto.id_producto_sucursal }}&tipo=producto&origen=empresa" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           style="text-decoration: none;">
+                                          <i class="fas fa-map-marker-alt"></i> {{ sucursal_producto.id_sucursal_fk.nombre_sucursal }}
+                                          {% if sucursal_producto.precio_producto_sucursal %}
+                                            - ${{ sucursal_producto.precio_producto_sucursal }}
+                                          {% endif %}
+                                        </a>
+                                      {% endfor %}
+                                    </div>
+                                  </div>
+                                {% else %}
+                                  <div class="mt-3">
+                                    <small class="text-muted"><i class="fas fa-exclamation-triangle"></i> No hay sucursales asociadas</small>
+                                  </div>
+                                {% endif %}
                               {% else %}
                                 <h5 class="ml-horizontal-card-title">
                                   <a href="{% url 'vista_items' %}?id={{ producto.id_producto_usuario }}&tipo=producto&origen=usuario" style="text-decoration: none; color: inherit;">
@@ -146,12 +161,6 @@
                                 </h5>
                                 <p class="ml-horizontal-card-description">{{ producto.descripcion_producto_usuario|default:'Sin descripción' }}</p>
                                 <div class="ml-horizontal-card-info">
-                                  {% if producto.marca_producto_usuario %}
-                                    <span><i class="fas fa-tag"></i> {{ producto.marca_producto_usuario }}</span>
-                                  {% endif %}
-                                  {% if producto.modelo_producto_usuario %}
-                                    <span><i class="fas fa-cog"></i> {{ producto.modelo_producto_usuario }}</span>
-                                  {% endif %}
                                   {% if producto.precio_producto_usuario %}
                                     <span><i class="fas fa-dollar-sign"></i> ${{ producto.precio_producto_usuario }}</span>
                                   {% endif %}

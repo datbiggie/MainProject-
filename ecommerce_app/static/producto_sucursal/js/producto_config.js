@@ -350,8 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Obtener los datos del producto desde los atributos data-
             const id = button.getAttribute('data-id');
             const nombre = button.getAttribute('data-nombre');
-            const marca = button.getAttribute('data-marca');
-            const modelo = button.getAttribute('data-modelo');
+
             const categoria = button.getAttribute('data-categoria');
             const estatus = button.getAttribute('data-estatus');
             const descripcion = button.getAttribute('data-descripcion');
@@ -362,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const estatusUsuario = button.getAttribute('data-estatus');
             const imagen = button.getAttribute('data-imagen');
             
-            console.log('Datos obtenidos:', { id, nombre, marca, modelo, categoria, estatus, descripcion, caracteristicas, stock, precio, condicion, estatusUsuario, imagen });
+            console.log('Datos obtenidos:', { id, nombre, categoria, estatus, descripcion, caracteristicas, stock, precio, condicion, estatusUsuario, imagen });
             
             // Debug detallado de todos los atributos data-
             console.log('=== DEBUG ATRIBUTOS DATA- ===');
@@ -372,8 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('data-precio:', precio);
             console.log('data-condicion:', condicion);
             console.log('data-estatus:', estatusUsuario);
-            console.log('data-marca:', marca);
-            console.log('data-modelo:', modelo);
+
             console.log('data-categoria:', categoria);
             console.log('data-estatus:', estatus);
             console.log('data-descripcion:', descripcion);
@@ -447,8 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Asignar valores a los campos del modal
                 const nombreField = document.getElementById('edit_nombre');
-                const marcaField = document.getElementById('edit_marca');
-                const modeloField = document.getElementById('edit_modelo');
+
                 
                 if (nombreField) {
                     nombreField.value = nombre || '';
@@ -457,19 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('❌ Campo edit_nombre no encontrado');
                 }
                 
-                if (marcaField) {
-                    marcaField.value = marca || '';
-                    console.log('✅ Marca asignada:', marca);
-                } else {
-                    console.log('❌ Campo edit_marca no encontrado');
-                }
-                
-                if (modeloField) {
-                    modeloField.value = modelo || '';
-                    console.log('✅ Modelo asignado:', modelo);
-                } else {
-                    console.log('❌ Campo edit_modelo no encontrado');
-                }
+
                 
                 // Asignar categoría
                 const categoriaSelect = document.getElementById('edit_categoria');
@@ -731,8 +716,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (usuarioIdField) usuarioIdField.value = '';
             
             document.getElementById('edit_nombre').value = '';
-            document.getElementById('edit_marca').value = '';
-                document.getElementById('edit_modelo').value = '';
+
                 document.getElementById('edit_categoria').value = '';
                 document.getElementById('edit_descripcion').value = '';
                 document.getElementById('edit_caracteristicas').value = '';

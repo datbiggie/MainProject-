@@ -333,27 +333,37 @@ body {
 
 .search-form .form-label {
     font-weight: 600;
-    color: #374151;
+    color: #1f2937;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
 }
 
+.search-form .form-control::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
 .search-form .form-control,
 .search-form .form-select {
-    border: 2px solid #e5e7eb;
+    border: 2px solid #d1d5db;
     border-radius: 8px;
     padding: 0.75rem;
     font-size: 0.95rem;
+    font-weight: 500;
+    color: #374151;
     transition: all 0.3s ease;
-    background-color: #f9fafb;
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .search-form .form-control:focus,
 .search-form .form-select:focus {
     border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), 0 2px 6px rgba(0, 0, 0, 0.15);
     background-color: white;
     outline: none;
+    transform: translateY(-1px);
 }
 
 .search-form .btn {

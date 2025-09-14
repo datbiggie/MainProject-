@@ -135,8 +135,6 @@
                                     <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
                                             data-id="{{ producto_all.id_producto_empresa }}"
                                             data-nombre="{{ producto_all.nombre_producto_empresa }}"
-                                            data-marca="{{ producto_all.marca_producto_empresa|default:'' }}"
-                                            data-modelo="{{ producto_all.modelo_producto_empresa|default:'' }}"
                                             data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_empresa|default:'' }}"
                                             data-descripcion="{{ producto_all.descripcion_producto_empresa|default:'' }}"
                                             data-caracteristicas="{{ producto_all.caracteristicas_generales_empresa|default:'' }}"
@@ -166,8 +164,6 @@
                                         <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
                                                 data-id="{{ producto_all.id_producto_sucursal }}"
                                                 data-nombre="{{ producto_all.nombre_producto_sucursal }}"
-                                                data-marca="{{ producto_all.marca_producto_sucursal|default:'' }}"
-                                                data-modelo="{{ producto_all.modelo_producto_sucursal|default:'' }}"
                                                 data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_sucursal|default:'' }}"
                                                 data-descripcion="{{ producto_all.descripcion_producto_sucursal|default:'' }}"
                                                 data-caracteristicas="{{ producto_all.caracteristicas_generales_sucursal|default:'' }}"
@@ -215,8 +211,6 @@
                                         <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
                                                 data-id="{{ producto_all.id_producto_usuario }}"
                                                 data-nombre="{{ producto_all.nombre_producto_usuario }}"
-                                                data-marca="{{ producto_all.marca_producto_usuario|default:'' }}"
-                                                data-modelo="{{ producto_all.modelo_producto_usuario|default:'' }}"
                                                 data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
                                                 data-descripcion="{{ producto_all.descripcion_producto_usuario|default:'' }}"
                                                 data-caracteristicas="{{ producto_all.caracteristicas_generales_usuario|default:'' }}"
@@ -270,22 +264,7 @@
                                         <input type="text" class="form-control enhanced-input" name="nombre_producto_usuario" id="edit_nombre" required>
                                     {% endif %}
                                 </div>
-                                <div class="form-group">
-                                    <label>Marca</label>
-                                    {% if user_info.tipo == 'empresa' %}
-                                        <input type="text" class="form-control enhanced-input" name="marca_producto_empresa" id="edit_marca">
-                                    {% else %}
-                                        <input type="text" class="form-control enhanced-input" name="marca_producto_usuario" id="edit_marca">
-                                    {% endif %}
-                                </div>
-                                <div class="form-group">
-                                    <label>Modelo</label>
-                                    {% if user_info.tipo == 'empresa' %}
-                                        <input type="text" class="form-control enhanced-input" name="modelo_producto_empresa" id="edit_modelo">
-                                    {% else %}
-                                        <input type="text" class="form-control enhanced-input" name="modelo_producto_usuario" id="edit_modelo">
-                                    {% endif %}
-                                </div>
+
                                 <div class="form-group">
                                     <label>Categoría</label>
                                     <select class="form-control enhanced-input" name="categoria_producto" id="edit_categoria" required>
