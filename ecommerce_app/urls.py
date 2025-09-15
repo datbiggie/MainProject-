@@ -48,6 +48,7 @@ urlpatterns = [
     path('api/obtener_filtros_busqueda/', views.api_obtener_filtros_busqueda, name='api_obtener_filtros_busqueda'),
     path('api/obtener_conteos_filtros/', views.api_obtener_conteos_filtros, name='api_obtener_conteos_filtros'),
     path('api/obtener_atributos_categoria/', views.api_obtener_atributos_categoria, name='api_obtener_atributos_categoria'),
+    path('api/get_avatars/', views.api_get_avatars, name='api_get_avatars'),
     path('api/agregar_atributo_categoria/', views.api_agregar_atributo_categoria, name='api_agregar_atributo_categoria'),
     path('api/modificar_atributo_categoria/', views.api_modificar_atributo_categoria, name='api_modificar_atributo_categoria'),
     path('api/eliminar_atributo_categoria/', views.api_eliminar_atributo_categoria, name='api_eliminar_atributo_categoria'),

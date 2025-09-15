@@ -4,7 +4,7 @@
     <!-- Floating button to open/close chat -->
     <div id="assistant-toggle-btn" class="assistant-toggle-button">
         {% if user_info.avatar_chatbot %}
-            <img src="{% static '' %}{{ user_info.avatar_chatbot }}" alt="Avatar" class="assistant-welcome-image">
+            <img src="{% static user_info.avatar_chatbot %}" alt="Avatar" class="assistant-welcome-image">
         {% else %}
             <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar" class="assistant-welcome-image">
         {% endif %}
@@ -16,7 +16,7 @@
         <div class="assistant-header">
             <div class="assistant-header-content">
                 {% if user_info.avatar_chatbot %}
-                    <img src="{% static '' %}{{ user_info.avatar_chatbot }}" alt="Avatar" class="assistant-header-image">
+                    <img src="{% static user_info.avatar_chatbot %}" alt="Avatar" class="assistant-header-image">
                 {% else %}
                     <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar" class="assistant-header-image">
                 {% endif %}
@@ -29,7 +29,7 @@
         <div id="assistant-messages-area" class="assistant-messages-container">
             <div class="assistant-welcome-section">
                 {% if user_info.avatar_chatbot %}
-                    <img src="{% static '' %}{{ user_info.avatar_chatbot }}" alt="Avatar" class="assistant-welcome-image">
+                    <img src="{% static user_info.avatar_chatbot %}" alt="Avatar" class="assistant-welcome-image">
                 {% else %}
                     <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar" class="assistant-welcome-image">
                 {% endif %}
@@ -97,7 +97,7 @@
     height: 200px;
     border-radius: 50%;
     border: 3px solid white;
-    object-fit: cover;
+    object-fit: contain;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     image-rendering: auto;
     -webkit-backface-visibility: hidden;
@@ -147,7 +147,7 @@
     height: 40px;
     border-radius: 50%;
     border: 2px solid white;
-    object-fit: cover;
+    object-fit: contain;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     image-rendering: auto;
     -webkit-backface-visibility: hidden;
@@ -205,7 +205,7 @@
     height: 100px;
     border-radius: 50%;
     border: 3px solid white;
-    object-fit: cover;
+    object-fit: contain;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     image-rendering: auto;
     -webkit-backface-visibility: hidden;

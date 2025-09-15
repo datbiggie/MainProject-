@@ -1,7 +1,9 @@
 import json
+import os
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
+from django.conf import settings
 from .models import producto_empresa, servicio_empresa, producto_sucursal, servicio_sucursal, sucursal, imagen_producto_empresa, imagen_servicio_empresa, categoria_servicio_usuario, categoria_servicio_empresa, imagen_producto_usuario, producto_usuario, categoria_producto_usuario, categoria_producto_empresa
 
 # Función auxiliar para generar user_info con avatar_chatbot
@@ -936,6 +938,7 @@ def registrar_persona(request):
         fecha_nacimiento=request.POST.get('fecha_nacimiento')
         pais=request.POST.get('pais')
         estado=request.POST.get('estado')
+        avatar_chatbot_file=request.FILES.get('avatar_chatbot')
 
         # Validaciones del backend
         import re
@@ -993,6 +996,34 @@ def registrar_persona(request):
             password_encriptada = make_password(password)
             logger.info(f"Contraseña encriptada correctamente para el usuario: {email}")
             
+            # Manejar el avatar del chatbot
+            avatar_option = request.POST.get('avatar_option', 'avatars/Cartoon Style Robot.jpg')
+            
+            if avatar_option == 'custom' and avatar_chatbot_file:
+                # Guardar la imagen personalizada del avatar del chatbot
+                import os
+                from django.core.files.storage import default_storage
+                from django.conf import settings
+                
+                # Crear directorio si no existe
+                avatar_dir = os.path.join(settings.MEDIA_ROOT, 'avatars_chatbot')
+                os.makedirs(avatar_dir, exist_ok=True)
+                
+                # Generar nombre único para el archivo
+                import uuid
+                file_extension = os.path.splitext(avatar_chatbot_file.name)[1]
+                unique_filename = f"avatar_{uuid.uuid4().hex}{file_extension}"
+                avatar_path = f"avatars_chatbot/{unique_filename}"
+                
+                # Guardar el archivo
+                saved_path = default_storage.save(avatar_path, avatar_chatbot_file)
+                avatar_chatbot_path = saved_path
+                logger.info(f"Avatar personalizado del chatbot guardado en: {avatar_chatbot_path}")
+            else:
+                # Usar avatar predefinido seleccionado
+                avatar_chatbot_path = avatar_option if avatar_option != 'custom' else 'avatars/Cartoon Style Robot.jpg'
+                logger.info(f"Avatar predefinido seleccionado: {avatar_chatbot_path}")
+            
             nuevo_usuario = usuario(
                 nombre_usuario=nombre_usuario + ' ' + apellido,
                 correo_usuario=email,
@@ -1002,7 +1033,8 @@ def registrar_persona(request):
                 rol_usuario='persona',          
                 fecha_nacimiento=fecha_nacimiento,
                 pais=pais,
-                estado=estado
+                estado=estado,
+                avatar_chatbot=avatar_chatbot_path
             )
             nuevo_usuario.save()
             logger.info(f"Usuario registrado exitosamente: {email}")
@@ -3326,6 +3358,8 @@ def index(request):
                 empresa_nombre = current_user.nombre_empresa
             
             user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+            # Para el index, usar siempre el avatar por defecto del chatbot (chatbot general del ecommerce)
+            user_info['avatar_chatbot'] = 'avatars/Cartoon Style Robot.jpg'
     
     return render(request, 'ecommerce_app/index.html', {'user_info': user_info})
 
@@ -5149,14 +5183,19 @@ def perfil_productos(request):
                     'nombre': current_user.nombre_empresa,
                     'email': current_user.correo_empresa,
                     'id': current_user.id_empresa,
-                    'empresa_nombre': current_user.nombre_empresa
+                    'empresa_nombre': current_user.nombre_empresa,
+                    'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
             elif current_user:
                 user_info.update({
                     'nombre': current_user.nombre_usuario,
                     'email': current_user.correo_usuario,
-                    'id': current_user.id_usuario
+                    'id': current_user.id_usuario,
+                    'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
+            
+            # Para el chatbot, usar el avatar por defecto cuando se ve perfil de empresa
+            user_info['avatar_chatbot'] = 'avatars/Cartoon Style Robot.jpg'
             
             return render(request, 'ecommerce_app/perfil_productos.html', {
                 'user_info': user_info,
@@ -5206,8 +5245,12 @@ def perfil_productos(request):
                 user_info.update({
                     'nombre': current_user.nombre_usuario,
                     'email': current_user.correo_usuario,
-                    'id': current_user.id_usuario
+                    'id': current_user.id_usuario,
+                    'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
+            
+            # Para el chatbot, usar el avatar del usuario cuyo perfil se está viendo
+            user_info['avatar_chatbot'] = getattr(usuario_obj, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
             
             return render(request, 'ecommerce_app/perfil_productos.html', {
                 'user_info': user_info,
@@ -5381,14 +5424,19 @@ def perfil_servicios(request):
                     'nombre': current_user.nombre_empresa,
                     'email': current_user.correo_empresa,
                     'id': current_user.id_empresa,
-                    'empresa_nombre': current_user.nombre_empresa
+                    'empresa_nombre': current_user.nombre_empresa,
+                    'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
             elif current_user:
                 user_info.update({
                     'nombre': current_user.nombre_usuario,
                     'email': current_user.correo_usuario,
-                    'id': current_user.id_usuario
+                    'id': current_user.id_usuario,
+                    'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
+            
+            # Para el chatbot, usar el avatar por defecto cuando se ve perfil de empresa
+            user_info['avatar_chatbot'] = 'avatars/Cartoon Style Robot.jpg'
             
             return render(request, 'ecommerce_app/perfil_servicios.html', {
                 'user_info': user_info,
@@ -5438,8 +5486,12 @@ def perfil_servicios(request):
                 user_info.update({
                     'nombre': current_user.nombre_usuario,
                     'email': current_user.correo_usuario,
-                    'id': current_user.id_usuario
+                    'id': current_user.id_usuario,
+                    'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
+            
+            # Para el chatbot, usar el avatar del usuario cuyo perfil se está viendo
+            user_info['avatar_chatbot'] = getattr(usuario_obj, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
             
             return render(request, 'ecommerce_app/perfil_servicios.html', {
                 'user_info': user_info,
@@ -9318,6 +9370,8 @@ def favoritos(request):
     
     if current_user:
         user_info = get_user_info_with_avatar(current_user, account_type)
+        # Para favoritos, usar siempre el avatar por defecto del chatbot (chatbot general del ecommerce)
+        user_info['avatar_chatbot'] = 'avatars/Cartoon Style Robot.jpg'
     else:
         user_info = {
             'is_authenticated': False
@@ -11128,6 +11182,47 @@ def api_obtener_atributos_categoria(request):
         
     except Exception as e:
         logger.error(f"Error al obtener atributos de categoría: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Error interno del servidor'
+        })
+
+# API para obtener avatares dinámicamente
+@require_GET
+def api_get_avatars(request):
+    """Devuelve todos los avatares disponibles en la carpeta static/avatars"""
+    try:
+        avatars_path = os.path.join(settings.BASE_DIR, 'ecommerce_app', 'static', 'avatars')
+        avatars = []
+        
+        if os.path.exists(avatars_path):
+            # Extensiones de imagen permitidas
+            allowed_extensions = {'.jpg', '.jpeg', '.png', '.svg', '.gif', '.webp'}
+            
+            for filename in os.listdir(avatars_path):
+                file_path = os.path.join(avatars_path, filename)
+                if os.path.isfile(file_path):
+                    # Verificar si es una imagen
+                    _, ext = os.path.splitext(filename.lower())
+                    if ext in allowed_extensions:
+                        # Generar nombre amigable (sin extensión y capitalizado)
+                        name = os.path.splitext(filename)[0].replace('-', ' ').replace('_', ' ').title()
+                        
+                        avatars.append({
+                            'filename': filename,
+                            'path': f'avatars/{filename}',
+                            'name': name
+                        })
+            
+            # Ordenar alfabéticamente por nombre
+            avatars.sort(key=lambda x: x['name'])
+        
+        return JsonResponse({
+            'success': True,
+            'avatars': avatars
+        })
+        
+    except Exception as e:
         return JsonResponse({
             'success': False,
             'message': f'Error interno del servidor: {str(e)}'

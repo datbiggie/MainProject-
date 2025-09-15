@@ -53,11 +53,11 @@
       </div>
       <div class="col-md-2 text-end">
         {% if user_info.tipo == 'empresa' %}
-          <a href="{% url 'perfil_empresa' %}" class="btn btn-primary">
+          <a href="{% url 'perfil_empresa' %}?id={{ empresa_obj.id_empresa }}" class="btn btn-primary">
             <i class="fas fa-user"></i> Ver Perfil
           </a>
         {% else %}
-          <a href="{% url 'perfil_usuario' %}" class="btn btn-primary">
+          <a href="{% url 'perfil_usuario' %}?id={{ usuario_obj.id_usuario }}" class="btn btn-primary">
             <i class="fas fa-user"></i> Ver Perfil
           </a>
         {% endif %}
