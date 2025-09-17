@@ -247,6 +247,16 @@
                     </div>
                   </div>
                 {% endif %}
+                {% if atributos_producto %}
+                  {% for atributo in atributos_producto %}
+                    <div class="characteristic-item">
+                      <div class="row">
+                        <div class="col-4"><strong>{{ atributo.nombre }}:</strong></div>
+                        <div class="col-8">{{ atributo.valor }}</div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% endif %}
               </div>
             </div>
           {% endif %}

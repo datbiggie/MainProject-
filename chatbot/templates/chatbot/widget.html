@@ -48,11 +48,16 @@
                 📍
             </button>
             <input type="text" id="assistant-text-input" placeholder="Escribe tu mensaje..." maxlength="500">
-            <button id="assistant-send-btn" class="assistant-send-button">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="white"/>
-                </svg>
-            </button>
+            <div class="assistant-action-buttons">
+                <button id="assistant-voice-btn" class="assistant-voice-button" title="Hablar">
+                    🎤
+                </button>
+                <button id="assistant-send-btn" class="assistant-send-button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="white"/>
+                    </svg>
+                </button>
+            </div>
         </div>
         
         <!-- Typing indicator -->
@@ -261,12 +266,19 @@
 }
 
 .assistant-input-container {
-    padding: 15px 20px;
+    padding: 18px 15px;
     background: white;
     border-top: 1px solid #e1e5e9;
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+.assistant-action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .assistant-location-button {
@@ -282,6 +294,7 @@
     justify-content: center;
     transition: all 0.3s ease;
     flex-shrink: 0;
+    margin: 0 2px;
 }
 
 .assistant-location-button:hover {
@@ -299,6 +312,39 @@
     cursor: not-allowed;
 }
 
+.assistant-voice-button {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #2196f3, #42a5f5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+.assistant-voice-button:hover {
+    background: linear-gradient(135deg, #1976d2, #2196f3);
+    transform: scale(1.05);
+}
+
+.assistant-voice-button.listening {
+    background: linear-gradient(135deg, #f44336, #e57373);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
 #assistant-text-input {
     flex: 1;
     border: 2px solid #1769aa;
@@ -307,6 +353,8 @@
     font-size: 14px;
     outline: none;
     transition: border-color 0.3s ease;
+    margin: 0 5px;
+    min-width: 0;
 }
 
 #assistant-text-input:focus {
@@ -325,6 +373,7 @@
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    margin: 0 2px;
 }
 
 .assistant-send-button:hover {
@@ -402,6 +451,8 @@ class VirtualAssistantWidget {
     }
     
     init() {
+        this.isListening = false;
+        this.recognition = null;
         this.bindEvents();
         this.loadConversation();
         this.requestLocationPermission();
@@ -477,11 +528,13 @@ class VirtualAssistantWidget {
         const sendBtn = document.getElementById('assistant-send-btn');
         const input = document.getElementById('assistant-text-input');
         const locationBtn = document.getElementById('assistant-location-btn');
+        const voiceBtn = document.getElementById('assistant-voice-btn');
         
         toggle.addEventListener('click', () => this.toggleChat());
         close.addEventListener('click', () => this.closeChat());
         sendBtn.addEventListener('click', () => this.sendMessage());
         locationBtn.addEventListener('click', () => this.shareLocation());
+        voiceBtn.addEventListener('click', () => this.toggleVoiceRecognition());
         
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -489,6 +542,8 @@ class VirtualAssistantWidget {
                 this.sendMessage();
             }
         });
+        
+        this.initVoiceRecognition();
     }
     
     toggleChat() {
@@ -588,8 +643,11 @@ class VirtualAssistantWidget {
             minute: '2-digit' 
         });
         
+        // Procesar enlaces markdown antes de escapar HTML
+        const processedContent = this.processMarkdownLinks(content);
+        
         messageDiv.innerHTML = `
-            <div class="message-bubble">${this.escapeHtml(content)}</div>
+            <div class="message-bubble">${processedContent}</div>
             <div class="message-timestamp">${timeString}</div>
         `;
         
@@ -638,10 +696,71 @@ class VirtualAssistantWidget {
         return '';
     }
     
+    processMarkdownLinks(text) {
+        // Primero escapar todo el HTML
+        const escapedText = this.escapeHtml(text);
+        
+        // Luego convertir enlaces markdown [texto](url) a HTML
+        const linkRegex = /\[([^\]]+)\]\(([^\)]+)\)/g;
+        return escapedText.replace(linkRegex, '<a href="$2" target="_blank" style="color: #007bff; text-decoration: underline;">$1</a>');
+    }
+    
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    initVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.lang = 'es-ES';
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+
+            this.recognition.onstart = () => {
+                this.isListening = true;
+                const voiceBtn = document.getElementById('assistant-voice-btn');
+                voiceBtn.classList.add('listening');
+                voiceBtn.title = 'Escuchando...';
+            };
+
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                const input = document.getElementById('assistant-text-input');
+                input.value = transcript;
+                this.sendMessage();
+            };
+
+            this.recognition.onend = () => {
+                this.isListening = false;
+                const voiceBtn = document.getElementById('assistant-voice-btn');
+                voiceBtn.classList.remove('listening');
+                voiceBtn.title = 'Hablar';
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Error de reconocimiento de voz:', event.error);
+                this.isListening = false;
+                const voiceBtn = document.getElementById('assistant-voice-btn');
+                voiceBtn.classList.remove('listening');
+                voiceBtn.title = 'Hablar';
+            };
+        }
+    }
+
+    toggleVoiceRecognition() {
+        if (!this.recognition) {
+            this.addMessage('Lo siento, tu navegador no soporta reconocimiento de voz.', 'bot');
+            return;
+        }
+
+        if (this.isListening) {
+            this.recognition.stop();
+        } else {
+            this.recognition.start();
+        }
     }
 }
 

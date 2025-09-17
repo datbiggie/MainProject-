@@ -1,0 +1,460 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Preguntas Frecuentes - TodoAquí</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="Preguntas Frecuentes - TodoAquí">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/css/vendor.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1565c0;
+            --secondary-color: #2196f3;
+            --accent-color: #03a9f4;
+            --text-dark: #1a237e;
+            --text-light: #747474;
+            --bg-light: #f8f9fa;
+            --bg-blue: #e3f2fd;
+            --bg-light-blue: #f1f8ff;
+        }
+        
+        body {
+            line-height: 1.6;
+            color: var(--text-light);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-blue) 50%, var(--bg-light-blue) 100%);
+            padding: 100px 0 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            opacity: 0.3;
+        }
+        
+        .content-section {
+            padding: 60px 0;
+        }
+        
+        .faq-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .faq-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        .faq-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .faq-header:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        }
+        
+        .faq-title {
+            font-weight: 600;
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        .faq-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .faq-content {
+            padding: 25px;
+            display: none;
+            border-top: 1px solid rgba(163, 190, 76, 0.2);
+        }
+        
+        .faq-content.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .faq-answer {
+            color: var(--text-light);
+            line-height: 1.7;
+            margin: 0;
+        }
+        
+        .category-section {
+            margin-bottom: 50px;
+        }
+        
+        .category-title {
+            color: var(--text-dark);
+            font-weight: 700;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .category-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .search-box {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 25px;
+            padding: 15px 25px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .search-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 100%;
+            padding: 10px 15px;
+            font-size: 1.1rem;
+            color: var(--text-dark);
+        }
+        
+        .search-input::placeholder {
+            color: var(--text-light);
+        }
+        
+        .btn-back {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(23, 105, 170, 0.3);
+            color: white;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, var(--bg-blue), var(--bg-light-blue));
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 4px solid var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="preloader-wrapper">
+        <div class="preloader">
+        </div>
+    </div>
+
+    {% include 'ecommerce_app/barra_superior_index.html' %}
+
+    <!-- Hero Section -->
+    <section class="py-5" style="background: linear-gradient(135deg, #1769aa 0%, #a3be4c 100%); min-height: 300px;">
+        <div class="container-lg">
+            <div class="row justify-content-center align-items-center" style="min-height: 250px;">
+                <div class="col-lg-8 text-center">
+                    <h1 class="display-4 text-white mb-3" style="font-weight: 700;">Preguntas Frecuentes</h1>
+                    <p class="lead text-white opacity-90">Encuentra respuestas rápidas a las preguntas más comunes sobre TodoAquí</p>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb justify-content-center">
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}" class="text-white">Inicio</a></li>
+                            <li class="breadcrumb-item active text-white" aria-current="page">FAQ</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    
+                    <!-- Search Box -->
+                    <div class="search-box">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-search" style="color: var(--text-light); margin-right: 15px;"></i>
+                            <input type="text" class="search-input" placeholder="Buscar en preguntas frecuentes..." id="searchInput">
+                        </div>
+                    </div>
+
+                    <!-- Categoría: Cuenta y Registro -->
+                    <div class="category-section">
+                        <h3 class="category-title">
+                            <div class="category-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            Cuenta y Registro
+                        </h3>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Cómo puedo crear una cuenta en TodoAquí?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                <p class="faq-answer">Para crear una cuenta, haz clic en "Registrarse" en la parte superior de la página. Completa el formulario con tu información personal, elige un nombre de usuario único y una contraseña segura. Recibirás un correo de confirmación para activar tu cuenta.</p>
+            </div>
+                        </div>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Olvidé mi contraseña, qué puedo hacer?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">En la página de inicio de sesión, haz clic en "¿Olvidaste tu contraseña?". Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña. Sigue las instrucciones del correo para crear una nueva contraseña.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categoría: Compras -->
+                    <div class="category-section">
+                        <h3 class="category-title">
+                            <div class="category-icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            Compras y Pedidos
+                        </h3>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Cómo puedo realizar una compra?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Navega por nuestro catálogo, selecciona los productos que deseas, agrégalos al carrito y procede al checkout. Completa la información de envío y pago, revisa tu pedido y confirma la compra. Recibirás una confirmación por correo electrónico.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Puedo cancelar o modificar mi pedido?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Puedes cancelar o modificar tu pedido dentro de las primeras 2 horas después de realizarlo, siempre que no haya sido procesado para envío. Contacta nuestro servicio al cliente o accede a "Mis Pedidos" en tu cuenta.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categoría: Pagos -->
+                    <div class="category-section">
+                        <h3 class="category-title">
+                            <div class="category-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            Pagos y Facturación
+                        </h3>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Qué métodos de pago aceptan?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Aceptamos tarjetas de crédito y débito (Visa, MasterCard, American Express), transferencias bancarias, PayPal y pagos en efectivo contra entrega en áreas seleccionadas. Todos los pagos son procesados de forma segura.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Es seguro pagar en línea?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Sí, utilizamos encriptación SSL de 256 bits y cumplimos con los estándares PCI DSS para proteger tu información financiera. Nunca almacenamos datos completos de tarjetas de crédito en nuestros servidores.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categoría: Envíos -->
+                    <div class="category-section">
+                        <h3 class="category-title">
+                            <div class="category-icon">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            Envíos y Entregas
+                        </h3>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Cuánto tiempo tarda la entrega?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Los tiempos de entrega varían según tu ubicación: 1-2 días hábiles en la ciudad principal, 3-5 días en ciudades secundarias, y 5-7 días en áreas rurales. Ofrecemos envío express con entrega en 24 horas por un costo adicional.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Puedo rastrear mi pedido?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Sí, una vez que tu pedido sea enviado, recibirás un número de seguimiento por correo electrónico. También puedes rastrear tu pedido en tiempo real desde la sección "Mis Pedidos" en tu cuenta.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categoría: Devoluciones -->
+                    <div class="category-section">
+                        <h3 class="category-title">
+                            <div class="category-icon">
+                                <i class="fas fa-undo"></i>
+                            </div>
+                            Devoluciones y Reembolsos
+                        </h3>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Cuál es la política de devoluciones?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Aceptamos devoluciones dentro de los 30 días posteriores a la entrega. Los productos deben estar en su estado original, sin usar y con el empaque original. Los costos de envío de devolución corren por cuenta del cliente, excepto en casos de productos defectuosos.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-card">
+                            <div class="faq-header" onclick="toggleFaq(this)">
+                                <h5 class="faq-title">¿Cuánto tiempo tarda el reembolso?</h5>
+                                <i class="fas fa-chevron-down faq-icon"></i>
+                            </div>
+                            <div class="faq-content">
+                                <p class="faq-answer">Una vez que recibamos y procesemos tu devolución, el reembolso se procesará en 3-5 días hábiles. El tiempo para que aparezca en tu cuenta bancaria puede variar según tu institución financiera (generalmente 5-10 días hábiles).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h4 style="color: var(--text-dark); font-weight: 600;">💬 ¿No encontraste tu respuesta?</h4>
+                        <p class="mb-0" style="color: var(--text-light);">Si tu pregunta no está aquí, no dudes en contactar nuestro equipo de atención al cliente. Estamos aquí para ayudarte las 24 horas del día.</p>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <a href="{% url 'index' %}" class="btn-back">
+                            <i class="fas fa-arrow-left"></i>
+                            Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleFaq(element) {
+            const content = element.nextElementSibling;
+            const icon = element.querySelector('.faq-icon');
+            
+            // Close all other FAQs
+            document.querySelectorAll('.faq-content.show').forEach(item => {
+                if (item !== content) {
+                    item.classList.remove('show');
+                    item.previousElementSibling.querySelector('.faq-icon').style.transform = 'rotate(0deg)';
+                }
+            });
+            
+            // Toggle current FAQ
+            content.classList.toggle('show');
+            
+            if (content.classList.contains('show')) {
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+        
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const faqCards = document.querySelectorAll('.faq-card');
+            
+            faqCards.forEach(card => {
+                const title = card.querySelector('.faq-title').textContent.toLowerCase();
+                const content = card.querySelector('.faq-answer').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || content.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    
+    <script src="{% static 'index/js/jquery-1.11.0.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="{% static 'index/js/plugins.js' %}"></script>
+    <script src="{% static 'index/js/script.js' %}"></script>
+</body>
+</html>

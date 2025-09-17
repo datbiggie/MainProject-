@@ -1,0 +1,409 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Políticas de Privacidad - TodoAquí</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="description" content="Políticas de Privacidad - TodoAquí">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/css/vendor.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1769aa;
+            --secondary-color: #a3be4c;
+            --accent-color: #F95F09;
+            --text-dark: #364127;
+            --text-light: #747474;
+            --bg-light: #f8f9fa;
+            --bg-green: #EEF5E4;
+            --bg-orange: #FCF7EB;
+        }
+        
+        body {
+            line-height: 1.6;
+            color: var(--text-light);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #1565c0, #2196f3);
+            padding: 100px 0 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            opacity: 0.3;
+        }
+        
+        .content-section {
+            padding: 60px 0;
+        }
+        
+        .policy-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .policy-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        .policy-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #1565c0, #2196f3);
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+            margin-right: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .policy-title {
+            color: var(--text-dark);
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .policy-text {
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+        
+        .policy-list {
+            color: var(--text-light);
+            padding-left: 20px;
+        }
+        
+        .policy-list li {
+            margin-bottom: 8px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .btn-back {
+            background: linear-gradient(135deg, #1565c0, #2196f3);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(21, 101, 192, 0.3);
+            color: white;
+        }
+        
+        .table-of-contents {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .toc-link {
+            color: #1565c0;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            display: block;
+            padding: 8px 0;
+        }
+        
+        .toc-link:hover {
+            color: #2196f3;
+        }
+        
+        .last-updated {
+            background: rgba(23, 105, 170, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="preloader-inner">
+            <div class="preloader-icon">
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+    <!-- End Preloader -->
+
+    {% include 'ecommerce_app/header.html' %}
+
+    <!-- Hero Section -->
+    <section class="hero-section" style="background: linear-gradient(135deg, #1769aa 0%, #a3be4c 100%); min-height: 300px; display: flex; align-items: center; color: white;">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <nav aria-label="breadcrumb" class="mb-4">
+                        <ol class="breadcrumb" style="background: transparent; margin-bottom: 0;">
+                            <li class="breadcrumb-item"><a href="{% url 'ecommerce_app:index' %}" style="color: rgba(255,255,255,0.8);">Inicio</a></li>
+                            <li class="breadcrumb-item active" aria-current="page" style="color: white;">Políticas de Privacidad</li>
+                        </ol>
+                    </nav>
+                    <h1 class="display-4 fw-bold mb-3">Políticas de Privacidad</h1>
+                    <p class="lead mb-0" style="color: rgba(255,255,255,0.9);">Conoce cómo protegemos y manejamos tu información personal en TodoAquí</p>
+                    <div class="mx-auto" style="width: 100px; height: 4px; background: linear-gradient(90deg, #1565c0, #2196f3); border-radius: 2px;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    
+                    <div class="last-updated">
+                        📅 Última actualización: 15 de enero de 2024
+                    </div>
+
+                    <!-- Table of Contents -->
+                    <div class="table-of-contents">
+                        <h4 style="color: var(--text-dark); font-weight: 700; margin-bottom: 20px;">📋 Índice de Contenidos</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <a href="#seccion1" class="toc-link">1. Información que Recopilamos</a>
+                                <a href="#seccion2" class="toc-link">2. Cómo Usamos tu Información</a>
+                                <a href="#seccion3" class="toc-link">3. Compartir Información</a>
+                                <a href="#seccion4" class="toc-link">4. Seguridad de Datos</a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="#seccion5" class="toc-link">5. Cookies y Tecnologías</a>
+                                <a href="#seccion6" class="toc-link">6. Tus Derechos</a>
+                                <a href="#seccion7" class="toc-link">7. Retención de Datos</a>
+                                <a href="#seccion8" class="toc-link">8. Contacto</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h4 style="color: var(--text-dark); font-weight: 600;">🔒 Compromiso con tu Privacidad</h4>
+                        <p class="mb-0" style="color: var(--text-light);">En TodoAquí, tu privacidad es fundamental. Esta política explica cómo recopilamos, usamos y protegemos tu información personal cuando utilizas nuestros servicios.</p>
+                    </div>
+
+                    <!-- Sección 1 -->
+                    <div class="policy-card" id="seccion1">
+                        <div class="policy-number">1</div>
+                        <h4 class="policy-title">Información que Recopilamos</h4>
+                        <p class="policy-text">Recopilamos diferentes tipos de información para brindarte el mejor servicio posible:</p>
+                        <ul class="policy-list">
+                            <li><strong>Información Personal:</strong> Nombre, dirección de correo electrónico, número de teléfono, dirección de envío y facturación</li>
+                            <li><strong>Información de Cuenta:</strong> Nombre de usuario, contraseña (encriptada), preferencias de cuenta</li>
+                            <li><strong>Información de Transacciones:</strong> Historial de compras, métodos de pago, direcciones de envío</li>
+                            <li><strong>Información Técnica:</strong> Dirección IP, tipo de navegador, sistema operativo, páginas visitadas</li>
+                            <li><strong>Información de Comunicación:</strong> Mensajes que nos envías, reseñas de productos, comentarios</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sección 2 -->
+                    <div class="policy-card" id="seccion2">
+                        <div class="policy-number">2</div>
+                        <h4 class="policy-title">Cómo Usamos tu Información</h4>
+                        <p class="policy-text">Utilizamos tu información para los siguientes propósitos legítimos:</p>
+                        <ul class="policy-list">
+                            <li>Procesar y gestionar tus pedidos y transacciones</li>
+                            <li>Proporcionar atención al cliente y soporte técnico</li>
+                            <li>Personalizar tu experiencia de compra</li>
+                            <li>Enviar comunicaciones importantes sobre tu cuenta y pedidos</li>
+                            <li>Mejorar nuestros productos y servicios</li>
+                            <li>Prevenir fraudes y garantizar la seguridad de la plataforma</li>
+                            <li>Cumplir con obligaciones legales y regulatorias</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sección 3 -->
+                    <div class="policy-card" id="seccion3">
+                        <div class="policy-number">3</div>
+                        <h4 class="policy-title">Compartir Información con Terceros</h4>
+                        <p class="policy-text">No vendemos tu información personal. Solo compartimos información en las siguientes circunstancias:</p>
+                        <ul class="policy-list">
+                            <li><strong>Proveedores de Servicios:</strong> Empresas que nos ayudan a operar (procesamiento de pagos, envíos, análisis)</li>
+                            <li><strong>Cumplimiento Legal:</strong> Cuando sea requerido por ley o para proteger nuestros derechos</li>
+                            <li><strong>Transferencias Comerciales:</strong> En caso de fusión, adquisición o venta de activos</li>
+                            <li><strong>Con tu Consentimiento:</strong> Cuando hayas dado tu autorización explícita</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sección 4 -->
+                    <div class="policy-card" id="seccion4">
+                        <div class="policy-number">4</div>
+                        <h4 class="policy-title">Seguridad de tus Datos</h4>
+                        <p class="policy-text">Implementamos múltiples medidas de seguridad para proteger tu información:</p>
+                        <ul class="policy-list">
+                            <li>Encriptación SSL/TLS para todas las transmisiones de datos</li>
+                            <li>Encriptación de contraseñas y datos sensibles</li>
+                            <li>Acceso restringido a información personal</li>
+                            <li>Monitoreo continuo de seguridad</li>
+                            <li>Auditorías regulares de seguridad</li>
+                            <li>Cumplimiento con estándares internacionales de seguridad</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sección 5 -->
+                    <div class="policy-card" id="seccion5">
+                        <div class="policy-number">5</div>
+                        <h4 class="policy-title">Cookies y Tecnologías Similares</h4>
+                        <p class="policy-text">Utilizamos cookies y tecnologías similares para mejorar tu experiencia:</p>
+                        <ul class="policy-list">
+                            <li><strong>Cookies Esenciales:</strong> Necesarias para el funcionamiento básico del sitio</li>
+                            <li><strong>Cookies de Rendimiento:</strong> Nos ayudan a entender cómo usas el sitio</li>
+                            <li><strong>Cookies de Funcionalidad:</strong> Recuerdan tus preferencias y configuraciones</li>
+                            <li><strong>Cookies de Marketing:</strong> Personalizan anuncios y ofertas (con tu consentimiento)</li>
+                        </ul>
+                        <p class="policy-text">Puedes gestionar las cookies a través de la configuración de tu navegador.</p>
+                    </div>
+
+                    <!-- Sección 6 -->
+                    <div class="policy-card" id="seccion6">
+                        <div class="policy-number">6</div>
+                        <h4 class="policy-title">Tus Derechos de Privacidad</h4>
+                        <p class="policy-text">Tienes los siguientes derechos sobre tu información personal:</p>
+                        <ul class="policy-list">
+                            <li><strong>Acceso:</strong> Solicitar una copia de la información que tenemos sobre ti</li>
+                            <li><strong>Rectificación:</strong> Corregir información inexacta o incompleta</li>
+                            <li><strong>Eliminación:</strong> Solicitar la eliminación de tu información personal</li>
+                            <li><strong>Portabilidad:</strong> Recibir tus datos en un formato estructurado</li>
+                            <li><strong>Oposición:</strong> Oponerte al procesamiento de tus datos para ciertos fines</li>
+                            <li><strong>Limitación:</strong> Restringir el procesamiento de tus datos</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sección 7 -->
+                    <div class="policy-card" id="seccion7">
+                        <div class="policy-number">7</div>
+                        <h4 class="policy-title">Retención de Datos</h4>
+                        <p class="policy-text">Conservamos tu información personal durante el tiempo necesario para:</p>
+                        <ul class="policy-list">
+                            <li>Proporcionar nuestros servicios</li>
+                            <li>Cumplir con obligaciones legales</li>
+                            <li>Resolver disputas y hacer cumplir nuestros acuerdos</li>
+                            <li>Prevenir fraudes y abusos</li>
+                        </ul>
+                        <p class="policy-text">Generalmente, conservamos los datos de cuenta mientras tu cuenta esté activa y los datos de transacciones durante 7 años por requisitos legales.</p>
+                    </div>
+
+                    <!-- Sección 8 -->
+                    <div class="policy-card" id="seccion8">
+                        <div class="policy-number">8</div>
+                        <h4 class="policy-title">Contacto y Ejercicio de Derechos</h4>
+                        <p class="policy-text">Para ejercer tus derechos de privacidad o si tienes preguntas sobre esta política, puedes contactarnos:</p>
+                        <ul class="policy-list">
+                            <li><strong>Correo Electrónico:</strong> privacidad@todoaqui.com</li>
+                            <li><strong>Teléfono:</strong> +57 300 123 4567</li>
+                            <li><strong>Dirección:</strong> Calle 123 #45-67, Bogotá, Colombia</li>
+                            <li><strong>Formulario de Contacto:</strong> Disponible en nuestra página de contacto</li>
+                        </ul>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4 style="color: var(--text-dark); font-weight: 600;">⚠️ Cambios en esta Política</h4>
+                        <p class="mb-0" style="color: var(--text-light);">Podemos actualizar esta política de privacidad ocasionalmente. Te notificaremos sobre cambios significativos por correo electrónico o mediante un aviso prominente en nuestro sitio web. Te recomendamos revisar esta página periódicamente.</p>
+                    </div>
+
+                    <div class="highlight-box">
+                        <h4 style="color: var(--text-dark); font-weight: 600;">📞 ¿Necesitas Ayuda?</h4>
+                        <p class="mb-0" style="color: var(--text-light);">Si tienes preguntas sobre cómo manejamos tu información personal o deseas ejercer alguno de tus derechos, no dudes en contactarnos. Estamos aquí para ayudarte a proteger tu privacidad.</p>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <a href="{% url 'index' %}" class="btn-back">
+                            <i class="fas fa-arrow-left"></i>
+                            Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Smooth scrolling for table of contents links
+        document.querySelectorAll('.toc-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+    
+    <script src="{% static 'index/js/jquery-1.11.0.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="{% static 'index/js/plugins.js' %}"></script>
+    <script src="{% static 'index/js/script.js' %}"></script>
+</body>
+</html>

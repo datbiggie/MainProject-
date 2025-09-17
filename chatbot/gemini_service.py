@@ -61,6 +61,15 @@ class GeminiService:
             - Para productos de usuario, menciona "entrega disponible" o la distancia si tienes coordenadas del usuario
             - Para productos/servicios de empresa, menciona la sucursal y distancia si es relevante
             
+            ENLACES DIRECTOS:
+            - SIEMPRE incluye un enlace directo para cada producto o servicio mostrado
+            - Formato del enlace: [Ver en detalle](http://127.0.0.1:8000/ecommerce/vista_items/?id=[ID]&tipo=[TIPO]&origen=[ORIGEN])
+            - Para productos de empresa: origen=empresa, tipo=producto
+            - Para productos de usuario: origen=usuario, tipo=producto  
+            - Para servicios de empresa: origen=empresa, tipo=servicio
+            - Para servicios de usuario: origen=usuario, tipo=servicio
+            - Ejemplo: "📱 iPhone 12 - $15,000 - Apple Store Polanco [Ver en detalle](http://127.0.0.1:8000/ecommerce/vista_items/?id=123&tipo=producto&origen=empresa)"
+            
             CONSULTAS DE PROXIMIDAD:
             - Si encontraste 'productos_cercanos', ordénalos por distancia y menciona la distancia en km (ej: "a 2.5 km")
             - NUNCA muestres coordenadas (latitud/longitud) al usuario, siempre calcula y muestra la distancia
@@ -68,6 +77,15 @@ class GeminiService:
             - Ejemplo: "Para encontrar productos cerca de ti, comparte tu ubicación como: 19.4326,-99.1332"
             - Explica que puede obtener sus coordenadas desde Google Maps o su teléfono
             - Para productos con ubicación, di "a X km de distancia" en lugar de mostrar coordenadas
+            
+            CONSULTAS DE USUARIOS Y EMPRESAS:
+            - Si encontraste 'usuario_consultado', muestra información del usuario: nombre, email, productos/servicios activos, pedidos realizados, fecha de registro
+            - Si encontraste 'usuarios_registrados', lista los usuarios con información básica
+            - Si encontraste 'empresa_consultada', muestra información de la empresa: nombre, tipo, descripción, productos/servicios, sucursales, fecha de registro
+            - Si encontraste 'empresas_registradas', lista las empresas con información básica
+            - Para información sensible como emails completos, solo muestra los primeros caracteres: "juan***@email.com"
+            - Incluye estadísticas relevantes como número de productos, servicios, pedidos, etc.
+            - Formato ejemplo: "👤 Usuario: Juan Pérez - Email: juan***@email.com - 5 productos activos - Registrado: 15/01/2024"
             
             - NO agregues sugerencias genéricas si ya encontraste productos
             - NO menciones "navegar por categorías" si ya hay resultados específicos
@@ -141,18 +159,103 @@ class GeminiService:
                     terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario)
                 logger.info(f"Términos de búsqueda extraídos: '{terminos_busqueda}'")
                 if terminos_busqueda:
+                    # Buscar productos por nombre/descripción
                     productos = self.db_service.buscar_productos(terminos_busqueda, limite=5)
-                    logger.info(f"Productos encontrados: {len(productos) if productos else 0}")
-                    if productos:
-                        informacion['productos_encontrados'] = productos
+                    logger.info(f"Productos encontrados por nombre: {len(productos) if productos else 0}")
+                    
+                    # También buscar por categoría
+                    productos_categoria = self.db_service.obtener_productos_por_categoria(terminos_busqueda, limite=5)
+                    logger.info(f"Productos encontrados por categoría: {len(productos_categoria) if productos_categoria else 0}")
+                    
+                    # Detectar y buscar por atributos específicos
+                    atributos_detectados = self._detectar_atributos_en_mensaje(mensaje_usuario)
+                    productos_atributos = []
+                    if atributos_detectados:
+                        logger.info(f"Atributos detectados: {atributos_detectados}")
+                        productos_atributos = self.db_service.buscar_productos_por_atributos(atributos_detectados, limite=5)
+                        logger.info(f"Productos encontrados por atributos: {len(productos_atributos) if productos_atributos else 0}")
+                    
+                    # Combinar resultados evitando duplicados
+                    todos_productos = productos or []
+                    if productos_categoria:
+                        ids_existentes = {p['id'] for p in todos_productos}
+                        for prod_cat in productos_categoria:
+                            if prod_cat['id'] not in ids_existentes:
+                                todos_productos.append(prod_cat)
+                    
+                    if productos_atributos:
+                        ids_existentes = {p['id'] for p in todos_productos}
+                        for prod_attr in productos_atributos:
+                            if prod_attr['id'] not in ids_existentes:
+                                todos_productos.append(prod_attr)
+                    
+                    if todos_productos:
+                        informacion['productos_encontrados'] = todos_productos[:10]
+            
+            # Detectar consultas sobre usuarios registrados
+            palabras_usuario = ['usuario', 'usuarios', 'cliente', 'clientes', 'persona', 'personas', 
+                               'registrado', 'registrados', 'registrada', 'registradas']
+            
+            if any(palabra in mensaje_lower for palabra in palabras_usuario):
+                logger.info("Consulta sobre usuarios detectada")
+                
+                # Buscar si se menciona un nombre, email o ID específico
+                criterio_busqueda = self._extraer_criterio_busqueda_usuario(mensaje_usuario)
+                
+                if criterio_busqueda:
+                    # Buscar usuario específico
+                    resultado_usuario = self.db_service.buscar_usuario(criterio_busqueda)
+                    informacion['usuario_consultado'] = resultado_usuario
+                    logger.info(f"Búsqueda de usuario específico: {criterio_busqueda}")
+                else:
+                    # Listar usuarios recientes si no se especifica uno
+                    if any(palabra in mensaje_lower for palabra in ['lista', 'listar', 'mostrar', 'ver', 'cuantos', 'cuántos']):
+                        usuarios_recientes = self.db_service.listar_usuarios_registrados(limite=5)
+                        informacion['usuarios_registrados'] = usuarios_recientes
+                        logger.info("Listando usuarios registrados")
+            
+            # Detectar consultas sobre empresas registradas
+            palabras_empresa = ['empresa', 'empresas', 'negocio', 'negocios', 'compañia', 'compañía', 
+                               'comercio', 'comercios', 'tienda', 'tiendas']
+            
+            if any(palabra in mensaje_lower for palabra in palabras_empresa):
+                logger.info("Consulta sobre empresas detectada")
+                
+                # Buscar si se menciona un nombre, email o ID específico
+                criterio_busqueda = self._extraer_criterio_busqueda_empresa(mensaje_usuario)
+                
+                if criterio_busqueda:
+                    # Buscar empresa específica
+                    resultado_empresa = self.db_service.buscar_empresa(criterio_busqueda)
+                    informacion['empresa_consultada'] = resultado_empresa
+                    logger.info(f"Búsqueda de empresa específica: {criterio_busqueda}")
+                else:
+                    # Listar empresas recientes si no se especifica una
+                    if any(palabra in mensaje_lower for palabra in ['lista', 'listar', 'mostrar', 'ver', 'cuantas', 'cuántas']):
+                        empresas_recientes = self.db_service.listar_empresas_registradas(limite=5)
+                        informacion['empresas_registradas'] = empresas_recientes
+                        logger.info("Listando empresas registradas")
             
             # Detectar consultas sobre servicios
             if any(palabra in mensaje_lower for palabra in ['servicio', 'servicios']):
                 terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario)
                 if terminos_busqueda:
+                    # Buscar servicios por nombre/descripción
                     servicios = self.db_service.buscar_servicios(terminos_busqueda, limite=5)
-                    if servicios:
-                        informacion['servicios_encontrados'] = servicios
+                    
+                    # Buscar servicios por categoría
+                    servicios_categoria = self.db_service.obtener_servicios_por_categoria(terminos_busqueda, limite=5)
+                    
+                    # Combinar resultados evitando duplicados
+                    todos_servicios = servicios or []
+                    if servicios_categoria:
+                        ids_existentes = {s['id'] for s in todos_servicios}
+                        for serv_cat in servicios_categoria:
+                            if serv_cat['id'] not in ids_existentes:
+                                todos_servicios.append(serv_cat)
+                    
+                    if todos_servicios:
+                        informacion['servicios_encontrados'] = todos_servicios[:10]
             
             # Detectar consultas sobre empresas
             if any(palabra in mensaje_lower for palabra in ['empresa', 'tienda', 'vendedor']):
@@ -254,6 +357,71 @@ class GeminiService:
         # Retornar todos los términos unidos con espacios para búsqueda más efectiva
         return ' '.join(terminos_unicos) if terminos_unicos else ''
     
+    def _extraer_criterio_busqueda_usuario(self, mensaje):
+        """Extrae criterio de búsqueda específico para usuarios (nombre, email, ID)"""
+        import re
+        mensaje_lower = mensaje.lower()
+        
+        # Buscar patrones de email
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        emails = re.findall(email_pattern, mensaje)
+        if emails:
+            return emails[0]
+        
+        # Buscar patrones de ID numérico
+        id_pattern = r'\bid[:\s]*([0-9]+)\b|\busuario[:\s]*([0-9]+)\b'
+        id_match = re.search(id_pattern, mensaje_lower)
+        if id_match:
+            return id_match.group(1) or id_match.group(2)
+        
+        # Buscar nombres propios (palabras que empiezan con mayúscula)
+        nombre_pattern = r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b'
+        nombres = re.findall(nombre_pattern, mensaje)
+        if nombres:
+            # Filtrar nombres comunes que no son nombres de persona
+            nombres_filtrados = [n for n in nombres if n.lower() not in 
+                               ['Usuario', 'Usuarios', 'Cliente', 'Clientes', 'Persona', 'Personas']]
+            if nombres_filtrados:
+                return nombres_filtrados[0]
+        
+        return None
+    
+    def _extraer_criterio_busqueda_empresa(self, mensaje):
+        """Extrae criterio de búsqueda específico para empresas (nombre, email, ID)"""
+        import re
+        mensaje_lower = mensaje.lower()
+        
+        # Buscar patrones de email
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        emails = re.findall(email_pattern, mensaje)
+        if emails:
+            return emails[0]
+        
+        # Buscar patrones de ID numérico
+        id_pattern = r'\bid[:\s]*([0-9]+)\b|\bempresa[:\s]*([0-9]+)\b'
+        id_match = re.search(id_pattern, mensaje_lower)
+        if id_match:
+            return id_match.group(1) or id_match.group(2)
+        
+        # Buscar nombres de empresa (palabras que empiezan con mayúscula o entre comillas)
+        # Primero buscar entre comillas
+        comillas_pattern = r'["\']([^"\']+)["\']'
+        comillas_match = re.search(comillas_pattern, mensaje)
+        if comillas_match:
+            return comillas_match.group(1)
+        
+        # Buscar nombres propios
+        nombre_pattern = r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b'
+        nombres = re.findall(nombre_pattern, mensaje)
+        if nombres:
+            # Filtrar palabras comunes que no son nombres de empresa
+            nombres_filtrados = [n for n in nombres if n.lower() not in 
+                               ['Empresa', 'Empresas', 'Negocio', 'Negocios', 'Tienda', 'Tiendas']]
+            if nombres_filtrados:
+                return nombres_filtrados[0]
+        
+        return None
+    
     def _extraer_coordenadas(self, mensaje):
         """Extrae coordenadas del mensaje del usuario"""
         import re
@@ -322,3 +490,113 @@ class GeminiService:
             contexto.append(f"{tipo}: {mensaje.contenido}")
         
         return "\n".join(contexto)
+    
+    def _detectar_atributos_en_mensaje(self, mensaje):
+        """Detecta atributos específicos mencionados en el mensaje del usuario"""
+        mensaje_lower = mensaje.lower()
+        atributos_detectados = {}
+        
+        # Mapeo de palabras clave a atributos comunes
+        mapeo_atributos = {
+            # Colores
+            'rojo': {'color': 'rojo'},
+            'azul': {'color': 'azul'},
+            'verde': {'color': 'verde'},
+            'negro': {'color': 'negro'},
+            'blanco': {'color': 'blanco'},
+            'amarillo': {'color': 'amarillo'},
+            'rosa': {'color': 'rosa'},
+            'morado': {'color': 'morado'},
+            'gris': {'color': 'gris'},
+            'naranja': {'color': 'naranja'},
+            
+            # Tallas
+            'talla s': {'talla': 'S'},
+            'talla m': {'talla': 'M'},
+            'talla l': {'talla': 'L'},
+            'talla xl': {'talla': 'XL'},
+            'talla xxl': {'talla': 'XXL'},
+            'pequeño': {'talla': 'S'},
+            'mediano': {'talla': 'M'},
+            'grande': {'talla': 'L'},
+            'extra grande': {'talla': 'XL'},
+            
+            # Materiales
+            'algodón': {'material': 'algodón'},
+            'algodon': {'material': 'algodón'},
+            'poliéster': {'material': 'poliéster'},
+            'poliester': {'material': 'poliéster'},
+            'cuero': {'material': 'cuero'},
+            'piel': {'material': 'cuero'},
+            'madera': {'material': 'madera'},
+            'metal': {'material': 'metal'},
+            'plástico': {'material': 'plástico'},
+            'plastico': {'material': 'plástico'},
+            'vidrio': {'material': 'vidrio'},
+            
+            # Marcas comunes
+            'nike': {'marca': 'Nike'},
+            'adidas': {'marca': 'Adidas'},
+            'samsung': {'marca': 'Samsung'},
+            'apple': {'marca': 'Apple'},
+            'sony': {'marca': 'Sony'},
+            'lg': {'marca': 'LG'},
+            
+            # Características
+            'nuevo': {'condicion': 'nuevo'},
+            'usado': {'condicion': 'usado'},
+            'seminuevo': {'condicion': 'seminuevo'},
+            'barato': {'precio_rango': 'bajo'},
+            'económico': {'precio_rango': 'bajo'},
+            'economico': {'precio_rango': 'bajo'},
+            'caro': {'precio_rango': 'alto'},
+            'premium': {'precio_rango': 'alto'},
+            'calidad': {'calidad': 'alta'},
+            
+            # Tecnología
+            'bluetooth': {'conectividad': 'bluetooth'},
+            'wifi': {'conectividad': 'wifi'},
+            'inalámbrico': {'conectividad': 'inalambrico'},
+            'inalambrico': {'conectividad': 'inalambrico'},
+            'usb': {'conectividad': 'usb'},
+            
+            # Capacidades
+            '32gb': {'capacidad': '32GB'},
+            '64gb': {'capacidad': '64GB'},
+            '128gb': {'capacidad': '128GB'},
+            '256gb': {'capacidad': '256GB'},
+            '512gb': {'capacidad': '512GB'},
+            '1tb': {'capacidad': '1TB'},
+        }
+        
+        # Buscar patrones en el mensaje
+        for patron, atributos in mapeo_atributos.items():
+            if patron in mensaje_lower:
+                atributos_detectados.update(atributos)
+        
+        # Detectar rangos de precio
+        import re
+        precio_patterns = [
+            r'menos de (\d+)',
+            r'menor a (\d+)',
+            r'bajo (\d+)',
+            r'máximo (\d+)',
+            r'maximo (\d+)',
+            r'entre (\d+) y (\d+)',
+            r'de (\d+) a (\d+)',
+        ]
+        
+        for pattern in precio_patterns:
+            match = re.search(pattern, mensaje_lower)
+            if match:
+                if 'entre' in pattern or 'de' in pattern:
+                    precio_min = match.group(1)
+                    precio_max = match.group(2)
+                    atributos_detectados['precio_min'] = precio_min
+                    atributos_detectados['precio_max'] = precio_max
+                else:
+                    precio_max = match.group(1)
+                    atributos_detectados['precio_max'] = precio_max
+                break
+        
+        return atributos_detectados if atributos_detectados else None

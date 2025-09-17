@@ -8,7 +8,8 @@ from ecommerce_app.models import (
     carrito_compra_producto_usuario, carrito_compra_producto_empresa,
     pedido_usuario, pedido_empresa, detalle_pedido_usuario, detalle_pedido_empresa,
     favorito_usuario, favorito_empresa_sucursal,
-    sucursal, imagen_producto_empresa, imagen_producto_usuario
+    sucursal, imagen_producto_empresa, imagen_producto_usuario,
+    AtributoProducto, ValorAtributoProducto
 )
 import logging
 import math
@@ -20,6 +21,147 @@ class DatabaseService:
     
     def __init__(self):
         pass
+    
+    def obtener_atributos_producto(self, producto_id, tipo_producto):
+        """Obtiene los atributos EAV de un producto específico"""
+        try:
+            atributos = {}
+            
+            if tipo_producto == 'producto_usuario':
+                valores = ValorAtributoProducto.objects.filter(
+                    producto_usuario_id=producto_id
+                ).select_related('atributo')
+            elif tipo_producto == 'producto_empresa':
+                valores = ValorAtributoProducto.objects.filter(
+                    producto_empresa_id=producto_id
+                ).select_related('atributo')
+            else:
+                return atributos
+            
+            for valor in valores:
+                atributo_nombre = valor.atributo.nombre
+                if valor.atributo.tipo_dato == 'texto':
+                    atributos[atributo_nombre] = valor.valor_texto
+                elif valor.atributo.tipo_dato == 'numero':
+                    atributos[atributo_nombre] = valor.valor_numerico
+                elif valor.atributo.tipo_dato == 'decimal':
+                    atributos[atributo_nombre] = float(valor.valor_decimal) if valor.valor_decimal else None
+                elif valor.atributo.tipo_dato == 'fecha':
+                    atributos[atributo_nombre] = valor.valor_fecha
+                elif valor.atributo.tipo_dato == 'booleano':
+                    atributos[atributo_nombre] = valor.valor_booleano
+            
+            return atributos
+            
+        except Exception as e:
+            logger.error(f"Error al obtener atributos del producto: {e}")
+            return {}
+    
+    def buscar_productos_por_atributos(self, filtros_atributos, limite=10):
+        """Busca productos que coincidan con atributos específicos
+        
+        Args:
+            filtros_atributos (dict): Diccionario con nombre_atributo: valor_buscado
+            limite (int): Número máximo de resultados
+        
+        Returns:
+            list: Lista de productos que coinciden con los atributos
+        """
+        try:
+            resultados = []
+            productos_encontrados = set()
+            
+            for nombre_atributo, valor_buscado in filtros_atributos.items():
+                # Buscar el atributo por nombre
+                try:
+                    atributo = AtributoProducto.objects.get(nombre=nombre_atributo)
+                except AtributoProducto.DoesNotExist:
+                    continue
+                
+                # Buscar valores que coincidan según el tipo de dato
+                valores_query = Q()
+                
+                if atributo.tipo_dato == 'texto':
+                    valores_query = Q(valor_texto__icontains=valor_buscado)
+                elif atributo.tipo_dato == 'numero':
+                    try:
+                        valores_query = Q(valor_numerico=int(valor_buscado))
+                    except ValueError:
+                        continue
+                elif atributo.tipo_dato == 'decimal':
+                    try:
+                        valores_query = Q(valor_decimal=float(valor_buscado))
+                    except ValueError:
+                        continue
+                elif atributo.tipo_dato == 'booleano':
+                    bool_val = valor_buscado.lower() in ['true', '1', 'sí', 'si', 'verdadero']
+                    valores_query = Q(valor_booleano=bool_val)
+                
+                # Obtener productos que tienen este atributo con el valor buscado
+                valores = ValorAtributoProducto.objects.filter(
+                    atributo=atributo
+                ).filter(valores_query)
+                
+                for valor in valores:
+                    # Agregar productos de usuario
+                    if valor.producto_usuario_id and valor.producto_usuario_id not in productos_encontrados:
+                        try:
+                            prod = producto_usuario.objects.get(
+                                id_producto_usuario=valor.producto_usuario_id,
+                                estatus_producto_usuario='Activo'
+                            )
+                            atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                            
+                            resultados.append({
+                                'tipo': 'producto_usuario',
+                                'id': prod.id_producto_usuario,
+                                'nombre': prod.nombre_producto_usuario,
+                                'descripcion': prod.descripcion_producto_usuario,
+                                'precio': float(prod.precio_producto_usuario),
+                                'stock': prod.stock_producto_usuario,
+                                'vendedor': prod.id_usuario_fk.nombre_usuario,
+                                'condicion': prod.condicion_producto_usuario,
+                                'atributos': atributos
+                            })
+                            productos_encontrados.add(valor.producto_usuario_id)
+                        except producto_usuario.DoesNotExist:
+                            continue
+                    
+                    # Agregar productos de empresa
+                    if valor.producto_empresa_id and valor.producto_empresa_id not in productos_encontrados:
+                        try:
+                            prod = producto_empresa.objects.get(id_producto_empresa=valor.producto_empresa_id)
+                            atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                            
+                            # Obtener sucursales activas
+                            sucursales = producto_sucursal.objects.filter(
+                                id_producto_fk=prod,
+                                estatus_producto_sucursal='Activo'
+                            )
+                            
+                            for suc_prod in sucursales:
+                                resultados.append({
+                                    'tipo': 'producto_empresa',
+                                    'id': suc_prod.id_producto_sucursal,
+                                    'nombre': prod.nombre_producto_empresa,
+                                    'descripcion': prod.descripcion_producto_empresa,
+                                    'precio': float(suc_prod.precio_producto_sucursal),
+                                    'stock': suc_prod.stock_producto_sucursal,
+                                    'vendedor': prod.id_empresa_fk.nombre_empresa,
+                                    'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                                    'condicion': suc_prod.condicion_producto_sucursal,
+                                    'atributos': atributos
+                                })
+                            
+                            productos_encontrados.add(valor.producto_empresa_id)
+                        except producto_empresa.DoesNotExist:
+                            continue
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error al buscar productos por atributos: {e}")
+            return []
     
     def calcular_distancia_haversine(self, lat1, lon1, lat2, lon2):
         """Calcula la distancia entre dos puntos usando la fórmula de Haversine"""
@@ -70,7 +212,10 @@ class DatabaseService:
             resultados = []
             
             for prod in productos_usuario:
-                resultados.append({
+                # Obtener atributos EAV del producto
+                atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                
+                resultado = {
                     'tipo': 'producto_usuario',
                     'id': prod.id_producto_usuario,
                     'nombre': prod.nombre_producto_usuario,
@@ -80,8 +225,10 @@ class DatabaseService:
                     'vendedor': prod.id_usuario_fk.nombre_usuario,
                     'condicion': prod.condicion_producto_usuario,
                     'latitud': float(prod.latitud_entrega_producto) if prod.latitud_entrega_producto else None,
-                    'longitud': float(prod.longitud_entrega_producto) if prod.longitud_entrega_producto else None
-                })
+                    'longitud': float(prod.longitud_entrega_producto) if prod.longitud_entrega_producto else None,
+                    'atributos': atributos
+                }
+                resultados.append(resultado)
             
             for prod in productos_empresa:
                 # Obtener información de sucursales
@@ -90,7 +237,10 @@ class DatabaseService:
                     estatus_producto_sucursal='Activo'
                 )
                 for suc_prod in sucursales:
-                    resultados.append({
+                    # Obtener atributos EAV del producto de empresa
+                    atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                    
+                    resultado = {
                         'tipo': 'producto_empresa',
                         'id': suc_prod.id_producto_sucursal,
                         'nombre': prod.nombre_producto_empresa,
@@ -101,8 +251,10 @@ class DatabaseService:
                         'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
                         'condicion': suc_prod.condicion_producto_sucursal,
                         'latitud': float(suc_prod.id_sucursal_fk.latitud_sucursal) if suc_prod.id_sucursal_fk.latitud_sucursal else None,
-                        'longitud': float(suc_prod.id_sucursal_fk.longitud_sucursal) if suc_prod.id_sucursal_fk.longitud_sucursal else None
-                    })
+                        'longitud': float(suc_prod.id_sucursal_fk.longitud_sucursal) if suc_prod.id_sucursal_fk.longitud_sucursal else None,
+                        'atributos': atributos
+                    }
+                    resultados.append(resultado)
             
             return resultados[:limite]
             
@@ -190,35 +342,55 @@ class DatabaseService:
         try:
             resultados = []
             
-            # Buscar en categorías de usuario
+            # Normalizar término de búsqueda (quitar acentos y convertir a minúsculas)
+            import unicodedata
+            categoria_normalizada = unicodedata.normalize('NFD', categoria_nombre.lower()).encode('ascii', 'ignore').decode('ascii')
+            
+            # Buscar en categorías de usuario con múltiples variaciones
             categorias_usuario = categoria_producto_usuario.objects.filter(
-                nombre_categoria_prod_usuario__icontains=categoria_nombre,
                 estatus_categoria_prod_usuario='Activo'
             )
             
-            for categoria in categorias_usuario:
+            # Filtrar categorías que coincidan (con y sin acentos)
+            categorias_coincidentes = []
+            for cat in categorias_usuario:
+                nombre_cat_normalizado = unicodedata.normalize('NFD', cat.nombre_categoria_prod_usuario.lower()).encode('ascii', 'ignore').decode('ascii')
+                if categoria_normalizada in nombre_cat_normalizado or categoria_nombre.lower() in cat.nombre_categoria_prod_usuario.lower():
+                    categorias_coincidentes.append(cat)
+            
+            for categoria in categorias_coincidentes:
                 productos = producto_usuario.objects.filter(
                     id_categoria_prod_fk=categoria,
                     estatus_producto_usuario='Activo'
                 )[:limite//2]
                 
                 for prod in productos:
+                    # Obtener atributos EAV del producto
+                    atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                    
                     resultados.append({
                         'tipo': 'producto_usuario',
                         'id': prod.id_producto_usuario,
                         'nombre': prod.nombre_producto_usuario,
                         'precio': float(prod.precio_producto_usuario),
                         'vendedor': prod.id_usuario_fk.nombre_usuario,
-                        'categoria': categoria.nombre_categoria_prod_usuario
+                        'categoria': categoria.nombre_categoria_prod_usuario,
+                        'atributos': atributos
                     })
             
-            # Buscar en categorías de empresa
+            # Buscar en categorías de empresa con la misma lógica
             categorias_empresa = categoria_producto_empresa.objects.filter(
-                nombre_categoria_prod_empresa__icontains=categoria_nombre,
                 estatus_categoria_prod_empresa='Activo'
             )
             
-            for categoria in categorias_empresa:
+            # Filtrar categorías de empresa que coincidan
+            categorias_empresa_coincidentes = []
+            for cat in categorias_empresa:
+                nombre_cat_normalizado = unicodedata.normalize('NFD', cat.nombre_categoria_prod_empresa.lower()).encode('ascii', 'ignore').decode('ascii')
+                if categoria_normalizada in nombre_cat_normalizado or categoria_nombre.lower() in cat.nombre_categoria_prod_empresa.lower():
+                    categorias_empresa_coincidentes.append(cat)
+            
+            for categoria in categorias_empresa_coincidentes:
                 productos = producto_empresa.objects.filter(
                     id_categoria_prod_fk=categoria
                 )[:limite//2]
@@ -229,6 +401,9 @@ class DatabaseService:
                         estatus_producto_sucursal='Activo'
                     )
                     for suc_prod in sucursales:
+                        # Obtener atributos EAV del producto de empresa
+                        atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                        
                         resultados.append({
                             'tipo': 'producto_empresa',
                             'id': suc_prod.id_producto_sucursal,
@@ -236,7 +411,8 @@ class DatabaseService:
                             'precio': float(suc_prod.precio_producto_sucursal),
                             'vendedor': prod.id_empresa_fk.nombre_empresa,
                             'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
-                            'categoria': categoria.nombre_categoria_prod_empresa
+                            'categoria': categoria.nombre_categoria_prod_empresa,
+                            'atributos': atributos
                         })
             
             return resultados[:limite]
@@ -485,6 +661,82 @@ class DatabaseService:
             logger.error(f"Error al buscar servicios: {e}")
             return []
     
+    def obtener_servicios_por_categoria(self, categoria_nombre, limite=10):
+        """Obtiene servicios de una categoría específica"""
+        try:
+            resultados = []
+            
+            # Normalizar término de búsqueda (quitar acentos y convertir a minúsculas)
+            import unicodedata
+            categoria_normalizada = unicodedata.normalize('NFD', categoria_nombre.lower()).encode('ascii', 'ignore').decode('ascii')
+            
+            # Buscar en categorías de servicios de usuario con múltiples variaciones
+            categorias_usuario = categoria_servicio_usuario.objects.filter(
+                estatus_categoria_serv_usuario='Activo'
+            )
+            
+            # Filtrar categorías que coincidan (con y sin acentos)
+            categorias_coincidentes = []
+            for cat in categorias_usuario:
+                nombre_cat_normalizado = unicodedata.normalize('NFD', cat.nombre_categoria_serv_usuario.lower()).encode('ascii', 'ignore').decode('ascii')
+                if categoria_normalizada in nombre_cat_normalizado or categoria_nombre.lower() in cat.nombre_categoria_serv_usuario.lower():
+                    categorias_coincidentes.append(cat)
+            
+            for categoria in categorias_coincidentes:
+                servicios = servicio_usuario.objects.filter(
+                    id_categoria_serv_fk=categoria,
+                    estatus_servicio_usuario='Activo'
+                )[:limite//2]
+                
+                for serv in servicios:
+                    resultados.append({
+                        'tipo': 'servicio_usuario',
+                        'id': serv.id_servicio_usuario,
+                        'nombre': serv.nombre_servicio_usuario,
+                        'precio': float(serv.precio_servicio_usuario or 0),
+                        'proveedor': serv.id_usuario_fk.nombre_usuario,
+                        'categoria': categoria.nombre_categoria_serv_usuario
+                    })
+            
+            # Buscar en categorías de servicios de empresa con la misma lógica
+            categorias_empresa = categoria_servicio_empresa.objects.filter(
+                estatus_categoria_serv_empresa='Activo'
+            )
+            
+            # Filtrar categorías de empresa que coincidan
+            categorias_empresa_coincidentes = []
+            for cat in categorias_empresa:
+                nombre_cat_normalizado = unicodedata.normalize('NFD', cat.nombre_categoria_serv_empresa.lower()).encode('ascii', 'ignore').decode('ascii')
+                if categoria_normalizada in nombre_cat_normalizado or categoria_nombre.lower() in cat.nombre_categoria_serv_empresa.lower():
+                    categorias_empresa_coincidentes.append(cat)
+            
+            for categoria in categorias_empresa_coincidentes:
+                servicios = servicio_empresa.objects.filter(
+                    id_categoria_serv_fk=categoria
+                )[:limite//2]
+                
+                for serv in servicios:
+                    sucursales = servicio_sucursal.objects.filter(
+                        id_servicio_fk=serv,
+                        estatus_servicio_sucursal='Activo'
+                    )
+                    for suc_serv in sucursales:
+                        resultados.append({
+                            'tipo': 'servicio_empresa',
+                            'id': suc_serv.id_servicio_sucursal,
+                            'nombre': serv.nombre_servicio_empresa,
+                            'precio': float(suc_serv.precio_servicio_sucursal or 0),
+                            'proveedor': serv.id_empresa_fk.nombre_empresa,
+                            'sucursal': suc_serv.id_sucursal_fk.nombre_sucursal,
+                            'categoria': categoria.nombre_categoria_serv_empresa
+                        })
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error al obtener servicios por categoría: {e}")
+            return []
+    
     # ===== MÉTODOS DE CATEGORÍAS =====
     
     def obtener_categorias_productos(self):
@@ -534,3 +786,159 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Error al obtener categorías de servicios: {e}")
             return []
+    
+    # ===== MÉTODOS DE INFORMACIÓN DE USUARIOS =====
+    
+    def buscar_usuario(self, criterio_busqueda):
+        """Busca un usuario específico por nombre, email o ID"""
+        try:
+            # Intentar buscar por ID primero
+            try:
+                usuario_id = int(criterio_busqueda)
+                usuario_obj = usuario.objects.filter(id_usuario=usuario_id).first()
+                if usuario_obj:
+                    return self._formatear_usuario(usuario_obj)
+            except ValueError:
+                pass
+            
+            # Buscar por email o nombre
+            usuario_obj = usuario.objects.filter(
+                Q(correo_usuario__icontains=criterio_busqueda) |
+                Q(nombre_usuario__icontains=criterio_busqueda)
+            ).first()
+            
+            if usuario_obj:
+                return self._formatear_usuario(usuario_obj)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error al buscar usuario: {e}")
+            return None
+    
+    def listar_usuarios_registrados(self, limite=10):
+        """Lista los usuarios registrados más recientes"""
+        try:
+            usuarios = usuario.objects.all().order_by('-fecha_registro_usuario')[:limite]
+            
+            resultados = []
+            for user in usuarios:
+                resultados.append(self._formatear_usuario(user))
+            
+            return resultados
+            
+        except Exception as e:
+            logger.error(f"Error al listar usuarios registrados: {e}")
+            return []
+    
+    def _formatear_usuario(self, usuario_obj):
+        """Formatea la información de un usuario para el chatbot"""
+        try:
+            # Contar productos y servicios del usuario
+            productos_count = producto_usuario.objects.filter(
+                id_usuario_fk=usuario_obj,
+                estatus_producto_usuario='Activo'
+            ).count()
+            
+            servicios_count = servicio_usuario.objects.filter(
+                id_usuario_fk=usuario_obj,
+                estatus_servicio_usuario='Activo'
+            ).count()
+            
+            # Contar pedidos realizados
+            carritos = carrito_compra_producto_usuario.objects.filter(id_usuario_fk=usuario_obj)
+            pedidos_count = pedido_usuario.objects.filter(id_carrito_fk__in=carritos).count()
+            
+            return {
+                'id': usuario_obj.id_usuario,
+                'nombre': usuario_obj.nombre_usuario,
+                'email': usuario_obj.correo_usuario,
+                'telefono': usuario_obj.telefono_usuario,
+                'pais': usuario_obj.pais_usuario,
+                'estado': usuario_obj.estado_usuario,
+                'direccion': usuario_obj.direccion_usuario,
+                'productos_count': productos_count,
+                'servicios_count': servicios_count,
+                'pedidos_count': pedidos_count,
+                'fecha_registro': usuario_obj.fecha_registro_usuario.strftime('%d/%m/%Y') if usuario_obj.fecha_registro_usuario else 'No disponible'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error al formatear usuario: {e}")
+            return None
+    
+    def buscar_empresa(self, criterio_busqueda):
+        """Busca una empresa específica por nombre, email o ID"""
+        try:
+            # Intentar buscar por ID primero
+            try:
+                empresa_id = int(criterio_busqueda)
+                empresa_obj = empresa.objects.filter(id_empresa=empresa_id).first()
+                if empresa_obj:
+                    return self._formatear_empresa(empresa_obj)
+            except ValueError:
+                pass
+            
+            # Buscar por email o nombre
+            empresa_obj = empresa.objects.filter(
+                Q(correo_empresa__icontains=criterio_busqueda) |
+                Q(nombre_empresa__icontains=criterio_busqueda)
+            ).first()
+            
+            if empresa_obj:
+                return self._formatear_empresa(empresa_obj)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error al buscar empresa: {e}")
+            return None
+    
+    def listar_empresas_registradas(self, limite=10):
+        """Lista las empresas registradas más recientes"""
+        try:
+            empresas = empresa.objects.all().order_by('-fecha_registro_empresa')[:limite]
+            
+            resultados = []
+            for emp in empresas:
+                resultados.append(self._formatear_empresa(emp))
+            
+            return resultados
+            
+        except Exception as e:
+            logger.error(f"Error al listar empresas registradas: {e}")
+            return []
+    
+    def _formatear_empresa(self, empresa_obj):
+        """Formatea la información de una empresa para el chatbot"""
+        try:
+            # Contar productos y servicios
+            productos_count = producto_empresa.objects.filter(id_empresa_fk=empresa_obj).count()
+            servicios_count = servicio_empresa.objects.filter(id_empresa_fk=empresa_obj).count()
+            sucursales_count = sucursal.objects.filter(id_empresa_fk=empresa_obj).count()
+            
+            # Contar pedidos recibidos a través del carrito
+            pedidos_count = pedido_empresa.objects.filter(
+                id_carrito_fk__id_empresa_fk=empresa_obj
+            ).count()
+            
+            return {
+                'id': empresa_obj.id_empresa,
+                'nombre': empresa_obj.nombre_empresa,
+                'email': empresa_obj.correo_empresa,
+
+                'tipo_empresa': empresa_obj.tipo_empresa,
+                'descripcion': empresa_obj.descripcion_empresa,
+                'pais': empresa_obj.pais_empresa,
+                'estado': empresa_obj.estado_empresa,
+                'direccion': empresa_obj.direccion_empresa,
+                'productos_count': productos_count,
+                'servicios_count': servicios_count,
+                'sucursales_count': sucursales_count,
+                'pedidos_count': pedidos_count,
+                'fecha_registro': empresa_obj.fecha_registro_empresa.strftime('%d/%m/%Y') if empresa_obj.fecha_registro_empresa else 'No disponible'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error al formatear empresa: {e}")
+            return None

@@ -1458,59 +1458,57 @@ def procesar_atributos_producto(request, producto_empresa=None, producto_usuario
     Procesa y guarda los valores de atributos dinámicos para un producto
     """
     try:
+        logger.info(f"Campos recibidos en request.POST: {dict(request.POST)}")
         # Obtener todos los campos del formulario que empiecen con 'atributo_'
         for key, value in request.POST.items():
             if key.startswith('atributo_'):
-                # Extraer el ID del atributo del nombre del campo
                 atributo_id = key.replace('atributo_', '')
-                
                 try:
-                    # Obtener el atributo correspondiente
-                    atributo = AtributoProducto.objects.get(id=atributo_id)
-                    
-                    # Validar que el valor no esté vacío (solo si el atributo es obligatorio)
+                    atributo = AtributoProducto.objects.get(id_atributo=atributo_id)
                     if atributo.obligatorio and (not value or value.strip() == ''):
                         continue
-                    
-                    # Procesar el valor según el tipo de dato
-                    valor_procesado = value
-                    
-                    if atributo.tipo_dato == 'numero':
+                    # Preparar kwargs para el valor según tipo de dato
+                    valor_kwargs = {}
+                    if atributo.tipo_dato == 'texto':
+                        valor_kwargs['valor_texto'] = value
+                    elif atributo.tipo_dato == 'numero':
                         try:
-                            valor_procesado = int(value) if value else 0
+                            valor_kwargs['valor_numero'] = int(value) if value else None
                         except ValueError:
-                            valor_procesado = 0
+                            valor_kwargs['valor_numero'] = None
                     elif atributo.tipo_dato == 'decimal':
                         try:
-                            valor_procesado = float(value) if value else 0.0
+                            valor_kwargs['valor_decimal'] = float(value) if value else None
                         except ValueError:
-                            valor_procesado = 0.0
+                            valor_kwargs['valor_decimal'] = None
+                    elif atributo.tipo_dato == 'fecha':
+                        valor_kwargs['valor_fecha'] = value if value else None
                     elif atributo.tipo_dato == 'booleano':
-                        valor_procesado = value.lower() in ['true', '1', 'on', 'yes']
-                    
+                        valor_kwargs['valor_booleano'] = value.lower() in ['true', '1', 'on', 'yes']
+                    elif atributo.tipo_dato == 'lista':
+                        valor_kwargs['valor_texto'] = value
+                    else:
+                        valor_kwargs['valor_texto'] = value
                     # Crear el registro en ValorAtributoProducto
                     if producto_empresa:
                         ValorAtributoProducto.objects.create(
-                            id_atributo_fk=atributo,
-                            id_producto_empresa_fk=producto_empresa,
-                            valor=str(valor_procesado)
+                            producto_empresa=producto_empresa,
+                            atributo=atributo,
+                            **valor_kwargs
                         )
                     elif producto_usuario:
                         ValorAtributoProducto.objects.create(
-                            id_atributo_fk=atributo,
-                            id_producto_usuario_fk=producto_usuario,
-                            valor=str(valor_procesado)
+                            producto_usuario=producto_usuario,
+                            atributo=atributo,
+                            **valor_kwargs
                         )
-                    
-                    logger.info(f"Atributo {atributo.nombre} guardado con valor: {valor_procesado}")
-                    
+                    logger.info(f"Atributo {atributo.nombre} guardado con valor: {value}")
                 except AtributoProducto.DoesNotExist:
                     logger.warning(f"Atributo con ID {atributo_id} no encontrado")
                     continue
                 except Exception as e:
                     logger.error(f"Error al procesar atributo {atributo_id}: {str(e)}")
                     continue
-                    
     except Exception as e:
         logger.error(f"Error general al procesar atributos: {str(e)}")
 
@@ -3549,6 +3547,7 @@ def perfil_empresa(request):
 
 def busquedad(request):
     query = request.GET.get('query', '')
+    tipo = request.GET.get('tipo', '')  # Nuevo parámetro para filtrar por tipo
     
     # Obtener parámetros de filtrado
     condicion = request.GET.get('condicion', '')
@@ -3567,7 +3566,7 @@ def busquedad(request):
     resultados_empresas = []
     resultados_usuarios = []
     
-    if query or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]):
+    if query or tipo or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]):
         # Determinar el tipo de búsqueda
         query_lower = query.lower().strip() if query else ''
         
@@ -3590,24 +3589,31 @@ def busquedad(request):
             )
         
         # Determinar si la búsqueda es para productos/servicios o personas/empresas
-        es_busqueda_producto_servicio = any(palabra in query_lower for palabra in palabras_producto + palabras_servicio) or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max])
+        es_busqueda_producto_servicio = any(palabra in query_lower for palabra in palabras_producto + palabras_servicio) or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]) or tipo in ['productos', 'servicios']
         es_busqueda_persona_empresa = query and len(query) <= 3 or query_lower in ['juan', 'maria', 'carlos', 'ana', 'empresa', 'tienda', 'negocio']
         
         # Buscar productos y servicios si hay filtros o es búsqueda específica
         if es_busqueda_producto_servicio or (query and len(query) > 3 and not empresas_list.exists() and not usuarios_list.exists()):
-            # Construir filtros para productos de empresa
-            filtros_productos_sucursal = {'estatus_producto_sucursal': 'Activo'}
-            if query:
-                filtros_productos_sucursal['id_producto_fk__nombre_producto_empresa__icontains'] = query
-            if condicion:
-                filtros_productos_sucursal['condicion_producto_sucursal'] = condicion
+            # Construir filtros para productos de empresa (solo si no es búsqueda exclusiva de servicios)
+            if tipo != 'servicios':
+                filtros_productos_sucursal = {'estatus_producto_sucursal': 'Activo'}
+                if query:
+                    filtros_productos_sucursal['id_producto_fk__nombre_producto_empresa__icontains'] = query
+                if condicion:
+                    filtros_productos_sucursal['condicion_producto_sucursal'] = condicion
 
-            if categoria_producto:
-                filtros_productos_sucursal['id_producto_fk__id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
-            
-            productos_sucursal_list = producto_sucursal.objects.filter(
-                **filtros_productos_sucursal
-            ).select_related('id_producto_fk', 'id_sucursal_fk')
+                if categoria_producto:
+                    filtros_productos_sucursal['id_producto_fk__id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
+                
+                productos_sucursal_list = producto_sucursal.objects.filter(
+                    **filtros_productos_sucursal
+                ).select_related('id_producto_fk', 'id_sucursal_fk')
+                
+                # Si es búsqueda de solo productos, ordenar por más recientes
+                if tipo == 'productos':
+                    productos_sucursal_list = productos_sucursal_list.order_by('-id_producto_fk__fecha_creacion_producto_empresa')
+            else:
+                productos_sucursal_list = producto_sucursal.objects.none()
             
             # Aplicar filtro de precio para productos de empresa
             if precio_min:
@@ -3621,19 +3627,26 @@ def busquedad(request):
                 except ValueError:
                     pass
             
-            # Construir filtros para productos de usuario
-            filtros_productos_usuario = {'estatus_producto_usuario': 'Activo'}
-            if query:
-                filtros_productos_usuario['nombre_producto_usuario__icontains'] = query
-            if condicion:
-                filtros_productos_usuario['condicion_producto_usuario'] = condicion
+            # Construir filtros para productos de usuario (solo si no es búsqueda exclusiva de servicios)
+            if tipo != 'servicios':
+                filtros_productos_usuario = {'estatus_producto_usuario': 'Activo'}
+                if query:
+                    filtros_productos_usuario['nombre_producto_usuario__icontains'] = query
+                if condicion:
+                    filtros_productos_usuario['condicion_producto_usuario'] = condicion
 
-            if categoria_producto:
-                filtros_productos_usuario['id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
-            
-            productos_usuario_list = producto_usuario.objects.filter(
-                **filtros_productos_usuario
-            )
+                if categoria_producto:
+                    filtros_productos_usuario['id_categoria_producto_fk__nombre_categoria_producto'] = categoria_producto
+                
+                productos_usuario_list = producto_usuario.objects.filter(
+                    **filtros_productos_usuario
+                )
+                
+                # Si es búsqueda de solo productos, ordenar por más recientes
+                if tipo == 'productos':
+                    productos_usuario_list = productos_usuario_list.order_by('-fecha_creacion_producto_usuario')
+            else:
+                productos_usuario_list = producto_usuario.objects.none()
             
             # Aplicar filtro de precio para productos de usuario
             if precio_min:
@@ -3647,16 +3660,23 @@ def busquedad(request):
                 except ValueError:
                     pass
             
-            # Construir filtros para servicios de empresa
-            filtros_servicios_sucursal = {'estatus_servicio_sucursal': 'Activo'}
-            if query:
-                filtros_servicios_sucursal['id_servicio_fk__nombre_servicio_empresa__icontains'] = query
-            if categoria_servicio:
-                filtros_servicios_sucursal['id_servicio_fk__id_categoria_servicio_fk__nombre_categoria_servicio'] = categoria_servicio
-            
-            servicios_sucursal_list = servicio_sucursal.objects.filter(
-                **filtros_servicios_sucursal
-            ).select_related('id_servicio_fk', 'id_sucursal_fk')
+            # Construir filtros para servicios de empresa (solo si no es búsqueda exclusiva de productos)
+            if tipo != 'productos':
+                filtros_servicios_sucursal = {'estatus_servicio_sucursal': 'Activo'}
+                if query:
+                    filtros_servicios_sucursal['id_servicio_fk__nombre_servicio_empresa__icontains'] = query
+                if categoria_servicio:
+                    filtros_servicios_sucursal['id_servicio_fk__id_categoria_servicio_fk__nombre_categoria_servicio'] = categoria_servicio
+                
+                servicios_sucursal_list = servicio_sucursal.objects.filter(
+                    **filtros_servicios_sucursal
+                ).select_related('id_servicio_fk', 'id_sucursal_fk')
+                
+                # Si es búsqueda de solo servicios, ordenar por más recientes
+                if tipo == 'servicios':
+                    servicios_sucursal_list = servicios_sucursal_list.order_by('-id_servicio_fk__fecha_creacion_servicio_empresa')
+            else:
+                servicios_sucursal_list = servicio_sucursal.objects.none()
             
             # Aplicar filtro de precio para servicios de empresa
             if precio_min:
@@ -3670,16 +3690,23 @@ def busquedad(request):
                 except ValueError:
                     pass
             
-            # Construir filtros para servicios de usuario
-            filtros_servicios_usuario = {'estatus_servicio_usuario': 'Activo'}
-            if query:
-                filtros_servicios_usuario['nombre_servicio_usuario__icontains'] = query
-            if categoria_servicio:
-                filtros_servicios_usuario['id_categoria_servicio_fk__nombre_categoria_servicio'] = categoria_servicio
-            
-            servicios_usuario_list = servicio_usuario.objects.filter(
-                **filtros_servicios_usuario
-            )
+            # Construir filtros para servicios de usuario (solo si no es búsqueda exclusiva de productos)
+            if tipo != 'productos':
+                filtros_servicios_usuario = {'estatus_servicio_usuario': 'Activo'}
+                if query:
+                    filtros_servicios_usuario['nombre_servicio_usuario__icontains'] = query
+                if categoria_servicio:
+                    filtros_servicios_usuario['id_categoria_servicio_fk__nombre_categoria_servicio'] = categoria_servicio
+                
+                servicios_usuario_list = servicio_usuario.objects.filter(
+                    **filtros_servicios_usuario
+                )
+                
+                # Si es búsqueda de solo servicios, ordenar por más recientes
+                if tipo == 'servicios':
+                    servicios_usuario_list = servicios_usuario_list.order_by('-fecha_creacion_servicio_usuario')
+            else:
+                servicios_usuario_list = servicio_usuario.objects.none()
             
             # Aplicar filtro de precio para servicios de usuario
             if precio_min:
@@ -4902,12 +4929,28 @@ def vista_items(request):
             print(f"DEBUG: Tipo de item no válido: {item_tipo}")
             return redirect('/ecommerce/index/')
         
+        # Obtener atributos y valores asociados al producto
+        atributos_producto = []
+        if item_tipo == 'producto' and item_data:
+            if item_data.get('tipo_propietario') == 'empresa':
+                valores_atributos = ValorAtributoProducto.objects.filter(producto_empresa__nombre_producto_empresa=item_data['nombre'])
+            else:
+                valores_atributos = ValorAtributoProducto.objects.filter(producto_usuario__nombre_producto_usuario=item_data['nombre'])
+            atributos_producto = [
+                {
+                    'nombre': v.atributo.nombre,
+                    'tipo_dato': v.atributo.tipo_dato,
+                    'valor': v.valor_texto or v.valor_numero or v.valor_decimal or v.valor_fecha or v.valor_booleano
+                }
+                for v in valores_atributos
+            ]
         context = {
             'item': item_data,
             'imagenes': imagenes,
-            'user_info': user_info
+            'user_info': user_info,
+            'atributos_producto': atributos_producto
         }
-        
+
         print(f"DEBUG: Renderizando vista_items exitosamente para {item_data['tipo']}: {item_data['nombre']}")
         return render(request, 'ecommerce_app/vista_items.html', context)
         
@@ -11227,3 +11270,130 @@ def api_get_avatars(request):
             'success': False,
             'message': f'Error interno del servidor: {str(e)}'
         })
+
+# Vista para la página Sobre Nosotros
+def sobre_nosotros(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            account_type = request.session.get('account_type', 'usuario')
+            
+            # Buscar empresa asociada para usuarios
+            empresa_nombre = None
+            if account_type == 'usuario':
+                try:
+                    empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                    if empresa_obj:
+                        empresa_nombre = empresa_obj.nombre_empresa
+                except Exception as e:
+                    empresa_nombre = None
+            elif account_type == 'empresa':
+                empresa_nombre = current_user.nombre_empresa
+            
+            user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+            # Para sobre nosotros, usar el avatar por defecto del chatbot
+            user_info['avatar_chatbot'] = 'avatars/Cartoon Style Robot.jpg'
+    
+    return render(request, 'ecommerce_app/sobre_nosotros.html', {'user_info': user_info})
+
+# Vista para la página de Términos y Condiciones
+def condiciones(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            account_type = request.session.get('account_type', 'usuario')
+            
+            # Buscar empresa asociada para usuarios
+            empresa_nombre = None
+            if account_type == 'usuario':
+                try:
+                    empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                    if empresa_obj:
+                        empresa_nombre = empresa_obj.nombre_empresa
+                except Exception as e:
+                    empresa_nombre = None
+            elif account_type == 'empresa':
+                empresa_nombre = current_user.nombre_empresa
+            
+            user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+    
+    return render(request, 'ecommerce_app/condiciones.html', {'user_info': user_info})
+
+# Vista para la página de Preguntas Frecuentes
+def faq(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            account_type = request.session.get('account_type', 'usuario')
+            
+            # Buscar empresa asociada para usuarios
+            empresa_nombre = None
+            if account_type == 'usuario':
+                try:
+                    empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                    if empresa_obj:
+                        empresa_nombre = empresa_obj.nombre_empresa
+                except Exception as e:
+                    empresa_nombre = None
+            elif account_type == 'empresa':
+                empresa_nombre = current_user.nombre_empresa
+            
+            user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+    
+    return render(request, 'ecommerce_app/faq.html', {'user_info': user_info})
+
+# Vista para la página de Contacto
+def contactos(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            account_type = request.session.get('account_type', 'usuario')
+            
+            # Buscar empresa asociada para usuarios
+            empresa_nombre = None
+            if account_type == 'usuario':
+                try:
+                    empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                    if empresa_obj:
+                        empresa_nombre = empresa_obj.nombre_empresa
+                except Exception as e:
+                    empresa_nombre = None
+            elif account_type == 'empresa':
+                empresa_nombre = current_user.nombre_empresa
+            
+            user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+    
+    return render(request, 'ecommerce_app/contactos.html', {'user_info': user_info})
+
+# Vista para la página de Políticas de Privacidad
+def politicas_privacidad(request):
+    # Obtener información del usuario si está autenticado
+    user_info = None
+    if is_user_authenticated(request):
+        current_user = get_current_user(request)
+        if current_user:
+            account_type = request.session.get('account_type', 'usuario')
+            
+            # Buscar empresa asociada para usuarios
+            empresa_nombre = None
+            if account_type == 'usuario':
+                try:
+                    empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                    if empresa_obj:
+                        empresa_nombre = empresa_obj.nombre_empresa
+                except Exception as e:
+                    empresa_nombre = None
+            elif account_type == 'empresa':
+                empresa_nombre = current_user.nombre_empresa
+            
+            user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+    
+    return render(request, 'ecommerce_app/politicas_privacidad.html', {'user_info': user_info})

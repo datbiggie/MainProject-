@@ -282,10 +282,10 @@
                 <a href="{% url 'index' %}" class="nav-link">Inicio</a>
               </li>
               <li class="nav-item active">
-                <a href="index.html" class="nav-link">Productos</a>
+                <a href="{% url 'busquedad' %}?tipo=productos" class="nav-link">Productos</a>
               </li>
               <li class="nav-item active">
-                <a href="#" class="nav-link" id="serviciosBtn">Servicios</a>
+                <a href="{% url 'busquedad' %}?tipo=servicios" class="nav-link" id="serviciosBtn">Servicios</a>
               </li>
               
              
