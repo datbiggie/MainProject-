@@ -291,6 +291,14 @@
                                     <textarea class="form-control enhanced-input" name="caracteristicas_generales" id="edit_caracteristicas" style="height: 80px;" required></textarea>
                                 </div>
                                 
+                                <!-- Contenedor para campos dinámicos de atributos -->
+                                <div id="edit-atributos-container" style="display: none;">
+                                    <div class="form-group">
+                                        <h6 class="mb-3" style="color: #495057; font-weight: 600;">Atributos Específicos de la Categoría</h6>
+                                        <div id="edit-atributos-fields"></div>
+                                    </div>
+                                </div>
+                                
                                 <!-- Campos adicionales solo para usuarios con rol 'persona' -->
                                 {% if user_info.tipo == 'persona' %}
                                 <div class="form-group">

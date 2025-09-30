@@ -71,17 +71,18 @@ a:hover {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 100vh;
-	background-color: #fff; /* color de fondo claro opcional */
-	padding: 10px;
+	min-height: calc(100vh - 70px);
+	background-color: #F4F7FA;
+	padding: 20px 10px;
 	gap: 50px;
+	flex-wrap: wrap;
 }
 
 .gif-login {
 	max-width: 550px;
-  margin-top: -130px;
-  margin-left: 100px;
-
+	height: auto;
+	margin-left: 50px;
+	flex-shrink: 0;
 }
 
 /*---------------------------------------------*/
@@ -192,31 +193,27 @@ iframe {
 }
 
 .container-login100 {
-  width: 100%;  
-  min-height: 100vh;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
   padding: 15px;
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  padding-top: 50px;
 }
 
 .wrap-login100 {
   width: 500px;
-  height: 400px;
+  min-height: 400px;
+  height: auto;
   background: #fff;
   border-radius: 10px;
-  border: 1px solid #ccc; /* color gris claro */
-
-  overflow: hidden;
+  border: 1px solid #ccc;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 
@@ -560,25 +557,27 @@ iframe {
 /* ===== ESTILOS PERSONALIZADOS PARA INICIO DE SESIÓN ===== */
 
 html, body {
-    height: 100%;
-    overflow: hidden;
+    min-height: 100%;
+    overflow-x: hidden;
     margin-top: 70px;
     background-color: #F4F7FA;
 }
 
 .contenedor-general {
-    height: 100vh;
-    overflow-y: hidden;
-    position: relative;
-    background-color: #F4F7FA;
-}
-
-.limiter {
-    height: 100%;
+    min-height: calc(100vh - 70px);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: -70px;
+    position: relative;
+    background-color: #F4F7FA;
+    padding: 20px 10px;
+}
+
+.limiter {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .button-container {
@@ -696,19 +695,25 @@ html, body {
 /* Media Queries para Responsive */
 @media screen and (max-width: 1200px) {
     .wrap-login100 {
-        padding: 0 30px !important;
+        padding: 30px !important;
+        width: 450px;
+        max-width: 90%;
     }
-    .container-login100 {
-        width: 90% !important;
+    .gif-login {
+        max-width: 400px;
+        margin-left: 30px;
+    }
+    .contenedor-general {
+        gap: 30px;
+        padding: 15px;
     }
 }
 
 @media screen and (max-width: 992px) {
     .wrap-login100 {
-        padding: 0 25px !important;
-    }
-    .container-login100 {
-        width: 95% !important;
+        padding: 25px !important;
+        width: 420px;
+        max-width: 85%;
     }
     .custom-button {
         width: 110px;
@@ -720,15 +725,22 @@ html, body {
     .google-button {
         width: 220px;
     }
+    .gif-login {
+        max-width: 350px;
+        margin-left: 20px;
+    }
+    .contenedor-general {
+        gap: 20px;
+        padding: 15px 10px;
+    }
 }
 
 @media screen and (max-width: 768px) {
     .wrap-login100 {
-        padding: 0 20px !important;
-    }
-    .container-login100 {
-        width: 100% !important;
-        padding: 0 15px;
+        padding: 20px !important;
+        width: 100%;
+        max-width: 500px;
+        min-height: auto;
     }
     .custom-button {
         width: 100px;
@@ -751,22 +763,40 @@ html, body {
     .login100-form-title {
         font-size: 28px !important;
     }
+    /* Ocultar la imagen en tablets y móviles */
+    .gif-login {
+        display: none;
+    }
+    .contenedor-general {
+        flex-direction: column;
+        gap: 0;
+        padding: 15px 10px;
+        min-height: auto;
+    }
+    html, body {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
 }
 
 @media screen and (max-width: 576px) {
     .wrap-login100 {
-        padding: 0 15px !important;
+        padding: 30px 20px !important;
+        width: 100%;
+        max-width: 400px;
     }
     .custom-button {
         width: 90px;
         font-size: 11px;
         padding: 5px 10px;
+        height: 36px;
     }
     .dropdown .custom-button {
         width: 110px;
     }
     .google-button {
-        width: 180px;
+        width: 100%;
+        max-width: 280px;
         font-size: 12px;
     }
     .login100-form-title {
@@ -774,26 +804,42 @@ html, body {
     }
     .input100 {
         font-size: 14px !important;
+        padding: 0 7px 0 38px;
     }
     .label-input100 {
-        font-size: 14px !important;
+        font-size: 13px !important;
+    }
+    .formbold-form-label {
+        font-size: 13px !important;
+    }
+    .contenedor-general {
+        padding: 15px 5px;
+    }
+    body, html {
+        margin-top: 60px;
     }
 }
 
-@media screen and (max-width: 320px) {
+@media screen and (max-width: 420px) {
+    .wrap-login100 {
+        padding: 25px 15px !important;
+    }
     .custom-button {
-        width: 80px;
+        width: 85px;
         font-size: 10px;
+        padding: 5px 8px;
+        height: 34px;
     }
     .dropdown .custom-button {
-        width: 100px;
+        width: 105px;
+        font-size: 10px;
     }
     .google-button {
-        width: 160px;
+        width: 100%;
         font-size: 11px;
+        padding: 0 10px;
     }
     .top-buttons {
-        flex-direction: column;
         gap: 8px;
     }
     .login100-form-title {
@@ -801,9 +847,40 @@ html, body {
     }
     .input100 {
         font-size: 13px !important;
+        height: 50px;
     }
-    .label-input100 {
-        font-size: 13px !important;
+}
+
+@media screen and (max-width: 360px) {
+    .wrap-login100 {
+        padding: 20px 12px !important;
+    }
+    .custom-button {
+        width: 75px;
+        font-size: 9px;
+        padding: 4px 6px;
+        height: 32px;
+    }
+    .dropdown .custom-button {
+        width: 95px;
+        font-size: 9px;
+    }
+    .google-button {
+        font-size: 10px;
+        height: 36px;
+    }
+    .top-buttons {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .login100-form-title {
+        font-size: 20px !important;
+    }
+    .input100 {
+        font-size: 12px !important;
+    }
+    .label-input100, .formbold-form-label {
+        font-size: 12px !important;
     }
 }
 

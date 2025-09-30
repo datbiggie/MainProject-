@@ -317,8 +317,9 @@ class GeminiService:
             'buscar', 'busco', 'quiero', 'necesito', 'me', 'puedes', 'ayudar', 
             'encontrar', 'ver', 'mostrar', 'hay', 'tiene', 'tienes', 'donde',
             'como', 'que', 'cual', 'cuando', 'producto', 'productos', 'servicio', 'servicios',
-            'para', 'con', 'una', 'uno', 'del', 'las', 'los', 'por', 'mas', 'más',
-            'otros', 'otras', 'diferentes', 'distintos', 'usuario', 'bot'
+            'para', 'con', 'una', 'uno', 'un', 'del', 'de', 'la', 'las', 'los', 'el', 'por', 'mas', 'más',
+            'otros', 'otras', 'diferentes', 'distintos', 'usuario', 'bot', 'en', 'es', 'son', 'está', 'esta',
+            'y', 'o', 'pero', 'si', 'no', 'al', 'le', 'se', 'te', 'lo', 'su', 'sus', 'mi', 'mis', 'tu', 'tus'
         }
         
         # Limpiar y dividir el mensaje

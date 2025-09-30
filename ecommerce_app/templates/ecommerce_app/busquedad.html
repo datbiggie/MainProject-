@@ -900,7 +900,8 @@
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('latitud', userLat);
                     currentUrl.searchParams.set('longitud', userLng);
-                    currentUrl.searchParams.set('rango_km', '50'); // Rango por defecto de 50km
+                    // Eliminar limitación de distancia para mostrar todos los resultados
+                    currentUrl.searchParams.delete('rango_km');
                     
                     // Mostrar mensaje de procesamiento
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Ordenando por distancia...';

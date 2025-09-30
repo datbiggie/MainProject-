@@ -164,3 +164,6 @@ LOGGING = {
         },
     },
 }
+
+# Login URL configuration
+LOGIN_URL = '/ecommerce/iniciar_sesion/'

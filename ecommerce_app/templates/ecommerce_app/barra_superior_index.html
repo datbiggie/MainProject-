@@ -231,6 +231,28 @@
             {% endif %}
           </li>
           <li class="nav-item">
+            {% if user_info.is_authenticated %}
+              <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasServiciosVentasCollapse" aria-expanded="false" aria-controls="offcanvasServiciosVentasCollapse" style="box-shadow:none;">
+                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
+                <span>Mis Ventas (Servicios)</span>
+                <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
+              </button>
+              <div class="collapse ps-5" id="offcanvasServiciosVentasCollapse">
+                <ul class="list-unstyled mb-0">
+                  <li><a class="nav-link no-blue-effect" href="{% url 'servicios_ventas_pendientes' %}">Pendientes</a></li>
+                  <li><a class="nav-link no-blue-effect" href="{% url 'servicios_ventas_cotizadas' %}">Cotizadas</a></li>
+                  <li><a class="nav-link no-blue-effect" href="{% url 'servicios_ventas_confirmadas' %}">Confirmadas</a></li>
+                  <li><a class="nav-link no-blue-effect" href="{% url 'servicios_ventas_rechazadas' %}">Rechazadas</a></li>
+                </ul>
+              </div>
+            {% else %}
+              <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver tus ventas de servicios')">
+                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
+                <span>Mis Ventas (Servicios)</span>
+              </a>
+            {% endif %}
+          </li>
+          <li class="nav-item">
             <a href="#" class="nav-link d-flex align-items-center gap-3">
               <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#user"></use></svg>
               <span>Mi cuenta / Perfil</span>
@@ -331,7 +353,7 @@
               </li>
               <li>
                 {% if user_info.is_authenticated %}
-                  <a href="{% url 'solicitud_servicio' %}" class="p-2 mx-1" title="Mis Solicitudes">
+                  <a href="{% url 'gestion_servicio' %}" class="p-2 mx-1" title="Mis Solicitudes">
                     <svg width="24" height="24"><use xlink:href="#service"></use></svg>
                   </a>
                 {% else %}

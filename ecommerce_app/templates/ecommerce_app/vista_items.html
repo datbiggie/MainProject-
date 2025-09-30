@@ -417,6 +417,17 @@
     
     if (currentValue < maxStock) {
       cantidadInput.value = currentValue + 1;
+    } else {
+      // Mostrar mensaje cuando se alcanza el límite de stock
+      Swal.fire({
+        title: 'Límite de stock alcanzado',
+        text: `No puedes agregar más unidades. Stock disponible: ${maxStock} unidades`,
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#3085d6',
+        timer: 3000,
+        timerProgressBar: true
+      });
     }
   }
 

@@ -97,6 +97,164 @@ function initializeModalEvents() {
     });
 }
 
+// ========================= Atributos Dinámicos =========================
+function cargarAtributosDinamicos(categoriaId, productId = null) {
+    console.log('cargarAtributosDinamicos llamada con:', categoriaId, productId);
+    if (!categoriaId) {
+        console.log('No hay categoriaId, ocultando contenedor');
+        document.getElementById('edit-atributos-container').style.display = 'none';
+        return;
+    }
+    
+    console.log('Haciendo fetch a:', `/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`);
+    fetch(`/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Respuesta recibida:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Datos de atributos recibidos:', data);
+        if (data.success && data.atributos && data.atributos.length > 0) {
+            console.log('Generando campos para', data.atributos.length, 'atributos');
+            generarCamposAtributosEdit(data.atributos, productId);
+            document.getElementById('edit-atributos-container').style.display = 'block';
+        } else {
+            console.log('No hay atributos o no exitoso, ocultando contenedor');
+            document.getElementById('edit-atributos-container').style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Error al cargar atributos:', error);
+        document.getElementById('edit-atributos-container').style.display = 'none';
+    });
+}
+
+function generarCamposAtributosEdit(atributos, productId = null) {
+    const container = document.getElementById('edit-atributos-fields');
+    container.innerHTML = '';
+    
+    atributos.forEach(atributo => {
+        const fieldHtml = generarCampoAtributoEdit(atributo);
+        container.insertAdjacentHTML('beforeend', fieldHtml);
+    });
+    
+    // Si hay un productId, cargar los valores existentes después de que los campos se hayan insertado
+    if (productId) {
+        // Usar un timeout más largo para asegurar que los campos estén completamente renderizados
+        setTimeout(() => {
+            console.log('Intentando cargar valores después del timeout para productId:', productId);
+            cargarValoresAtributosExistentes(productId);
+        }, 300);
+    }
+}
+
+function generarCampoAtributoEdit(atributo) {
+    const required = atributo.obligatorio ? 'required' : '';
+    const requiredAsterisk = atributo.obligatorio ? '<span style="color: red;">*</span>' : '';
+    
+    let inputHtml = '';
+    
+    const attrId = atributo.id_atributo;
+    switch (atributo.tipo_dato) {
+        case 'texto':
+            inputHtml = `<input type="text" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+            break;
+        case 'numero':
+            inputHtml = `<input type="number" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+            break;
+        case 'decimal':
+            inputHtml = `<input type="number" step="0.01" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+            break;
+        case 'fecha':
+            inputHtml = `<input type="date" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>`;
+            break;
+        case 'booleano':
+            inputHtml = `
+                <select class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>
+                    <option value="">Seleccione una opción</option>
+                    <option value="true">Sí</option>
+                    <option value="false">No</option>
+                </select>`;
+            break;
+        case 'lista':
+            let opciones = '<option value="">Seleccione una opción</option>';
+            if (atributo.opciones) {
+                atributo.opciones.forEach(opcion => {
+                    opciones += `<option value="${opcion}">${opcion}</option>`;
+                });
+            }
+            inputHtml = `<select class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>${opciones}</select>`;
+            break;
+        default:
+            inputHtml = `<input type="text" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
+    }
+    
+    return `
+        <div class="form-group">
+            <label for="edit_atributo_${attrId}">${atributo.nombre} ${requiredAsterisk}</label>
+            ${inputHtml}
+        </div>
+    `;
+}
+
+function cargarValoresAtributosExistentes(productId) {
+    console.log('cargarValoresAtributosExistentes llamada con productId:', productId);
+    fetch(`/ecommerce/api/obtener_valores_atributos_producto/?producto_id=${productId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Respuesta de valores atributos:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Datos de valores recibidos:', data);
+        if (data.success && data.valores) {
+            console.log('Procesando', data.valores.length, 'valores de atributos');
+            // Verificar que el contenedor de atributos existe
+            const container = document.getElementById('edit-atributos-fields');
+            console.log('Contenedor de atributos encontrado:', !!container);
+            if (container) {
+                console.log('Contenido del contenedor:', container.innerHTML.length > 0 ? 'Tiene contenido' : 'Vacío');
+            }
+            
+            data.valores.forEach(valor => {
+                console.log('Procesando valor:', valor);
+                const campo = document.getElementById(`edit_atributo_${valor.atributo_id}`);
+                console.log('Buscando campo con ID:', `edit_atributo_${valor.atributo_id}`, 'encontrado:', !!campo);
+                if (campo) {
+                    console.log('Estableciendo valor', valor.valor, 'en campo tipo', campo.type);
+                    if (campo.type === 'checkbox') {
+                        campo.checked = valor.valor === 'true';
+                    } else {
+                        campo.value = valor.valor;
+                    }
+                    console.log('Valor establecido. Campo value:', campo.value, 'checked:', campo.checked);
+                } else {
+                    console.log('Campo no encontrado para atributo_id:', valor.atributo_id);
+                    // Listar todos los campos de atributos disponibles para debug
+                    const todosLosCampos = document.querySelectorAll('[id^="edit_atributo_"]');
+                    console.log('Campos de atributos disponibles:', Array.from(todosLosCampos).map(c => c.id));
+                }
+            });
+        } else {
+            console.log('No hay valores de atributos o respuesta no exitosa:', data);
+        }
+    })
+    .catch(error => {
+        console.error('Error al cargar valores de atributos:', error);
+    });
+}
+
 // ========================= Populate Form =========================
 function populateEditForm(data) {
     // Campos comunes
@@ -114,11 +272,13 @@ function populateEditForm(data) {
     
     // Categoría
     const categoriaSelect = document.getElementById('edit_categoria');
+    let categoriaId = null;
     if (categoriaSelect && data.categoria) {
         // Buscar la opción que coincida con el nombre de la categoría
         for (let option of categoriaSelect.options) {
             if (option.text === data.categoria) {
                 option.selected = true;
+                categoriaId = option.value;
                 break;
             }
         }
@@ -136,6 +296,27 @@ function populateEditForm(data) {
             initializeEditMapOnModalShow(data.latitud, data.longitud);
         }
     }
+    
+    // Cargar atributos dinámicos basados en la categoría
+    console.log('Categoría seleccionada:', categoriaId);
+    console.log('Data categoria:', data.categoria);
+    if (categoriaId) {
+        console.log('Cargando atributos para categoría:', categoriaId, 'producto:', data.id);
+        cargarAtributosDinamicos(categoriaId, data.id);
+    } else {
+        console.log('No se puede cargar atributos - categoriaId no encontrado');
+    }
+    
+    // Agregar evento de cambio de categoría para recargar atributos
+    if (categoriaSelect) {
+        categoriaSelect.removeEventListener('change', handleCategoriaChange);
+        categoriaSelect.addEventListener('change', handleCategoriaChange);
+    }
+}
+
+function handleCategoriaChange(event) {
+    const categoriaId = event.target.value;
+    cargarAtributosDinamicos(categoriaId, currentProductId);
 }
 
 // ========================= Utility Functions =========================

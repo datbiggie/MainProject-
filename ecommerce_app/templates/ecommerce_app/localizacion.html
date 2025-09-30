@@ -87,7 +87,50 @@
                   {% if query %}Ubicaciones encontradas{% else %}Mapa de localización{% endif %}
                 </h5>
               </div>
-              <div class="card-body p-0">
+              <div class="card-body">
+                <!-- Control de rango -->
+                <div class="mb-3 p-4 border rounded-3 shadow-sm" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #e9ecef !important;">
+                  <div class="row align-items-center">
+                    <div class="col-md-8">
+                      <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                          <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="fas fa-search-location text-white"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-1 fw-bold text-dark">Rango de búsqueda</h6>
+                          <p class="mb-0 text-muted small">Ajusta la distancia para encontrar más resultados</p>
+                        </div>
+                      </div>
+                      
+                      <div class="position-relative">
+                        <label for="rangeSlider" class="form-label mb-2 fw-semibold">
+                          Distancia: <span id="rangeValue" class="text-primary fw-bold fs-5">4</span> <span class="text-muted">km</span>
+                        </label>
+                        <input type="range" class="form-range" id="rangeSlider" min="1" max="20" value="4" step="0.5" 
+                               style="height: 8px; background: linear-gradient(to right, #007bff 0%, #007bff 20%, #dee2e6 20%, #dee2e6 100%);">
+                        <div class="d-flex justify-content-between text-muted small mt-2">
+                          <span class="badge bg-light text-dark border">1 km</span>
+                          <span class="badge bg-light text-dark border">10 km</span>
+                          <span class="badge bg-light text-dark border">20 km</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                       <div class="text-center">
+                         <div class="bg-success rounded-3 p-2 shadow-sm" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important; max-width: 120px; margin: 0 auto;">
+                           <div class="text-white">
+                             <i class="fas fa-map-marker-alt fs-6 mb-1"></i>
+                             <div class="fw-bold fs-5" id="resultCount">{{ resultados|length }}</div>
+                             <small class="opacity-90" style="font-size: 0.7rem;">resultado{{ resultados|length|pluralize }}</small>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                  </div>
+                </div>
                 <div id="map"></div>
               </div>
             </div>
@@ -157,12 +200,31 @@
                             ${{ resultado.precio }}
                           </span>
                           {% endif %}
-                          <a href="/ecommerce/vista_items/?id={{ resultado.id }}&tipo={{ resultado.tipo }}&origen={{ resultado.origen }}" 
-                             class="btn btn-primary btn-sm" 
-                             style="font-size: 0.65rem; padding: 4px 8px; border-radius: 6px; text-decoration: none; white-space: nowrap; font-weight: 600;"
-                             onclick="event.stopPropagation();">
-                            <i class="fas fa-eye me-1" style="font-size: 0.6rem;"></i>Ver
-                          </a>
+                          <div class="d-flex flex-column gap-1">
+                            <a href="/ecommerce/vista_items/?id={{ resultado.id }}&tipo={{ resultado.tipo }}&origen={{ resultado.origen }}" 
+                               class="btn btn-primary btn-sm" 
+                               style="font-size: 0.65rem; padding: 4px 8px; border-radius: 6px; text-decoration: none; white-space: nowrap; font-weight: 600;"
+                               onclick="event.stopPropagation();">
+                              <i class="fas fa-eye me-1" style="font-size: 0.6rem;"></i>Ver
+                            </a>
+                            {% if resultado.lat and resultado.lng %}
+                            <button class="btn btn-success btn-sm ruta-btn" 
+                                    style="font-size: 0.65rem; padding: 4px 8px; border-radius: 6px; white-space: nowrap; font-weight: 600;"
+                                    data-lat="{{ resultado.lat }}"
+                                    data-lng="{{ resultado.lng }}"
+                                    data-nombre="{{ resultado.nombre|escapejs }}"
+                                    title="Obtener direcciones">
+                              <i class="fas fa-route me-1" style="font-size: 0.6rem;"></i>Mejor Ruta
+                            </button>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm" 
+                                    style="font-size: 0.65rem; padding: 4px 8px; border-radius: 6px; white-space: nowrap; font-weight: 600;"
+                                    disabled
+                                    title="Ubicación no disponible">
+                              <i class="fas fa-map-marker-alt me-1" style="font-size: 0.6rem;"></i>Sin Ubicación
+                            </button>
+                            {% endif %}
+                          </div>
                         </div>
                     </div>
                   </div>
@@ -328,9 +390,25 @@
       let map;
       let markers = [];
       let userLocation = null;
+      let allResults = []; // Almacenar todos los resultados originales
+      let currentRange = 4; // Rango actual en km
       
       // Datos de resultados pasados desde Django
       const resultados = JSON.parse('{{ resultados_json|safe|default:"[]" }}');
+      
+      // Inicializar el control de rango
+      document.addEventListener('DOMContentLoaded', function() {
+        const rangeSlider = document.getElementById('rangeSlider');
+        const rangeValue = document.getElementById('rangeValue');
+        
+        if (rangeSlider && rangeValue) {
+          rangeSlider.addEventListener('input', function() {
+            currentRange = parseFloat(this.value);
+            rangeValue.textContent = currentRange;
+            filterMarkersByRange();
+          });
+        }
+      });
       
       function initMap() {
         // Configuración inicial del mapa
@@ -386,8 +464,82 @@
         }
       }
       
+      // Función para filtrar marcadores por rango
+      function filterMarkersByRange() {
+        if (!userLocation || !allResults.length) return;
+        
+        // Ocultar todos los marcadores existentes
+        markers.forEach(markerData => {
+          markerData.marker.setVisible(false);
+          markerData.infoWindow.close();
+        });
+        
+        // Filtrar resultados por distancia
+        const filteredResults = allResults.filter(resultado => {
+          return resultado.distancia <= currentRange;
+        });
+        
+        // Mostrar marcadores filtrados
+         let visibleCount = 0;
+         markers.forEach((markerData, index) => {
+           if (index < filteredResults.length) {
+             markerData.marker.setVisible(true);
+             visibleCount++;
+           }
+         });
+         
+         // Filtrar también la lista de resultados del lado derecho
+         const resultCards = document.querySelectorAll('.resultado-card');
+         resultCards.forEach((card, index) => {
+           if (index < filteredResults.length) {
+             card.style.display = 'block';
+           } else {
+             card.style.display = 'none';
+           }
+         });
+         
+         // Actualizar contador de resultados
+         const resultCount = document.getElementById('resultCount');
+         if (resultCount) {
+           resultCount.textContent = visibleCount;
+         }
+         
+         // Actualizar el header de la lista de resultados
+         const cardHeader = document.querySelector('.card-header.bg-success h6');
+         if (cardHeader) {
+           const plural = visibleCount !== 1 ? 's' : '';
+           cardHeader.innerHTML = `<i class="fas fa-list me-1"></i>${visibleCount} resultado${plural}`;
+         }
+        
+        // Ajustar bounds del mapa para mostrar solo marcadores visibles
+        if (visibleCount > 0) {
+          const bounds = new google.maps.LatLngBounds();
+          if (userLocation) {
+            bounds.extend(userLocation);
+          }
+          
+          markers.forEach((markerData, index) => {
+            if (index < filteredResults.length) {
+              bounds.extend(markerData.marker.getPosition());
+            }
+          });
+          
+          map.fitBounds(bounds);
+          
+          // Asegurar un zoom mínimo
+          google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+            if (map.getZoom() > 15) {
+              map.setZoom(15);
+            }
+          });
+        }
+      }
+      
       function addResultMarkers() {
         if (!resultados || resultados.length === 0) return;
+        
+        // Guardar todos los resultados originales
+        allResults = [...resultados];
         
         const bounds = new google.maps.LatLngBounds();
         
@@ -437,7 +589,7 @@
               infoWindow.open(map, marker);
             });
             
-            markers.push({ marker, infoWindow });
+            markers.push({ marker, infoWindow, resultado });
             bounds.extend(position);
           }
         });
@@ -476,6 +628,56 @@
           setTimeout(() => {
             marker.setAnimation(null);
           }, 2000);
+        }
+      }
+       
+       // Event listener para botones de mejor ruta
+       document.addEventListener('DOMContentLoaded', function() {
+         const rutaBtns = document.querySelectorAll('.ruta-btn');
+         rutaBtns.forEach(function(btn) {
+           btn.addEventListener('click', function(e) {
+             e.stopPropagation();
+             const lat = this.getAttribute('data-lat');
+             const lng = this.getAttribute('data-lng');
+             const nombre = this.getAttribute('data-nombre');
+             
+             if (lat && lng) {
+               abrirMejorRuta(parseFloat(lat), parseFloat(lng), nombre);
+             }
+           });
+         });
+       });
+       
+       // Función para abrir la mejor ruta en Google Maps
+      function abrirMejorRuta(lat, lng, nombre) {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              const origen = position.coords.latitude + ',' + position.coords.longitude;
+              const destino = lat + ',' + lng;
+              const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
+              window.open(url, '_blank');
+            },
+            function(error) {
+              // Si no se puede obtener la ubicación, abrir Google Maps con solo el destino
+              console.log('No se pudo obtener la ubicación del usuario:', error);
+              const url = `https://www.google.com/maps/search/${lat},${lng}`;
+              window.open(url, '_blank');
+              
+              // Mostrar mensaje informativo
+              alert('No se pudo obtener tu ubicación actual. Se abrirá Google Maps con la ubicación del destino.');
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 300000
+            }
+          );
+        } else {
+          // Si el navegador no soporta geolocalización
+          const url = `https://www.google.com/maps/search/${lat},${lng}`;
+          window.open(url, '_blank');
+          alert('Tu navegador no soporta geolocalización. Se abrirá Google Maps con la ubicación del destino.');
         }
       }
       

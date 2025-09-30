@@ -81,7 +81,12 @@
                                 </div>
                             {% else %}
                                 <!-- Notificación Regular -->
-                                <div class="notification-card {% if notificacion.estado == 'no_leida' %}unread{% else %}read{% endif %} card" data-id="{{ notificacion.id_notificacion }}">
+                                <div class="notification-card {% if notificacion.estado == 'no_leida' %}unread{% else %}read{% endif %} card clickable-notification" 
+                                     data-id="{{ notificacion.id_notificacion }}"
+                                     data-tipo="{{ notificacion.tipo_notificacion }}"
+                                     data-solicitud-id="{% if notificacion.id_solicitud_servicio_usuario_fk %}{{ notificacion.id_solicitud_servicio_usuario_fk.id_solicitud_servicio_usuario }}{% elif notificacion.id_solicitud_servicio_empresa_fk %}{{ notificacion.id_solicitud_servicio_empresa_fk.id_solicitud_servicio_empresa }}{% endif %}"
+                                     data-pedido-id="{% if notificacion.id_pedido_usuario_fk %}{{ notificacion.id_pedido_usuario_fk.id_pedido_usuario }}{% elif notificacion.id_pedido_empresa_fk %}{{ notificacion.id_pedido_empresa_fk.id_pedido_empresa }}{% endif %}"
+                                     style="cursor: pointer;">
                                     <div class="card-body">
                                         <div class="d-flex align-items-start">
                                             <div class="notification-icon {{ notificacion.tipo_notificacion }}">
@@ -89,7 +94,7 @@
                                                     <i class="fas fa-shopping-cart"></i>
                                                 {% elif notificacion.tipo_notificacion == 'pago' %}
                                                     <i class="fas fa-credit-card"></i>
-                                                {% elif notificacion.tipo_notificacion == 'servicio' %}
+                                                {% elif notificacion.tipo_notificacion == 'servicio' or notificacion.tipo_notificacion == 'solicitud_servicio' or notificacion.tipo_notificacion == 'servicio_cotizado' or notificacion.tipo_notificacion == 'servicio_aceptado' or notificacion.tipo_notificacion == 'servicio_completado' %}
                                                     <i class="fas fa-tools"></i>
                                                 {% else %}
                                                     <i class="fas fa-info-circle"></i>
@@ -98,11 +103,19 @@
                                             <div class="flex-grow-1">
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                                     <h6 class="mb-1 fw-bold">{{ notificacion.titulo }}</h6>
-                                                    {% if notificacion.estado == 'no_leida' %}
-                                                        <button class="btn btn-outline-primary btn-sm mark-read-btn" data-notificacion-id="{{ notificacion.id_notificacion }}">
-                                                            <i class="fas fa-check"></i> Marcar como leída
+                                                    <div class="notification-actions">
+                                                        {% if notificacion.estado == 'no_leida' %}
+                                                            <button class="btn btn-outline-primary btn-sm mark-read-btn" 
+                                                                    data-notificacion-id="{{ notificacion.id_notificacion }}"
+                                                                    onclick="event.stopPropagation();">
+                                                                <i class="fas fa-check"></i> Marcar como leída
+                                                            </button>
+                                                        {% endif %}
+                                                        <button class="btn btn-outline-secondary btn-sm ms-2" 
+                                                                onclick="event.stopPropagation(); redirectToNotification(this.closest('.notification-card'));">
+                                                            <i class="fas fa-external-link-alt"></i> Ver
                                                         </button>
-                                                    {% endif %}
+                                                    </div>
                                                 </div>
                                                 <p class="mb-2 text-muted">{{ notificacion.mensaje }}</p>
                                                 <div class="d-flex justify-content-between align-items-center">

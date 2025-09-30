@@ -4,6 +4,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from django.http import JsonResponse
 from django.utils import timezone
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from .models import producto_empresa, servicio_empresa, producto_sucursal, servicio_sucursal, sucursal, imagen_producto_empresa, imagen_servicio_empresa, categoria_servicio_usuario, categoria_servicio_empresa, imagen_producto_usuario, producto_usuario, categoria_producto_usuario, categoria_producto_empresa
 
 # Función auxiliar para generar user_info con avatar_chatbot
@@ -3566,7 +3567,8 @@ def busquedad(request):
     resultados_empresas = []
     resultados_usuarios = []
     
-    if query or tipo or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]):
+    # Si no hay query ni filtros, mostrar productos y servicios generales
+    if query or tipo or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]) or not any([query, tipo, condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]):
         # Determinar el tipo de búsqueda
         query_lower = query.lower().strip() if query else ''
         
@@ -3574,7 +3576,7 @@ def busquedad(request):
         palabras_producto = ['laptop', 'computadora', 'celular', 'telefono', 'ropa', 'zapatos', 'libro', 'mueble', 'casa', 'carro', 'auto']
         palabras_servicio = ['reparacion', 'mantenimiento', 'limpieza', 'consultoria', 'asesoria', 'diseño', 'programacion', 'corte', 'pintura']
         
-        # Buscar empresas por nombre (prioridad alta) - solo si no hay filtros específicos
+        # Buscar empresas por nombre (prioridad alta) - solo si hay query y no hay filtros específicos
         empresas_list = empresa.objects.none()
         usuarios_list = usuario.objects.none()
         
@@ -3592,8 +3594,8 @@ def busquedad(request):
         es_busqueda_producto_servicio = any(palabra in query_lower for palabra in palabras_producto + palabras_servicio) or any([condicion, marca, modelo, categoria_producto, categoria_servicio, precio_min, precio_max]) or tipo in ['productos', 'servicios']
         es_busqueda_persona_empresa = query and len(query) <= 3 or query_lower in ['juan', 'maria', 'carlos', 'ana', 'empresa', 'tienda', 'negocio']
         
-        # Buscar productos y servicios si hay filtros o es búsqueda específica
-        if es_busqueda_producto_servicio or (query and len(query) > 3 and not empresas_list.exists() and not usuarios_list.exists()):
+        # Buscar productos y servicios si hay filtros, es búsqueda específica, o no hay parámetros (búsqueda general)
+        if es_busqueda_producto_servicio or (query and len(query) > 3 and not empresas_list.exists() and not usuarios_list.exists()) or not query:
             # Construir filtros para productos de empresa (solo si no es búsqueda exclusiva de servicios)
             if tipo != 'servicios':
                 filtros_productos_sucursal = {'estatus_producto_sucursal': 'Activo'}
@@ -3612,6 +3614,9 @@ def busquedad(request):
                 # Si es búsqueda de solo productos, ordenar por más recientes
                 if tipo == 'productos':
                     productos_sucursal_list = productos_sucursal_list.order_by('-id_producto_fk__fecha_creacion_producto_empresa')
+                # Si no hay query (búsqueda general), limitar resultados y ordenar por más recientes
+                elif not query:
+                    productos_sucursal_list = productos_sucursal_list.order_by('-id_producto_fk__fecha_creacion_producto_empresa')[:10]
             else:
                 productos_sucursal_list = producto_sucursal.objects.none()
             
@@ -3645,6 +3650,9 @@ def busquedad(request):
                 # Si es búsqueda de solo productos, ordenar por más recientes
                 if tipo == 'productos':
                     productos_usuario_list = productos_usuario_list.order_by('-fecha_creacion_producto_usuario')
+                # Si no hay query (búsqueda general), limitar resultados y ordenar por más recientes
+                elif not query:
+                    productos_usuario_list = productos_usuario_list.order_by('-fecha_creacion_producto_usuario')[:10]
             else:
                 productos_usuario_list = producto_usuario.objects.none()
             
@@ -3675,6 +3683,9 @@ def busquedad(request):
                 # Si es búsqueda de solo servicios, ordenar por más recientes
                 if tipo == 'servicios':
                     servicios_sucursal_list = servicios_sucursal_list.order_by('-id_servicio_fk__fecha_creacion_servicio_empresa')
+                # Si no hay query (búsqueda general), limitar resultados y ordenar por más recientes
+                elif not query:
+                    servicios_sucursal_list = servicios_sucursal_list.order_by('-id_servicio_fk__fecha_creacion_servicio_empresa')[:10]
             else:
                 servicios_sucursal_list = servicio_sucursal.objects.none()
             
@@ -3705,6 +3716,9 @@ def busquedad(request):
                 # Si es búsqueda de solo servicios, ordenar por más recientes
                 if tipo == 'servicios':
                     servicios_usuario_list = servicios_usuario_list.order_by('-fecha_creacion_servicio_usuario')
+                # Si no hay query (búsqueda general), limitar resultados y ordenar por más recientes
+                elif not query:
+                    servicios_usuario_list = servicios_usuario_list.order_by('-fecha_creacion_servicio_usuario')[:10]
             else:
                 servicios_usuario_list = servicio_usuario.objects.none()
             
@@ -4409,10 +4423,17 @@ def localizacion(request):
                 
                 todos_resultados.append(resultado)
         
-        # Filtrar resultados dentro de 4km y ordenar por distancia
+        # Obtener rango de búsqueda del parámetro GET (por defecto 20km para cargar más resultados)
+        rango_busqueda = request.GET.get('rango', '20')
+        try:
+            rango_busqueda_float = float(rango_busqueda)
+        except (ValueError, TypeError):
+            rango_busqueda_float = 20.0  # Valor por defecto amplio
+        
+        # Filtrar resultados dentro del rango especificado y ordenar por distancia
         if user_lat and user_lng:
-            # Filtrar solo resultados dentro de 4km
-            todos_resultados = [r for r in todos_resultados if r['distancia'] <= 4.0]
+            # Filtrar solo resultados dentro del rango especificado
+            todos_resultados = [r for r in todos_resultados if r['distancia'] <= rango_busqueda_float]
             todos_resultados.sort(key=lambda x: x['distancia'])
         
         resultados_cercanos = todos_resultados[:10]  # Aumentar a 10 resultados máximo
@@ -4933,9 +4954,9 @@ def vista_items(request):
         atributos_producto = []
         if item_tipo == 'producto' and item_data:
             if item_data.get('tipo_propietario') == 'empresa':
-                valores_atributos = ValorAtributoProducto.objects.filter(producto_empresa__nombre_producto_empresa=item_data['nombre'])
+                valores_atributos = ValorAtributoProducto.objects.filter(producto_empresa__id_producto_empresa=item_data['id'])
             else:
-                valores_atributos = ValorAtributoProducto.objects.filter(producto_usuario__nombre_producto_usuario=item_data['nombre'])
+                valores_atributos = ValorAtributoProducto.objects.filter(producto_usuario__id_producto_usuario=item_data['id'])
             atributos_producto = [
                 {
                     'nombre': v.atributo.nombre,
@@ -10295,9 +10316,9 @@ def solicitud_servicio(request):
                     try:
                         from datetime import datetime
                         if hora_preferida:
-                            fecha_requerida = datetime.strptime(f"{fecha_preferida} {hora_preferida}", "%Y-%m-%d %H:%M").date()
+                            fecha_requerida = datetime.strptime(f"{fecha_preferida} {hora_preferida}", "%Y-%m-%d %H:%M")
                         else:
-                            fecha_requerida = datetime.strptime(fecha_preferida, "%Y-%m-%d").date()
+                            fecha_requerida = datetime.strptime(fecha_preferida, "%Y-%m-%d")
                     except ValueError:
                         fecha_requerida = None
                 
@@ -10306,7 +10327,7 @@ def solicitud_servicio(request):
                     solicitud = solicitud_servicio_usuario.objects.create(
                         id_usuario_fk=current_user,
                         id_servicio_sucursal_fk=servicio_sucursal_obj,
-                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        fecha_requerida=fecha_requerida or timezone.now(),
                         direccion=request.POST.get('direccion', ''),
                         descripcion_detallada=descripcion_solicitud,
                         estado='pendiente'
@@ -10330,7 +10351,7 @@ def solicitud_servicio(request):
                     solicitud = solicitud_servicio_empresa.objects.create(
                         id_empresa_fk=current_user,
                         id_servicio_sucursal_fk=servicio_sucursal_obj,
-                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        fecha_requerida=fecha_requerida or timezone.now(),
                         direccion=request.POST.get('direccion', ''),
                         descripcion_detallada=descripcion_solicitud,
                         estado='pendiente'
@@ -10362,9 +10383,9 @@ def solicitud_servicio(request):
                     try:
                         from datetime import datetime
                         if hora_preferida:
-                            fecha_requerida = datetime.strptime(f"{fecha_preferida} {hora_preferida}", "%Y-%m-%d %H:%M").date()
+                            fecha_requerida = datetime.strptime(f"{fecha_preferida} {hora_preferida}", "%Y-%m-%d %H:%M")
                         else:
-                            fecha_requerida = datetime.strptime(fecha_preferida, "%Y-%m-%d").date()
+                            fecha_requerida = datetime.strptime(fecha_preferida, "%Y-%m-%d")
                     except ValueError:
                         fecha_requerida = None
                 
@@ -10373,7 +10394,7 @@ def solicitud_servicio(request):
                     solicitud = solicitud_servicio_usuario.objects.create(
                         id_usuario_fk=current_user,
                         id_servicio_usuario_fk=servicio_obj,
-                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        fecha_requerida=fecha_requerida or timezone.now(),
                         direccion=request.POST.get('direccion', ''),
                         descripcion_detallada=descripcion_solicitud,
                         estado='pendiente'
@@ -10396,7 +10417,7 @@ def solicitud_servicio(request):
                     solicitud = solicitud_servicio_empresa.objects.create(
                         id_empresa_fk=current_user,
                         id_servicio_usuario_fk=servicio_obj,
-                        fecha_requerida=fecha_requerida or timezone.now().date(),
+                        fecha_requerida=fecha_requerida or timezone.now(),
                         direccion=request.POST.get('direccion', ''),
                         descripcion_detallada=descripcion_solicitud,
                         estado='pendiente'
@@ -10444,20 +10465,79 @@ def gestion_servicio(request):
             'tipo': current_user.rol_empresa,
             'is_authenticated': True
         }
-        # Obtener solicitudes de servicios de la empresa
-        solicitudes_raw = solicitud_servicio_empresa.objects.filter(id_empresa_fk=current_user).order_by('-fecha_solicitud')
+        # Obtener solicitudes de servicios de la empresa (solo pendientes y cotizadas)
+        solicitudes_raw = solicitud_servicio_empresa.objects.filter(
+            id_empresa_fk=current_user,
+            estado__in=['pendiente', 'cotizada']
+        ).select_related(
+            'id_servicio_usuario_fk__id_usuario_fk',
+            'id_servicio_sucursal_fk__id_servicio_fk__id_empresa_fk',
+            'id_servicio_sucursal_fk__id_sucursal_fk'
+        ).order_by('-fecha_solicitud')
         
-        # Agregar información de sucursal a cada solicitud
+        # Agregar información detallada a cada solicitud
         solicitudes = []
         for solicitud in solicitudes_raw:
-            solicitud_data = {
-                'solicitud': solicitud,
-                'sucursal_info': None
+            # Convertir el objeto solicitud a diccionario serializable
+            solicitud_dict = {
+                'id_solicitud_servicio_empresa': solicitud.id_solicitud_servicio_empresa,
+                'fecha_solicitud': solicitud.fecha_solicitud.isoformat() if solicitud.fecha_solicitud else None,
+                'fecha_requerida': solicitud.fecha_requerida.isoformat() if solicitud.fecha_requerida else None,
+                'estado': solicitud.estado,
+                'descripcion_detallada': solicitud.descripcion_detallada,
+                'direccion': solicitud.direccion,
+                # Campos de cotización
+                'presupuesto_cotizacion': float(solicitud.presupuesto_cotizacion) if solicitud.presupuesto_cotizacion else None,
+                'descripcion_cotizacion': solicitud.descripcion_cotizacion,
+                'fecha_cotizacion': solicitud.fecha_cotizacion.isoformat() if solicitud.fecha_cotizacion else None,
+                'archivo_cotizacion': solicitud.archivo_cotizacion.url if solicitud.archivo_cotizacion else None
             }
             
-            # Si la solicitud está asociada a un servicio de sucursal, obtener la información de la sucursal
-            if solicitud.id_servicio_sucursal_fk:
-                sucursal = solicitud.id_servicio_sucursal_fk.id_sucursal_fk
+            solicitud_data = {
+                'solicitud': solicitud_dict,
+                'sucursal_info': None,
+                'proveedor_info': None,
+                'servicio_info': None
+            }
+            
+            # Información del servicio y proveedor
+            if solicitud.id_servicio_usuario_fk:
+                # Servicio de usuario individual
+                servicio = solicitud.id_servicio_usuario_fk
+                proveedor = servicio.id_usuario_fk
+                solicitud_data['servicio_info'] = {
+                    'nombre': servicio.nombre_servicio_usuario,
+                    'descripcion': servicio.descripcion_servicio_usuario,
+                    'precio': servicio.precio_servicio_usuario,
+                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo': 'usuario'
+                }
+                solicitud_data['proveedor_info'] = {
+                    'nombre': proveedor.nombre_usuario,
+                    'email': proveedor.correo_usuario,
+                    'telefono': proveedor.telefono_usuario,
+                    'tipo': 'Usuario Individual'
+                }
+            elif solicitud.id_servicio_sucursal_fk:
+                # Servicio de empresa
+                servicio_sucursal = solicitud.id_servicio_sucursal_fk
+                servicio = servicio_sucursal.id_servicio_fk
+                empresa_proveedor = servicio.id_empresa_fk
+                sucursal = servicio_sucursal.id_sucursal_fk
+                
+                solicitud_data['servicio_info'] = {
+                    'nombre': servicio.nombre_servicio_empresa,
+                    'descripcion': servicio.descripcion_servicio_empresa,
+                    'precio': servicio_sucursal.precio_servicio_sucursal,
+                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo': 'empresa'
+                }
+                solicitud_data['proveedor_info'] = {
+                    'nombre': empresa_proveedor.nombre_empresa,
+                    'email': empresa_proveedor.correo_empresa,
+                    'telefono': 'No disponible',
+                    'tipo': 'Empresa'
+                }
                 solicitud_data['sucursal_info'] = {
                     'nombre': sucursal.nombre_sucursal,
                     'direccion': sucursal.direccion_sucursal,
@@ -10474,20 +10554,79 @@ def gestion_servicio(request):
             'tipo': current_user.rol_usuario,
             'is_authenticated': True
         }
-        # Obtener solicitudes de servicios del usuario
-        solicitudes_raw = solicitud_servicio_usuario.objects.filter(id_usuario_fk=current_user).order_by('-fecha_solicitud')
+        # Obtener solicitudes de servicios del usuario (solo pendientes y cotizadas)
+        solicitudes_raw = solicitud_servicio_usuario.objects.filter(
+            id_usuario_fk=current_user,
+            estado__in=['pendiente', 'cotizada']
+        ).select_related(
+            'id_servicio_usuario_fk__id_usuario_fk',
+            'id_servicio_sucursal_fk__id_servicio_fk__id_empresa_fk',
+            'id_servicio_sucursal_fk__id_sucursal_fk'
+        ).order_by('-fecha_solicitud')
         
-        # Agregar información de sucursal a cada solicitud
+        # Agregar información detallada a cada solicitud
         solicitudes = []
         for solicitud in solicitudes_raw:
-            solicitud_data = {
-                'solicitud': solicitud,
-                'sucursal_info': None
+            # Convertir el objeto solicitud a diccionario serializable
+            solicitud_dict = {
+                'id_solicitud_servicio_usuario': solicitud.id_solicitud_servicio_usuario,
+                'fecha_solicitud': solicitud.fecha_solicitud.isoformat() if solicitud.fecha_solicitud else None,
+                'fecha_requerida': solicitud.fecha_requerida.isoformat() if solicitud.fecha_requerida else None,
+                'estado': solicitud.estado,
+                'descripcion_detallada': solicitud.descripcion_detallada,
+                'direccion': solicitud.direccion,
+                # Campos de cotización
+                'presupuesto_cotizacion': float(solicitud.presupuesto_cotizacion) if solicitud.presupuesto_cotizacion else None,
+                'descripcion_cotizacion': solicitud.descripcion_cotizacion,
+                'fecha_cotizacion': solicitud.fecha_cotizacion.isoformat() if solicitud.fecha_cotizacion else None,
+                'archivo_cotizacion': solicitud.archivo_cotizacion.url if solicitud.archivo_cotizacion else None
             }
             
-            # Si la solicitud está asociada a un servicio de sucursal, obtener la información de la sucursal
-            if solicitud.id_servicio_sucursal_fk:
-                sucursal = solicitud.id_servicio_sucursal_fk.id_sucursal_fk
+            solicitud_data = {
+                'solicitud': solicitud_dict,
+                'sucursal_info': None,
+                'proveedor_info': None,
+                'servicio_info': None
+            }
+            
+            # Información del servicio y proveedor
+            if solicitud.id_servicio_usuario_fk:
+                # Servicio de usuario individual
+                servicio = solicitud.id_servicio_usuario_fk
+                proveedor = servicio.id_usuario_fk
+                solicitud_data['servicio_info'] = {
+                    'nombre': servicio.nombre_servicio_usuario,
+                    'descripcion': servicio.descripcion_servicio_usuario,
+                    'precio': servicio.precio_servicio_usuario,
+                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo': 'usuario'
+                }
+                solicitud_data['proveedor_info'] = {
+                    'nombre': proveedor.nombre_usuario,
+                    'email': proveedor.correo_usuario,
+                    'telefono': proveedor.telefono_usuario,
+                    'tipo': 'Usuario Individual'
+                }
+            elif solicitud.id_servicio_sucursal_fk:
+                # Servicio de empresa
+                servicio_sucursal = solicitud.id_servicio_sucursal_fk
+                servicio = servicio_sucursal.id_servicio_fk
+                empresa_proveedor = servicio.id_empresa_fk
+                sucursal = servicio_sucursal.id_sucursal_fk
+                
+                solicitud_data['servicio_info'] = {
+                    'nombre': servicio.nombre_servicio_empresa,
+                    'descripcion': servicio.descripcion_servicio_empresa,
+                    'precio': servicio_sucursal.precio_servicio_sucursal,
+                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo': 'empresa'
+                }
+                solicitud_data['proveedor_info'] = {
+                    'nombre': empresa_proveedor.nombre_empresa,
+                    'email': empresa_proveedor.correo_empresa,
+                    'telefono': 'No disponible',
+                    'tipo': 'Empresa'
+                }
                 solicitud_data['sucursal_info'] = {
                     'nombre': sucursal.nombre_sucursal,
                     'direccion': sucursal.direccion_sucursal,
@@ -11230,6 +11369,78 @@ def api_obtener_atributos_categoria(request):
             'message': 'Error interno del servidor'
         })
 
+def api_obtener_valores_atributos_producto(request):
+    """API para obtener los valores de atributos de un producto específico"""
+    try:
+        producto_id = request.GET.get('producto_id')
+        account_type = request.session.get('account_type', 'usuario')
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
+        
+        if not producto_id:
+            return JsonResponse({'error': 'ID de producto requerido'}, status=400)
+        
+        # Importar los modelos necesarios
+        from .models import ValorAtributoProducto, producto_usuario, producto_empresa
+        from .eav_helpers import EAVHelper
+        
+        valores_list = []
+        
+        # Determinar el tipo de producto y obtener los valores
+        if account_type == 'empresa':
+            # Para empresas, buscar en producto_empresa
+            try:
+                producto = producto_empresa.objects.get(id_producto_empresa=producto_id)
+                valores = EAVHelper.obtener_valores_producto_empresa(producto)
+            except producto_empresa.DoesNotExist:
+                return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+        else:
+            # Para usuarios, buscar en producto_usuario
+            try:
+                producto = producto_usuario.objects.get(id_producto_usuario=producto_id)
+                valores = EAVHelper.obtener_valores_producto_usuario(producto)
+            except producto_usuario.DoesNotExist:
+                return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+        
+        # Construir la lista de valores
+        for valor in valores:
+            atributo = valor.atributo
+            valor_final = None
+            
+            # Obtener el valor según el tipo de dato
+            if atributo.tipo_dato == 'texto' or atributo.tipo_dato == 'lista':
+                valor_final = valor.valor_texto
+            elif atributo.tipo_dato == 'numero':
+                valor_final = valor.valor_numero
+            elif atributo.tipo_dato == 'decimal':
+                valor_final = float(valor.valor_decimal) if valor.valor_decimal else None
+            elif atributo.tipo_dato == 'fecha':
+                valor_final = valor.valor_fecha.isoformat() if valor.valor_fecha else None
+            elif atributo.tipo_dato == 'booleano':
+                valor_final = 'true' if valor.valor_booleano else 'false'
+            
+            if valor_final is not None:
+                valores_list.append({
+                    'atributo_id': atributo.id_atributo,
+                    'nombre_atributo': atributo.nombre,
+                    'tipo_dato': atributo.tipo_dato,
+                    'valor': str(valor_final)
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'valores': valores_list
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al obtener valores de atributos del producto: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Error interno del servidor'
+        })
+
 # API para obtener avatares dinámicamente
 @require_GET
 def api_get_avatars(request):
@@ -11397,3 +11608,990 @@ def politicas_privacidad(request):
             user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
     
     return render(request, 'ecommerce_app/politicas_privacidad.html', {'user_info': user_info})
+
+# =====================================================
+# VISTAS PARA MIS VENTAS (SERVICIOS)
+# =====================================================
+
+@require_login
+def servicios_ventas_pendientes(request):
+    """
+    Vista para mostrar los servicios pendientes de cotización donde el usuario/empresa es el proveedor.
+    """
+    try:
+        logger.info("servicios_ventas_pendientes - Iniciando función")
+        current_user = get_current_user(request)
+        logger.info(f"servicios_ventas_pendientes - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("servicios_ventas_pendientes - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"servicios_ventas_pendientes - account_type: {account_type}")
+        servicios_pendientes = []
+        
+        logger.info("servicios_ventas_pendientes - Iniciando consultas a la base de datos")
+        
+        if account_type == 'usuario':
+            # Solicitudes donde otros usuarios/empresas solicitan servicios de este usuario
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado='pendiente'
+            ).select_related('id_usuario_fk', 'id_servicio_usuario_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado='pendiente'
+            ).select_related('id_empresa_fk', 'id_servicio_usuario_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                logger.info(f"Procesando solicitud de usuario: {solicitud.id_solicitud_servicio_usuario}")
+                logger.info(f"Cliente nombre: {solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'None'}")
+                logger.info(f"Cliente email: {solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'None'}")
+                servicios_pendientes.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'categoria_servicio': 'Servicio de Usuario',
+                    'tipo_cliente': 'usuario',
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'Sin email',
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario if solicitud.id_usuario_fk else 'Sin teléfono',
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                logger.info(f"Procesando solicitud de empresa: {solicitud.id_solicitud_servicio_empresa}")
+                logger.info(f"Empresa nombre: {solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'None'}")
+                logger.info(f"Empresa email: {solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'None'}")
+                servicios_pendientes.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'categoria_servicio': 'Servicio de Usuario',
+                    'tipo_cliente': 'empresa',
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'Sin email',
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        elif account_type == 'empresa':
+            # Solicitudes donde otros usuarios/empresas solicitan servicios de sucursales de esta empresa
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado='pendiente'
+            ).select_related('id_usuario_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado='pendiente'
+            ).select_related('id_empresa_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                logger.info(f"Empresa - Procesando solicitud de usuario: {solicitud.id_solicitud_servicio_usuario}")
+                logger.info(f"Empresa - Cliente nombre: {solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'None'}")
+                servicios_pendientes.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'categoria_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo_cliente': 'usuario',
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'Sin email',
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario if solicitud.id_usuario_fk else 'Sin teléfono',
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                logger.info(f"Empresa - Procesando solicitud de empresa: {solicitud.id_solicitud_servicio_empresa}")
+                logger.info(f"Empresa - Cliente empresa nombre: {solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'None'}")
+                servicios_pendientes.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'categoria_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo_cliente': 'empresa',
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'Sin email',
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        # Ordenar por fecha de solicitud (más recientes primero)
+        servicios_pendientes.sort(key=lambda x: x['fecha_solicitud'], reverse=True)
+        
+        # Obtener información del usuario para el template
+        empresa_nombre = None
+        if account_type == 'usuario':
+            try:
+                empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                if empresa_obj:
+                    empresa_nombre = empresa_obj.nombre_empresa
+            except Exception as e:
+                empresa_nombre = None
+        elif account_type == 'empresa':
+            empresa_nombre = current_user.nombre_empresa
+        
+        user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'servicios_pendientes': servicios_pendientes,
+            'total_servicios': len(servicios_pendientes)
+        }
+        
+        return render(request, 'ecommerce_app/servicios_ventas_pendientes.html', context)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en servicios_ventas_pendientes: {e}")
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        return render(request, 'ecommerce_app/error.html', {'error_message': f'Error al cargar servicios pendientes: {str(e)}'})
+
+@require_login
+def servicios_ventas_confirmadas(request):
+    """
+    Vista para mostrar los servicios confirmados/completados donde el usuario/empresa es el proveedor.
+    """
+    try:
+        current_user = get_current_user(request)
+        logger.info(f"servicios_ventas_confirmadas - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("servicios_ventas_confirmadas - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"servicios_ventas_confirmadas - account_type: {account_type}")
+        servicios_confirmados = []
+        
+        if account_type == 'usuario':
+            # Solicitudes confirmadas donde otros usuarios/empresas solicitan servicios de este usuario
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado__in=['aceptada', 'pagada', 'completada']
+            ).select_related('id_usuario_fk', 'id_servicio_usuario_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado__in=['aceptada', 'pagada', 'completada']
+            ).select_related('id_empresa_fk', 'id_servicio_usuario_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                servicios_confirmados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                servicios_confirmados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        elif account_type == 'empresa':
+            # Solicitudes confirmadas donde otros usuarios/empresas solicitan servicios de sucursales de esta empresa
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado__in=['aceptada', 'pagada', 'completada']
+            ).select_related('id_usuario_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado__in=['aceptada', 'pagada', 'completada']
+            ).select_related('id_empresa_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                servicios_confirmados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                servicios_confirmados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        # Ordenar por fecha de solicitud (más recientes primero)
+        servicios_confirmados.sort(key=lambda x: x['fecha_solicitud'], reverse=True)
+        
+        # Obtener información del usuario para el template
+        empresa_nombre = None
+        if account_type == 'usuario':
+            try:
+                empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                if empresa_obj:
+                    empresa_nombre = empresa_obj.nombre_empresa
+            except Exception as e:
+                empresa_nombre = None
+        elif account_type == 'empresa':
+            empresa_nombre = current_user.nombre_empresa
+        
+        user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+        
+        context = {
+            'user_info': user_info,
+            'servicios_confirmados': servicios_confirmados,
+            'total_servicios': len(servicios_confirmados)
+        }
+        
+        return render(request, 'ecommerce_app/servicios_ventas_confirmadas.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en servicios_ventas_confirmadas: {e}")
+        return render(request, 'ecommerce_app/error.html', {'error_message': 'Error al cargar servicios confirmados'})
+
+@require_login
+def servicios_ventas_rechazadas(request):
+    """
+    Vista para mostrar los servicios rechazados donde el usuario/empresa es el proveedor.
+    """
+    try:
+        current_user = get_current_user(request)
+        logger.info(f"servicios_ventas_rechazadas - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("servicios_ventas_rechazadas - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"servicios_ventas_rechazadas - account_type: {account_type}")
+        servicios_rechazados = []
+        
+        if account_type == 'usuario':
+            # Solicitudes rechazadas donde otros usuarios/empresas solicitan servicios de este usuario
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado='rechazada'
+            ).select_related('id_usuario_fk', 'id_servicio_usuario_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado='rechazada'
+            ).select_related('id_empresa_fk', 'id_servicio_usuario_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                servicios_rechazados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                servicios_rechazados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        elif account_type == 'empresa':
+            # Solicitudes rechazadas donde otros usuarios/empresas solicitan servicios de sucursales de esta empresa
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado='rechazada'
+            ).select_related('id_usuario_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado='rechazada'
+            ).select_related('id_empresa_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                servicios_rechazados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                servicios_rechazados.append({
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'estado': solicitud.estado,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        # Ordenar por fecha de solicitud (más recientes primero)
+        servicios_rechazados.sort(key=lambda x: x['fecha_solicitud'], reverse=True)
+        
+        # Obtener información del usuario para el template
+        empresa_nombre = None
+        if account_type == 'usuario':
+            try:
+                empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                if empresa_obj:
+                    empresa_nombre = empresa_obj.nombre_empresa
+            except Exception as e:
+                empresa_nombre = None
+        elif account_type == 'empresa':
+            empresa_nombre = current_user.nombre_empresa
+        
+        user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+        
+        context = {
+            'user_info': user_info,
+            'servicios_rechazados': servicios_rechazados,
+            'total_servicios': len(servicios_rechazados)
+        }
+        
+        return render(request, 'ecommerce_app/servicios_ventas_rechazadas.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en servicios_ventas_rechazadas: {e}")
+        return render(request, 'ecommerce_app/error.html', {'error_message': 'Error al cargar servicios rechazados'})
+
+@require_POST
+@require_login
+def cotizar_servicio(request):
+    """
+    Endpoint para enviar cotización de un servicio.
+    Actualiza los campos de cotización en la solicitud correspondiente.
+    """
+    try:
+        # Obtener datos del formulario
+        servicio_id = request.POST.get('servicio_id')
+        tipo_solicitud = request.POST.get('tipo_solicitud')
+        presupuesto = request.POST.get('presupuesto')
+        descripcion = request.POST.get('descripcion')
+        archivo_cotizacion = request.FILES.get('archivo_cotizacion')
+        
+        logger.info(f"cotizar_servicio - servicio_id: {servicio_id}, tipo_solicitud: {tipo_solicitud}")
+        
+        # Validar datos requeridos
+        if not all([servicio_id, tipo_solicitud, presupuesto, descripcion]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Todos los campos son requeridos (ID, tipo, presupuesto y descripción)'
+            })
+        
+        # Validar presupuesto
+        try:
+            presupuesto_decimal = float(presupuesto)
+            if presupuesto_decimal <= 0:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'El presupuesto debe ser mayor a 0'
+                })
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False, 
+                'message': 'El presupuesto debe ser un número válido'
+            })
+        
+        # Obtener usuario actual
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Usuario no autenticado'
+            })
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Buscar y actualizar la solicitud correspondiente
+        solicitud_actualizada = False
+        
+        if tipo_solicitud == 'usuario':
+            # Buscar en solicitud_servicio_usuario
+            try:
+                solicitud = solicitud_servicio_usuario.objects.get(
+                    id_solicitud_servicio_usuario=servicio_id
+                )
+                
+                # Verificar que el usuario actual sea el proveedor del servicio
+                if account_type == 'usuario':
+                    # Para usuarios, verificar que sea el dueño del servicio
+                    if solicitud.id_servicio_usuario_fk and solicitud.id_servicio_usuario_fk.id_usuario_fk != current_user:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para cotizar este servicio'
+                        })
+                elif account_type == 'empresa':
+                    # Para empresas, verificar que sea la empresa dueña del servicio
+                    if (solicitud.id_servicio_sucursal_fk and 
+                        solicitud.id_servicio_sucursal_fk.id_sucursal_fk.id_empresa_fk != current_user):
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para cotizar este servicio'
+                        })
+                
+                # Actualizar campos de cotización
+                solicitud.presupuesto_cotizacion = presupuesto_decimal
+                solicitud.descripcion_cotizacion = descripcion
+                solicitud.fecha_cotizacion = timezone.now()
+                solicitud.estado = 'cotizada'  # Cambiar estado a cotizada
+                
+                if archivo_cotizacion:
+                    solicitud.archivo_cotizacion = archivo_cotizacion
+                
+                solicitud.save()
+                solicitud_actualizada = True
+                
+            except solicitud_servicio_usuario.DoesNotExist:
+                pass
+        
+        elif tipo_solicitud == 'empresa':
+            # Buscar en solicitud_servicio_empresa
+            try:
+                solicitud = solicitud_servicio_empresa.objects.get(
+                    id_solicitud_servicio_empresa=servicio_id
+                )
+                
+                # Verificar que el usuario actual sea el proveedor del servicio
+                if account_type == 'usuario':
+                    # Para usuarios, verificar que sea el dueño del servicio
+                    if solicitud.id_servicio_usuario_fk and solicitud.id_servicio_usuario_fk.id_usuario_fk != current_user:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para cotizar este servicio'
+                        })
+                elif account_type == 'empresa':
+                    # Para empresas, verificar que sea la empresa dueña del servicio
+                    if (solicitud.id_servicio_sucursal_fk and 
+                        solicitud.id_servicio_sucursal_fk.id_sucursal_fk.id_empresa_fk != current_user):
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para cotizar este servicio'
+                        })
+                
+                # Actualizar campos de cotización
+                solicitud.presupuesto_cotizacion = presupuesto_decimal
+                solicitud.descripcion_cotizacion = descripcion
+                solicitud.fecha_cotizacion = timezone.now()
+                solicitud.estado = 'cotizada'  # Cambiar estado a cotizada
+                
+                if archivo_cotizacion:
+                    solicitud.archivo_cotizacion = archivo_cotizacion
+                
+                solicitud.save()
+                solicitud_actualizada = True
+                
+            except solicitud_servicio_empresa.DoesNotExist:
+                pass
+        
+        if not solicitud_actualizada:
+            return JsonResponse({
+                'success': False, 
+                'message': 'No se encontró la solicitud de servicio'
+            })
+        
+        logger.info(f"Cotización enviada exitosamente para solicitud {servicio_id}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Cotización enviada exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en cotizar_servicio: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'message': 'Error interno del servidor'
+        })
+
+
+@require_POST
+@require_login
+def rechazar_servicio(request):
+    """
+    Endpoint para rechazar una solicitud de servicio.
+    Actualiza el estado a 'rechazada' y guarda el motivo del rechazo.
+    """
+    try:
+        # Obtener datos del formulario
+        servicio_id = request.POST.get('servicio_id')
+        tipo_solicitud = request.POST.get('tipo_solicitud')
+        motivo_rechazo = request.POST.get('motivo_rechazo')
+        
+        logger.info(f"rechazar_servicio - servicio_id: {servicio_id}, tipo_solicitud: {tipo_solicitud}")
+        
+        # Validar datos requeridos
+        if not all([servicio_id, tipo_solicitud, motivo_rechazo]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Todos los campos son requeridos (ID, tipo y motivo de rechazo)'
+            })
+        
+        # Validar longitud del motivo
+        if len(motivo_rechazo.strip()) < 10:
+            return JsonResponse({
+                'success': False, 
+                'message': 'El motivo del rechazo debe tener al menos 10 caracteres'
+            })
+        
+        # Obtener usuario actual
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Usuario no autenticado'
+            })
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Buscar y actualizar la solicitud correspondiente
+        solicitud_actualizada = False
+        
+        if tipo_solicitud == 'usuario':
+            # Buscar en solicitud_servicio_usuario
+            try:
+                solicitud = solicitud_servicio_usuario.objects.get(
+                    id_solicitud_servicio_usuario=servicio_id
+                )
+                
+                # Verificar que el usuario actual sea el proveedor del servicio
+                if account_type == 'usuario':
+                    # Para usuarios, verificar que sea el dueño del servicio
+                    if solicitud.id_servicio_usuario_fk and solicitud.id_servicio_usuario_fk.id_usuario_fk != current_user:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para rechazar este servicio'
+                        })
+                elif account_type == 'empresa':
+                    # Para empresas, verificar que sea la empresa dueña del servicio
+                    if (solicitud.id_servicio_sucursal_fk and 
+                        solicitud.id_servicio_sucursal_fk.id_sucursal_fk.id_empresa_fk != current_user):
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para rechazar este servicio'
+                        })
+                
+                # Actualizar campos de rechazo
+                solicitud.motivo_rechazo = motivo_rechazo
+                solicitud.fecha_rechazo = timezone.now()
+                solicitud.estado = 'rechazada'  # Cambiar estado a rechazada
+                
+                solicitud.save()
+                solicitud_actualizada = True
+                
+            except solicitud_servicio_usuario.DoesNotExist:
+                pass
+        
+        elif tipo_solicitud == 'empresa':
+            # Buscar en solicitud_servicio_empresa
+            try:
+                solicitud = solicitud_servicio_empresa.objects.get(
+                    id_solicitud_servicio_empresa=servicio_id
+                )
+                
+                # Verificar que el usuario actual sea el proveedor del servicio
+                if account_type == 'usuario':
+                    # Para usuarios, verificar que sea el dueño del servicio
+                    if solicitud.id_servicio_usuario_fk and solicitud.id_servicio_usuario_fk.id_usuario_fk != current_user:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para rechazar este servicio'
+                        })
+                elif account_type == 'empresa':
+                    # Para empresas, verificar que sea la empresa dueña del servicio
+                    if (solicitud.id_servicio_sucursal_fk and 
+                        solicitud.id_servicio_sucursal_fk.id_sucursal_fk.id_empresa_fk != current_user):
+                        return JsonResponse({
+                            'success': False, 
+                            'message': 'No tienes permisos para rechazar este servicio'
+                        })
+                
+                # Actualizar campos de rechazo
+                solicitud.motivo_rechazo = motivo_rechazo
+                solicitud.fecha_rechazo = timezone.now()
+                solicitud.estado = 'rechazada'  # Cambiar estado a rechazada
+                
+                solicitud.save()
+                solicitud_actualizada = True
+                
+            except solicitud_servicio_empresa.DoesNotExist:
+                pass
+        
+        if not solicitud_actualizada:
+            return JsonResponse({
+                'success': False, 
+                'message': 'No se encontró la solicitud de servicio'
+            })
+        
+        logger.info(f"Solicitud rechazada exitosamente: {servicio_id}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Solicitud rechazada exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en rechazar_servicio: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'message': 'Error interno del servidor'
+        })
+
+def servicios_ventas_cotizadas(request):
+    """
+    Vista para mostrar los servicios cotizados donde el usuario/empresa es el proveedor.
+    """
+    try:
+        logger.info("servicios_ventas_cotizadas - Iniciando función")
+        current_user = get_current_user(request)
+        logger.info(f"servicios_ventas_cotizadas - current_user: {current_user}")
+        
+        if not current_user:
+            logger.error("servicios_ventas_cotizadas - No current_user found")
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        # Obtener account_type de la sesión
+        account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"servicios_ventas_cotizadas - account_type: {account_type}")
+        servicios_cotizados = []
+        
+        logger.info("servicios_ventas_cotizadas - Iniciando consultas a la base de datos")
+        
+        if account_type == 'usuario':
+            # Solicitudes donde otros usuarios/empresas solicitan servicios de este usuario
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado='cotizada'
+            ).select_related('id_usuario_fk', 'id_servicio_usuario_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_usuario_fk__id_usuario_fk=current_user,
+                estado='cotizada'
+            ).select_related('id_empresa_fk', 'id_servicio_usuario_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                logger.info(f"Procesando solicitud cotizada de usuario: {solicitud.id_solicitud_servicio_usuario}")
+                servicios_cotizados.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'fecha_cotizacion': solicitud.fecha_cotizacion,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_cotizacion': solicitud.descripcion_cotizacion,
+                    'presupuesto_cotizacion': solicitud.presupuesto_cotizacion,
+                    'archivo_cotizacion': solicitud.archivo_cotizacion,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'categoria_servicio': 'Servicio de Usuario',
+                    'tipo_cliente': 'usuario',
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'Sin email',
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario if solicitud.id_usuario_fk else 'Sin teléfono',
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                logger.info(f"Procesando solicitud cotizada de empresa: {solicitud.id_solicitud_servicio_empresa}")
+                servicios_cotizados.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'fecha_cotizacion': solicitud.fecha_cotizacion,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_cotizacion': solicitud.descripcion_cotizacion,
+                    'presupuesto_cotizacion': solicitud.presupuesto_cotizacion,
+                    'archivo_cotizacion': solicitud.archivo_cotizacion,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
+                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'categoria_servicio': 'Servicio de Usuario',
+                    'tipo_cliente': 'empresa',
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'Sin email',
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        elif account_type == 'empresa':
+            # Solicitudes donde otros usuarios/empresas solicitan servicios de sucursales de esta empresa
+            solicitudes_usuario = solicitud_servicio_usuario.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado='cotizada'
+            ).select_related('id_usuario_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            solicitudes_empresa = solicitud_servicio_empresa.objects.filter(
+                id_servicio_sucursal_fk__id_sucursal_fk__id_empresa_fk=current_user,
+                estado='cotizada'
+            ).select_related('id_empresa_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
+            
+            # Procesar solicitudes de usuarios
+            for solicitud in solicitudes_usuario:
+                logger.info(f"Empresa - Procesando solicitud cotizada de usuario: {solicitud.id_solicitud_servicio_usuario}")
+                servicios_cotizados.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
+                    'id_solicitud': solicitud.id_solicitud_servicio_usuario,
+                    'tipo_solicitud': 'usuario',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'fecha_cotizacion': solicitud.fecha_cotizacion,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_cotizacion': solicitud.descripcion_cotizacion,
+                    'presupuesto_cotizacion': solicitud.presupuesto_cotizacion,
+                    'archivo_cotizacion': solicitud.archivo_cotizacion,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'categoria_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo_cliente': 'usuario',
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'Sin email',
+                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario if solicitud.id_usuario_fk else 'Sin teléfono',
+                })
+            
+            # Procesar solicitudes de empresas
+            for solicitud in solicitudes_empresa:
+                logger.info(f"Empresa - Procesando solicitud cotizada de empresa: {solicitud.id_solicitud_servicio_empresa}")
+                servicios_cotizados.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
+                    'id_solicitud': solicitud.id_solicitud_servicio_empresa,
+                    'tipo_solicitud': 'empresa',
+                    'fecha_solicitud': solicitud.fecha_solicitud,
+                    'fecha_requerida': solicitud.fecha_requerida,
+                    'fecha_cotizacion': solicitud.fecha_cotizacion,
+                    'direccion': solicitud.direccion,
+                    'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_cotizacion': solicitud.descripcion_cotizacion,
+                    'presupuesto_cotizacion': solicitud.presupuesto_cotizacion,
+                    'archivo_cotizacion': solicitud.archivo_cotizacion,
+                    'estado': solicitud.estado,
+                    'nombre_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
+                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
+                    'categoria_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría',
+                    'tipo_cliente': 'empresa',
+                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
+                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'Sin nombre',
+                    'cliente_email': solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'Sin email',
+                    'cliente_telefono': 'No disponible',
+                })
+        
+        # Ordenar por fecha de cotización (más recientes primero)
+        servicios_cotizados.sort(key=lambda x: x['fecha_cotizacion'] if x['fecha_cotizacion'] else x['fecha_solicitud'], reverse=True)
+        
+        # Obtener información del usuario para el template
+        empresa_nombre = None
+        if account_type == 'usuario':
+            try:
+                empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
+                if empresa_obj:
+                    empresa_nombre = empresa_obj.nombre_empresa
+            except Exception as e:
+                empresa_nombre = None
+        elif account_type == 'empresa':
+            empresa_nombre = current_user.nombre_empresa
+        
+        user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
+        
+        context = {
+            'user_info': user_info,
+            'servicios_cotizados': servicios_cotizados,
+            'total_servicios': len(servicios_cotizados)
+        }
+        
+        return render(request, 'ecommerce_app/servicios_ventas_cotizadas.html', context)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en servicios_ventas_cotizadas: {e}")
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        return render(request, 'ecommerce_app/error.html', {'error_message': f'Error al cargar servicios cotizados: {str(e)}'})
+
+
+@require_http_methods(["POST"])
+def procesar_pago_servicio(request):
+    logger.info(f"SESION AL PROCESAR PAGO: {dict(request.session)}")
+    
+    # Verificar autenticación usando el sistema personalizado
+    current_user = get_current_user(request)
+    if not current_user:
+        return JsonResponse({'success': False, 'error': 'Usuario no autenticado.'}, status=401)
+    
+    try:
+        from .models import pago_servicio, solicitud_servicio_usuario, solicitud_servicio_empresa
+        # Intentar obtener el ID con ambos nombres posibles
+        servicio_id = request.POST.get('solicitud_id') or request.POST.get('servicio_id')
+        tipo_solicitud = request.POST.get('tipo_solicitud')  # 'usuario' o 'empresa'
+        metodo_pago = request.POST.get('metodo_pago')
+        comprobante_pago = request.FILES.get('comprobante_pago')
+        notas_pago = request.POST.get('notas', '') or request.POST.get('notas_pago', '')
+
+        if not (servicio_id and tipo_solicitud and metodo_pago):
+            return JsonResponse({'success': False, 'error': 'Faltan datos requeridos para procesar el pago.'})
+
+        # Buscar la solicitud correspondiente
+        solicitud = None
+        if tipo_solicitud == 'usuario':
+            try:
+                solicitud = solicitud_servicio_usuario.objects.get(id_solicitud_servicio_usuario=servicio_id)
+            except solicitud_servicio_usuario.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Solicitud de servicio de usuario no encontrada.'})
+        elif tipo_solicitud == 'empresa':
+            try:
+                solicitud = solicitud_servicio_empresa.objects.get(id_solicitud_servicio_empresa=servicio_id)
+            except solicitud_servicio_empresa.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Solicitud de servicio de empresa no encontrada.'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Tipo de solicitud inválido.'})
+
+        # Validar que la solicitud esté cotizada y no pagada
+        if solicitud.estado != 'cotizada':
+            return JsonResponse({'success': False, 'error': 'Solo se puede procesar el pago de solicitudes cotizadas.'})
+
+        # Crear el pago
+        pago = pago_servicio(
+            metodo_pago=metodo_pago,
+            comprobante_pago=comprobante_pago,
+            notas_pago=notas_pago,
+            estado_pago='pendiente',
+        )
+        if tipo_solicitud == 'usuario':
+            pago.solicitud_servicio_usuario = solicitud
+        else:
+            pago.solicitud_servicio_empresa = solicitud
+        pago.save()
+
+        # Cambiar estado de la solicitud a 'pagada'
+        solicitud.estado = 'pagada'
+        solicitud.save()
+
+        return JsonResponse({'success': True, 'message': 'Pago procesado correctamente. Queda pendiente de confirmación.'})
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en procesar_pago_servicio: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error interno del servidor: {str(e)}'})

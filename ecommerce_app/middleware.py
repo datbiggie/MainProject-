@@ -31,14 +31,18 @@ class JsonResponseMiddleware(MiddlewareMixin):
         from django.conf import settings
         
         # Registrar el error completo con traceback
-        logger.error(f"Excepción no capturada: {str(exception)}")
-        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        logger.error(f"MIDDLEWARE - Excepción no capturada en URL: {request.path}")
+        logger.error(f"MIDDLEWARE - Excepción: {str(exception)}")
+        logger.error(f"MIDDLEWARE - Traceback completo: {traceback.format_exc()}")
         
-        # En modo DEBUG, mostrar el error específico
-        error_detail = str(exception) if settings.DEBUG else None
+        # Solo devolver JSON para rutas API, no para vistas normales
+        if '/api/' in request.path or request.headers.get('Accept') == 'application/json':
+            error_detail = str(exception) if settings.DEBUG else None
+            return JsonResponse({
+                'success': False,
+                'message': f'Error interno del servidor: {str(exception)}' if settings.DEBUG else 'Error interno del servidor',
+                'error': error_detail
+            }, status=500, content_type='application/json')
         
-        return JsonResponse({
-            'success': False,
-            'message': f'Error interno del servidor: {str(exception)}' if settings.DEBUG else 'Error interno del servidor',
-            'error': error_detail
-        }, status=500, content_type='application/json')
+        # Para vistas normales, dejar que Django maneje la excepción normalmente
+        return None

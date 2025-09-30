@@ -489,10 +489,21 @@ class solicitud_servicio_usuario(models.Model):
     
     id_solicitud_servicio_usuario = models.AutoField(primary_key=True)
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
-    fecha_requerida = models.DateField()
+    fecha_requerida = models.DateTimeField()
     direccion = models.TextField()
     descripcion_detallada = models.TextField()
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    
+    # Campos de cotización
+    presupuesto_cotizacion = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Presupuesto de la cotización')
+    descripcion_cotizacion = models.TextField(null=True, blank=True, help_text='Descripción de la cotización')
+    archivo_cotizacion = models.FileField(upload_to='cotizaciones/', null=True, blank=True, help_text='Archivo de cotización (PDF, DOC, DOCX, JPG, PNG)')
+    fecha_cotizacion = models.DateTimeField(null=True, blank=True, help_text='Fecha cuando se envió la cotización')
+    
+    # Campo de rechazo
+    motivo_rechazo = models.TextField(null=True, blank=True, help_text='Motivo del rechazo de la solicitud')
+    fecha_rechazo = models.DateTimeField(null=True, blank=True, help_text='Fecha cuando se rechazó la solicitud')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -517,10 +528,21 @@ class solicitud_servicio_empresa(models.Model):
     
     id_solicitud_servicio_empresa = models.AutoField(primary_key=True)
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
-    fecha_requerida = models.DateField()
+    fecha_requerida = models.DateTimeField()
     direccion = models.TextField()
     descripcion_detallada = models.TextField()
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    
+    # Campos de cotización
+    presupuesto_cotizacion = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Presupuesto de la cotización')
+    descripcion_cotizacion = models.TextField(null=True, blank=True, help_text='Descripción de la cotización')
+    archivo_cotizacion = models.FileField(upload_to='cotizaciones/', null=True, blank=True, help_text='Archivo de cotización (PDF, DOC, DOCX, JPG, PNG)')
+    fecha_cotizacion = models.DateTimeField(null=True, blank=True, help_text='Fecha cuando se envió la cotización')
+    
+    # Campo de rechazo
+    motivo_rechazo = models.TextField(null=True, blank=True, help_text='Motivo del rechazo de la solicitud')
+    fecha_rechazo = models.DateTimeField(null=True, blank=True, help_text='Fecha cuando se rechazó la solicitud')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -891,6 +913,101 @@ class ValorAtributoProducto(models.Model):
         producto = self.producto_usuario or self.producto_empresa
         producto_tipo = 'Usuario' if self.producto_usuario else 'Empresa'
         return f"{producto} - {self.atributo.nombre}: {self.get_valor()} ({producto_tipo})"
+
+
+class pago_servicio(models.Model):
+    METODO_PAGO_CHOICES = [
+        ('tarjeta', 'Tarjeta de Crédito/Débito'),
+        ('transferencia', 'Transferencia Bancaria'),
+        ('efectivo', 'Efectivo'),
+        ('paypal', 'PayPal'),
+        ('pago_movil', 'Pago Móvil'),
+        ('criptomoneda', 'Criptomoneda'),
+    ]
+    
+    ESTADO_PAGO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('procesando', 'Procesando'),
+        ('confirmado', 'Confirmado'),
+        ('rechazado', 'Rechazado'),
+        ('reembolsado', 'Reembolsado'),
+    ]
+    
+    id_pago_servicio = models.AutoField(primary_key=True)
+    
+    # Foreign Keys opcionales - solo una debe estar llena
+    solicitud_servicio_usuario = models.ForeignKey(
+        'solicitud_servicio_usuario', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='pagos'
+    )
+    solicitud_servicio_empresa = models.ForeignKey(
+        'solicitud_servicio_empresa', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='pagos'
+    )
+    
+    # Campos de pago
+    metodo_pago = models.CharField(max_length=50, choices=METODO_PAGO_CHOICES)
+    
+    # Archivos y comprobantes
+    comprobante_pago = models.ImageField(upload_to='comprobantes_pago/', null=True, blank=True)
+    
+    # Estados y fechas
+    estado_pago = models.CharField(max_length=20, choices=ESTADO_PAGO_CHOICES, default='pendiente')
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    fecha_confirmacion = models.DateTimeField(null=True, blank=True)
+    fecha_vencimiento = models.DateTimeField(null=True, blank=True, help_text='Fecha límite para confirmar el pago')
+    
+    # Campos adicionales
+    notas_pago = models.TextField(null=True, blank=True)
+    motivo_rechazo = models.TextField(null=True, blank=True)
+    
+    # Metadatos
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Pago de Servicio'
+        verbose_name_plural = 'Pagos de Servicios'
+        ordering = ['-fecha_pago']
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(solicitud_servicio_usuario__isnull=False, solicitud_servicio_empresa__isnull=True) |
+                    models.Q(solicitud_servicio_usuario__isnull=True, solicitud_servicio_empresa__isnull=False)
+                ),
+                name='pago_servicio_solicitud_exclusiva'
+            )
+        ]
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Validar que solo una solicitud esté asignada
+        if not ((self.solicitud_servicio_usuario and not self.solicitud_servicio_empresa) or 
+                (self.solicitud_servicio_empresa and not self.solicitud_servicio_usuario)):
+            raise ValidationError('Debe asignar exactamente una solicitud (usuario o empresa).')
+    
+    def get_solicitud(self):
+        """Retorna la solicitud asociada (usuario o empresa)"""
+        return self.solicitud_servicio_usuario or self.solicitud_servicio_empresa
+    
+    def get_tipo_solicitante(self):
+        """Retorna el tipo de solicitante"""
+        if self.solicitud_servicio_usuario:
+            return 'usuario'
+        elif self.solicitud_servicio_empresa:
+            return 'empresa'
+        return None
+    
+    def __str__(self):
+        solicitud = self.get_solicitud()
+        tipo = self.get_tipo_solicitante()
+        return f"Pago {self.id_pago_servicio} - {solicitud} ({tipo}) - {self.estado_pago}"
 
 
 

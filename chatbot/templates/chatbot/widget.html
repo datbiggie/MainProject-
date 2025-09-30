@@ -88,9 +88,18 @@
     background: transparent;
     border: none;
     border-radius: 50%;
-    cursor: pointer;
+    cursor: move;
     z-index: 1000;
-    transition: all 0.3s ease;
+    transition: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.assistant-toggle-button.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
 }
 
 .assistant-toggle-button.hidden {
@@ -447,6 +456,11 @@ class VirtualAssistantWidget {
         this.isOpen = false;
         this.conversationId = null;
         this.userLocation = null;
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.containerStartX = 0;
+        this.containerStartY = 0;
         this.init();
     }
     
@@ -530,7 +544,14 @@ class VirtualAssistantWidget {
         const locationBtn = document.getElementById('assistant-location-btn');
         const voiceBtn = document.getElementById('assistant-voice-btn');
         
-        toggle.addEventListener('click', () => this.toggleChat());
+        // Drag events
+        toggle.addEventListener('mousedown', (e) => this.startDrag(e));
+        toggle.addEventListener('touchstart', (e) => this.startDrag(e), { passive: false });
+        document.addEventListener('mousemove', (e) => this.drag(e));
+        document.addEventListener('touchmove', (e) => this.drag(e), { passive: false });
+        document.addEventListener('mouseup', () => this.endDrag());
+        document.addEventListener('touchend', () => this.endDrag());
+        
         close.addEventListener('click', () => this.closeChat());
         sendBtn.addEventListener('click', () => this.sendMessage());
         locationBtn.addEventListener('click', () => this.shareLocation());
@@ -544,6 +565,82 @@ class VirtualAssistantWidget {
         });
         
         this.initVoiceRecognition();
+    }
+    
+    startDrag(e) {
+        e.preventDefault();
+        this.isDragging = true;
+        this.dragStartTime = Date.now();
+        
+        const container = document.getElementById('virtual-assistant-container');
+        const toggle = document.getElementById('assistant-toggle-btn');
+        
+        // Get touch or mouse position
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        
+        this.dragStartX = clientX;
+        this.dragStartY = clientY;
+        
+        // Get current position
+        const rect = container.getBoundingClientRect();
+        this.containerStartX = rect.right - window.innerWidth;
+        this.containerStartY = rect.bottom - window.innerHeight;
+        
+        toggle.classList.add('dragging');
+    }
+    
+    drag(e) {
+        if (!this.isDragging) return;
+        
+        e.preventDefault();
+        
+        const container = document.getElementById('virtual-assistant-container');
+        
+        // Get touch or mouse position
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        
+        const deltaX = clientX - this.dragStartX;
+        const deltaY = clientY - this.dragStartY;
+        
+        // Calculate new position (inverted because we're using right/bottom)
+        const newRight = this.containerStartX - deltaX;
+        const newBottom = this.containerStartY - deltaY;
+        
+        // Apply boundaries
+        const maxRight = window.innerWidth - 100;
+        const maxBottom = window.innerHeight - 100;
+        const minRight = -100;
+        const minBottom = -100;
+        
+        const boundedRight = Math.max(minRight, Math.min(maxRight, newRight));
+        const boundedBottom = Math.max(minBottom, Math.min(maxBottom, newBottom));
+        
+        container.style.right = boundedRight + 'px';
+        container.style.bottom = boundedBottom + 'px';
+    }
+    
+    endDrag() {
+        if (!this.isDragging) return;
+        
+        const toggle = document.getElementById('assistant-toggle-btn');
+        toggle.classList.remove('dragging');
+        
+        // If it was a quick click (not a drag), open the chat
+        const dragDuration = Date.now() - this.dragStartTime;
+        const container = document.getElementById('virtual-assistant-container');
+        const rect = container.getBoundingClientRect();
+        const movedDistance = Math.sqrt(
+            Math.pow(rect.right - window.innerWidth - this.containerStartX, 2) +
+            Math.pow(rect.bottom - window.innerHeight - this.containerStartY, 2)
+        );
+        
+        if (dragDuration < 200 && movedDistance < 10) {
+            this.toggleChat();
+        }
+        
+        this.isDragging = false;
     }
     
     toggleChat() {

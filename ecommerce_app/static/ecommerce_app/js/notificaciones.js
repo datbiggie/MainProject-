@@ -1,9 +1,57 @@
+// Función para redireccionar según el tipo de notificación (definida globalmente)
+function redirectToNotification(notificationElement) {
+    const tipo = $(notificationElement).data('tipo');
+    const solicitudId = $(notificationElement).data('solicitud-id');
+    const pedidoId = $(notificationElement).data('pedido-id');
+    
+    // Debug: mostrar los valores recibidos
+    console.log('Datos de notificación:', {
+        tipo: tipo,
+        solicitudId: solicitudId,
+        pedidoId: pedidoId,
+        accountType: window.accountType
+    });
+    
+    let redirectUrl = '';
+    
+    // Determinar la URL de redirección según el tipo de notificación
+    if (tipo === 'solicitud_servicio') {
+        // Nueva solicitud de servicio (eres el proveedor) -> ir a ventas pendientes
+        redirectUrl = '/ecommerce/servicios_ventas_pendientes/';
+    } else if (tipo === 'servicio' || tipo === 'servicio_cotizado' || 
+        tipo === 'servicio_aceptado' || tipo === 'servicio_completado') {
+        // Actualizaciones de tus propias solicitudes -> ir a gestión de servicios
+        redirectUrl = '/ecommerce/gestion_servicio/';
+    } else if (tipo === 'pedido_confirmado' || tipo === 'nuevo_pedido' || tipo === 'pago') {
+        if (pedidoId) {
+            // Redireccionar a mis pedidos o mis ventas según el tipo de usuario
+            if (window.accountType === 'empresa') {
+                redirectUrl = '/ecommerce/mis_ventas/';
+            } else {
+                redirectUrl = '/ecommerce/mis_pedidos/';
+            }
+        }
+    }
+    
+    // Realizar la redirección si se encontró una URL válida
+    if (redirectUrl) {
+        window.location.href = redirectUrl;
+    } else {
+        console.warn('No se pudo determinar la URL de redirección para esta notificación');
+    }
+}
+
 // JavaScript para el manejo de notificaciones
 $(document).ready(function() {
     // Event listener para los botones de marcar como leída
     $('.mark-read-btn').on('click', function() {
         const notificacionId = $(this).data('notificacion-id');
         marcarComoLeida(notificacionId);
+    });
+
+    // Manejar clics en notificaciones para redirección
+    $('.clickable-notification').on('click', function() {
+        redirectToNotification(this);
     });
 });
 

@@ -19,6 +19,8 @@
     
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -69,6 +71,7 @@
                                     <th scope="col">Fecha Solicitud</th>
                                     <th scope="col">Estado</th>
                                     <th scope="col">Sucursal</th>
+                                    <th scope="col">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -88,12 +91,11 @@
                                                 <i class="fas fa-{% if solicitud.id_servicio_usuario_fk %}user{% else %}building{% endif %} text-primary" style="font-size: 1.5rem;"></i>
                                             </div>
                                             <div>
-                                                {% if solicitud.id_servicio_usuario_fk %}
-                                                    <strong>{{ solicitud.id_servicio_usuario_fk.nombre_servicio_usuario }}</strong><br>
-                                                    <small class="text-muted">Servicio de Usuario</small>
-                                                {% elif solicitud.id_servicio_sucursal_fk %}
-                                                    <strong>{{ solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa }}</strong><br>
-                                                    <small class="text-muted">Servicio de Empresa</small>
+                                                {% if solicitud_data.servicio_info and solicitud_data.servicio_info.nombre %}
+                                                    <strong>{{ solicitud_data.servicio_info.nombre }}</strong><br>
+                                                    <small class="text-muted">
+                                                        {% if solicitud_data.servicio_info.tipo == 'usuario' %}Servicio de Usuario{% elif solicitud_data.servicio_info.tipo == 'empresa' %}Servicio de Empresa{% else %}Servicio{% endif %}
+                                                    </small>
                                                 {% else %}
                                                     <span class="text-muted">Servicio no especificado</span>
                                                 {% endif %}
@@ -101,8 +103,14 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <strong>{{ solicitud.fecha_solicitud|date:"d/m/Y" }}</strong><br>
-                                        <small class="text-muted">{{ solicitud.fecha_solicitud|date:"H:i" }}</small>
+                                        {% if solicitud.fecha_solicitud %}
+                                            {% with fecha=solicitud.fecha_solicitud|slice:":10" %}
+                                                <strong>{{ fecha|slice:"8:10" }}/{{ fecha|slice:"5:7" }}/{{ fecha|slice:"0:4" }}</strong><br>
+                                            {% endwith %}
+                                            <small class="text-muted">{{ solicitud.fecha_solicitud|slice:"11:16" }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Sin fecha</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if solicitud.estado == 'pendiente' %}
@@ -131,6 +139,12 @@
                                             <span class="text-muted">Servicio individual</span>
                                         {% endif %}
                                     </td>
+                                    <td>
+                                      <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                onclick="verDetallesSolicitud('{{ forloop.counter0 }}')">
+                                            <i class="fas fa-eye me-1"></i> Ver Detalles
+                                        </button>
+                                    </td>
                                 </tr>
                                 {% endwith %}
                                 {% endfor %}
@@ -153,9 +167,692 @@
     </div>
 </div>
 
+<!-- Modal para Ver Detalles de Solicitud -->
+<div class="modal fade" id="modalDetallesSolicitud" tabindex="-1" aria-labelledby="modalDetallesSolicitudLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalDetallesSolicitudLabel">
+                    <i class="fas fa-info-circle me-2"></i>Detalles de la Solicitud
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Acordeón para organizar la información -->
+                <div class="accordion" id="accordionDetallesSolicitud">
+                    
+                    <!-- Información de la Solicitud -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingSolicitud">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSolicitud" aria-expanded="false" aria-controls="collapseSolicitud">
+                                <i class="fas fa-clipboard-list me-2"></i>Información de la Solicitud
+                            </button>
+                        </h2>
+                        <div id="collapseSolicitud" class="accordion-collapse collapse" aria-labelledby="headingSolicitud" data-bs-parent="#accordionDetallesSolicitud">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>ID de Solicitud:</strong><br>
+                                        <span id="detalle-id-solicitud" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Fecha de Solicitud:</strong><br>
+                                        <span id="detalle-fecha-solicitud" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-md-6 mt-3">
+                                        <strong>Fecha Requerida:</strong><br>
+                                        <span id="detalle-fecha-requerida" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-md-6 mt-3">
+                                        <strong>Estado:</strong><br>
+                                        <span id="detalle-estado" class="badge"></span>
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <strong>Descripción Detallada:</strong><br>
+                                        <div id="detalle-descripcion" class="text-muted p-2 bg-light rounded"></div>
+                                    </div>
+                                    <div class="col-12 mt-3" id="detalle-direccion-container" style="display: none;">
+                                        <strong>Dirección:</strong><br>
+                                        <span id="detalle-direccion" class="text-muted"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del Servicio -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingServicio">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseServicio" aria-expanded="false" aria-controls="collapseServicio">
+                                <i class="fas fa-cogs me-2"></i>Información del Servicio
+                            </button>
+                        </h2>
+                        <div id="collapseServicio" class="accordion-collapse collapse" aria-labelledby="headingServicio" data-bs-parent="#accordionDetallesSolicitud">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <strong>Nombre del Servicio:</strong><br>
+                                        <span id="detalle-servicio-nombre" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Precio:</strong><br>
+                                        <span id="detalle-servicio-precio" class="text-success fw-bold"></span>
+                                    </div>
+                                    <div class="col-md-6 mt-3">
+                                        <strong>Categoría:</strong><br>
+                                        <span id="detalle-servicio-categoria" class="badge bg-info"></span>
+                                    </div>
+                                    <div class="col-md-6 mt-3">
+                                        <strong>Tipo de Servicio:</strong><br>
+                                        <span id="detalle-servicio-tipo" class="badge bg-secondary"></span>
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <strong>Descripción del Servicio:</strong><br>
+                                        <div id="detalle-servicio-descripcion" class="text-muted p-2 bg-light rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del Proveedor -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingProveedor">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProveedor" aria-expanded="false" aria-controls="collapseProveedor">
+                                <i class="fas fa-user-tie me-2"></i>Información del Proveedor
+                            </button>
+                        </h2>
+                        <div id="collapseProveedor" class="accordion-collapse collapse" aria-labelledby="headingProveedor" data-bs-parent="#accordionDetallesSolicitud">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Nombre:</strong><br>
+                                        <span id="detalle-proveedor-nombre" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Tipo:</strong><br>
+                                        <span id="detalle-proveedor-tipo" class="badge bg-success"></span>
+                                    </div>
+                                    <div class="col-md-6 mt-3">
+                                        <strong>Email:</strong><br>
+                                        <a id="detalle-proveedor-email" href="#" class="text-decoration-none"></a>
+                                    </div>
+                                    <div class="col-md-6 mt-3">
+                                        <strong>Teléfono:</strong><br>
+                                        <a id="detalle-proveedor-telefono" href="#" class="text-decoration-none"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información de la Sucursal (solo para servicios de empresa) -->
+                    <div class="accordion-item" id="detalle-sucursal-container" style="display: none;">
+                        <h2 class="accordion-header" id="headingSucursal">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSucursal" aria-expanded="false" aria-controls="collapseSucursal">
+                                <i class="fas fa-store me-2"></i>Información de la Sucursal
+                            </button>
+                        </h2>
+                        <div id="collapseSucursal" class="accordion-collapse collapse" aria-labelledby="headingSucursal" data-bs-parent="#accordionDetallesSolicitud">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Nombre de la Sucursal:</strong><br>
+                                        <span id="detalle-sucursal-nombre" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Teléfono:</strong><br>
+                                        <a id="detalle-sucursal-telefono" href="#" class="text-decoration-none"></a>
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <strong>Dirección:</strong><br>
+                                        <span id="detalle-sucursal-direccion" class="text-muted"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información de la Cotización (solo si existe) -->
+                    <div class="accordion-item" id="detalle-cotizacion-container" style="display: none;">
+                        <h2 class="accordion-header" id="headingCotizacion">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCotizacion" aria-expanded="false" aria-controls="collapseCotizacion">
+                                <i class="fas fa-calculator me-2"></i>Información de la Cotización
+                            </button>
+                        </h2>
+                        <div id="collapseCotizacion" class="accordion-collapse collapse" aria-labelledby="headingCotizacion" data-bs-parent="#accordionDetallesSolicitud">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Presupuesto:</strong><br>
+                                        <span id="detalle-cotizacion-presupuesto" class="text-success fw-bold"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Fecha de Cotización:</strong><br>
+                                        <span id="detalle-cotizacion-fecha" class="text-muted"></span>
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <strong>Descripción de la Cotización:</strong><br>
+                                        <div id="detalle-cotizacion-descripcion" class="text-muted p-2 bg-light rounded"></div>
+                                    </div>
+                                    <div class="col-12 mt-3" id="detalle-cotizacion-archivo-container" style="display: none;">
+                                        <strong>Archivo de Cotización:</strong><br>
+                                        <a id="detalle-cotizacion-archivo" href="#" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-1"></i>Descargar Archivo
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cerrar
+                </button>
+                <button type="button" class="btn btn-success" id="btnAceptarCotizacion" style="display: none;" onclick="abrirModalPago()">
+                    <i class="fas fa-credit-card me-1"></i>Aceptar Cotización y Proceder con Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalPagoLabel">
+                    <i class="fas fa-credit-card me-2"></i>Procesar Pago del Servicio
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPago" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="solicitudId" name="solicitud_id">
+                    <input type="hidden" id="tipoSolicitud" name="tipo_solicitud">
+                    
+
+                    
+                    <!-- Método de Pago -->
+                    <div class="mb-3">
+                        <label for="metodoPago" class="form-label">
+                            <i class="fas fa-credit-card me-1"></i>Método de Pago *
+                        </label>
+                        <select class="form-select" id="metodoPago" name="metodo_pago" required>
+                            <option value="">Seleccione un método de pago</option>
+                            <option value="transferencia">Transferencia Bancaria</option>
+                            <option value="deposito">Depósito Bancario</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    
+
+                    
+                    <!-- Comprobante de Pago -->
+                    <div class="mb-3">
+                        <label for="comprobantePago" class="form-label">
+                            <i class="fas fa-file-upload me-1"></i>Comprobante de Pago *
+                        </label>
+                        <input type="file" class="form-control" id="comprobantePago" name="comprobante_pago" 
+                               accept=".pdf,.jpg,.jpeg,.png" required>
+                        <div class="form-text">Formatos permitidos: PDF, JPG, PNG (máx. 5MB)</div>
+                    </div>
+                    
+                    <!-- Notas Adicionales -->
+                    <div class="mb-3">
+                        <label for="notasPago" class="form-label">
+                            <i class="fas fa-sticky-note me-1"></i>Notas Adicionales
+                        </label>
+                        <textarea class="form-control" id="notasPago" name="notas" rows="3" 
+                                  placeholder="Información adicional sobre el pago..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="procesarPago()">
+                    <i class="fas fa-check me-1"></i>Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
 
+<!-- JSON Data Script Tag -->
+{{ solicitudes|json_script:"solicitudes-data" }}
+{{ user_info|json_script:"user-info-data" }}
+
+<!-- JavaScript para manejar el modal de detalles -->
+<script>
+// Obtener datos de las solicitudes desde el JSON script tag
+const solicitudesRawData = JSON.parse(document.getElementById('solicitudes-data').textContent);
+const userInfoData = JSON.parse(document.getElementById('user-info-data').textContent);
+
+// Procesar los datos para el formato esperado por el JavaScript
+const solicitudesData = solicitudesRawData.map(solicitud_data => {
+    return {
+        solicitud: {
+            id: userInfoData.tipo === 'empresa' ? 
+                solicitud_data.solicitud.id_solicitud_servicio_empresa : 
+                solicitud_data.solicitud.id_solicitud_servicio_usuario,
+            fecha_solicitud: new Date(solicitud_data.solicitud.fecha_solicitud).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }),
+            fecha_requerida: solicitud_data.solicitud.fecha_requerida ? 
+                new Date(solicitud_data.solicitud.fecha_requerida).toLocaleDateString('es-ES') : 
+                'No especificada',
+            estado: solicitud_data.solicitud.estado,
+            descripcion_detallada: solicitud_data.solicitud.descripcion_detallada || 'Sin descripción',
+            direccion: solicitud_data.solicitud.direccion || '',
+            // Campos de cotización
+            presupuesto_cotizacion: solicitud_data.solicitud.presupuesto_cotizacion || null,
+            descripcion_cotizacion: solicitud_data.solicitud.descripcion_cotizacion || null,
+            fecha_cotizacion: solicitud_data.solicitud.fecha_cotizacion || null,
+            archivo_cotizacion: solicitud_data.solicitud.archivo_cotizacion || null
+        },
+        servicio_info: solicitud_data.servicio_info || {
+            nombre: 'Servicio no especificado',
+            descripcion: 'Sin descripción',
+            precio: 'Consultar',
+            categoria: 'Sin categoría',
+            tipo: 'desconocido'
+        },
+        proveedor_info: solicitud_data.proveedor_info || {
+            nombre: 'Proveedor no especificado',
+            email: '',
+            telefono: '',
+            tipo: 'Desconocido'
+        },
+        sucursal_info: solicitud_data.sucursal_info || {
+            nombre: null,
+            direccion: null,
+            telefono: null
+        }
+    };
+});
+
+function verDetallesSolicitud(index) {
+    const data = solicitudesData[index];
+    
+    // Llenar información de la solicitud
+    document.getElementById('detalle-id-solicitud').textContent = '#' + data.solicitud.id;
+    document.getElementById('detalle-fecha-solicitud').textContent = data.solicitud.fecha_solicitud;
+    document.getElementById('detalle-fecha-requerida').textContent = data.solicitud.fecha_requerida;
+    document.getElementById('detalle-descripcion').textContent = data.solicitud.descripcion_detallada;
+    
+    // Mostrar dirección si existe
+    const direccionContainer = document.getElementById('detalle-direccion-container');
+    if (data.solicitud.direccion && data.solicitud.direccion.trim() !== '') {
+        document.getElementById('detalle-direccion').textContent = data.solicitud.direccion;
+        direccionContainer.style.display = 'block';
+    } else {
+        direccionContainer.style.display = 'none';
+    }
+    
+    // Estado con colores
+    const estadoBadge = document.getElementById('detalle-estado');
+    estadoBadge.textContent = data.solicitud.estado.charAt(0).toUpperCase() + data.solicitud.estado.slice(1);
+    estadoBadge.className = 'badge ';
+    switch(data.solicitud.estado) {
+        case 'pendiente':
+            estadoBadge.className += 'bg-warning text-dark';
+            break;
+        case 'cotizada':
+            estadoBadge.className += 'bg-info';
+            break;
+        case 'aceptada':
+            estadoBadge.className += 'bg-primary';
+            break;
+        case 'pagada':
+        case 'completada':
+            estadoBadge.className += 'bg-success';
+            break;
+        case 'rechazada':
+            estadoBadge.className += 'bg-danger';
+            break;
+        default:
+            estadoBadge.className += 'bg-secondary';
+    }
+    
+    // Llenar información del servicio
+    document.getElementById('detalle-servicio-nombre').textContent = data.servicio_info.nombre || 'Sin nombre';
+    document.getElementById('detalle-servicio-descripcion').textContent = data.servicio_info.descripcion || 'Sin descripción';
+    document.getElementById('detalle-servicio-precio').textContent = (data.servicio_info.precio && data.servicio_info.precio !== 'None' && data.servicio_info.precio !== 'Consultar') ? '$' + data.servicio_info.precio : 'Consultar';
+    document.getElementById('detalle-servicio-categoria').textContent = data.servicio_info.categoria || 'Sin categoría';
+    
+    const tipoServicioBadge = document.getElementById('detalle-servicio-tipo');
+    tipoServicioBadge.textContent = data.servicio_info.tipo === 'usuario' ? 'Usuario Individual' : 'Empresa';
+    tipoServicioBadge.className = 'badge ' + (data.servicio_info.tipo === 'usuario' ? 'bg-success' : 'bg-info');
+    
+    // Llenar información del proveedor
+    document.getElementById('detalle-proveedor-nombre').textContent = data.proveedor_info.nombre || 'Sin nombre';
+    document.getElementById('detalle-proveedor-tipo').textContent = data.proveedor_info.tipo || 'Desconocido';
+    
+    const emailLink = document.getElementById('detalle-proveedor-email');
+    emailLink.textContent = data.proveedor_info.email || 'No disponible';
+    emailLink.href = data.proveedor_info.email ? 'mailto:' + data.proveedor_info.email : '#';
+    
+    const telefonoLink = document.getElementById('detalle-proveedor-telefono');
+    telefonoLink.textContent = data.proveedor_info.telefono || 'No disponible';
+    telefonoLink.href = data.proveedor_info.telefono ? 'tel:' + data.proveedor_info.telefono : '#';
+    
+    // Mostrar información de sucursal si existe
+    const sucursalContainer = document.getElementById('detalle-sucursal-container');
+    if (data.sucursal_info && data.sucursal_info.nombre) {
+        document.getElementById('detalle-sucursal-nombre').textContent = data.sucursal_info.nombre || 'Sin nombre';
+        document.getElementById('detalle-sucursal-direccion').textContent = data.sucursal_info.direccion || 'Sin dirección';
+        
+        const sucursalTelefonoLink = document.getElementById('detalle-sucursal-telefono');
+        sucursalTelefonoLink.textContent = data.sucursal_info.telefono || 'No disponible';
+        sucursalTelefonoLink.href = data.sucursal_info.telefono ? 'tel:' + data.sucursal_info.telefono : '#';
+        
+        sucursalContainer.style.display = 'block';
+    } else {
+        sucursalContainer.style.display = 'none';
+    }
+    
+    // Mostrar información de cotización si existe
+    const cotizacionContainer = document.getElementById('detalle-cotizacion-container');
+    if (data.solicitud.presupuesto_cotizacion || data.solicitud.descripcion_cotizacion) {
+        // Mostrar presupuesto
+        const presupuesto = data.solicitud.presupuesto_cotizacion;
+        document.getElementById('detalle-cotizacion-presupuesto').textContent = presupuesto ? '$' + parseFloat(presupuesto).toFixed(2) : 'No especificado';
+        
+        // Mostrar fecha de cotización
+        const fechaCotizacion = data.solicitud.fecha_cotizacion;
+        document.getElementById('detalle-cotizacion-fecha').textContent = fechaCotizacion ? 
+            new Date(fechaCotizacion).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'No especificada';
+        
+        // Mostrar descripción
+        document.getElementById('detalle-cotizacion-descripcion').textContent = data.solicitud.descripcion_cotizacion || 'Sin descripción';
+        
+        // Mostrar archivo si existe
+        const archivoContainer = document.getElementById('detalle-cotizacion-archivo-container');
+        if (data.solicitud.archivo_cotizacion) {
+            const archivoLink = document.getElementById('detalle-cotizacion-archivo');
+            archivoLink.href = data.solicitud.archivo_cotizacion;
+            archivoContainer.style.display = 'block';
+        } else {
+            archivoContainer.style.display = 'none';
+        }
+        
+        cotizacionContainer.style.display = 'block';
+    } else {
+        cotizacionContainer.style.display = 'none';
+    }
+    
+    // Mostrar/ocultar botón de pago según el estado
+    const btnAceptarCotizacion = document.getElementById('btnAceptarCotizacion');
+    if (data.solicitud.estado === 'cotizada') {
+        btnAceptarCotizacion.style.display = 'inline-block';
+        // Guardar datos para el modal de pago
+        btnAceptarCotizacion.setAttribute('data-solicitud-id', data.solicitud.id);
+        // Determinar el tipo de solicitud basado en el tipo de usuario
+        const tipoSolicitud = userInfoData.tipo === 'empresa' ? 'empresa' : 'usuario';
+        btnAceptarCotizacion.setAttribute('data-tipo-solicitud', tipoSolicitud);
+        btnAceptarCotizacion.setAttribute('data-servicio-nombre', data.servicio_info.nombre);
+        btnAceptarCotizacion.setAttribute('data-proveedor-nombre', data.proveedor_info.nombre);
+        btnAceptarCotizacion.setAttribute('data-monto-cotizado', data.solicitud.presupuesto_cotizacion);
+        btnAceptarCotizacion.setAttribute('data-fecha-cotizacion', data.solicitud.fecha_cotizacion);
+    } else {
+        btnAceptarCotizacion.style.display = 'none';
+    }
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('modalDetallesSolicitud'));
+    modal.show();
+}
+
+// Función para abrir el modal de pago
+function abrirModalPago() {
+    const btn = document.getElementById('btnAceptarCotizacion');
+    
+    // Llenar datos del servicio en el modal de pago
+    document.getElementById('solicitudId').value = btn.getAttribute('data-solicitud-id');
+    document.getElementById('tipoSolicitud').value = btn.getAttribute('data-tipo-solicitud');
+    
+    // Cerrar modal de detalles y abrir modal de pago
+    const modalDetalles = bootstrap.Modal.getInstance(document.getElementById('modalDetallesSolicitud'));
+    modalDetalles.hide();
+    
+    setTimeout(() => {
+        const modalPago = new bootstrap.Modal(document.getElementById('modalPago'));
+        modalPago.show();
+    }, 300);
+}
+
+// Función para procesar el pago
+function procesarPago() {
+    const form = document.getElementById('formPago');
+    const formData = new FormData(form);
+    
+    // Validaciones básicas del frontend
+    const solicitudId = document.getElementById('solicitudId').value;
+    const tipoSolicitud = document.getElementById('tipoSolicitud').value;
+    const metodoPago = document.getElementById('metodoPago').value;
+    const comprobantePago = document.getElementById('comprobantePago').files[0];
+    
+    // Validar campos requeridos
+    if (!solicitudId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'ID de solicitud no encontrado.',
+            confirmButtonColor: '#dc3545'
+        });
+        return;
+    }
+    
+    if (!tipoSolicitud) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Tipo de solicitud no especificado.',
+            confirmButtonColor: '#dc3545'
+        });
+        return;
+    }
+    
+    if (!metodoPago) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Por favor seleccione un método de pago.',
+            confirmButtonColor: '#dc3545'
+        });
+        return;
+    }
+    
+    // Validar comprobante para métodos que lo requieren
+    const metodos_requieren_comprobante = ['transferencia', 'deposito', 'pago_movil'];
+    if (metodos_requieren_comprobante.includes(metodoPago) && !comprobantePago) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Este método de pago requiere un comprobante.',
+            confirmButtonColor: '#dc3545'
+        });
+        return;
+    }
+    
+    // Validar tamaño del archivo
+    if (comprobantePago && comprobantePago.size > 5 * 1024 * 1024) { // 5MB
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El archivo no puede exceder 5MB.',
+            confirmButtonColor: '#dc3545'
+        });
+        return;
+    }
+    
+    // Validar tipo de archivo
+    if (comprobantePago) {
+        const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        if (!tiposPermitidos.includes(comprobantePago.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Formato de archivo no válido. Use JPG, PNG o PDF.',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+    }
+    
+    // Deshabilitar botón durante el procesamiento
+    const btnProcesar = document.querySelector('#modalPago .btn-success');
+    const textoOriginal = btnProcesar.innerHTML;
+    btnProcesar.disabled = true;
+    btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    // Asegurar que el token CSRF esté incluido
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    if (!csrfToken) {
+        console.error('Token CSRF no encontrado');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de seguridad: Token CSRF no encontrado. Por favor, recargue la página.',
+            confirmButtonColor: '#dc3545'
+        });
+        btnProcesar.disabled = false;
+        btnProcesar.innerHTML = textoOriginal;
+        return;
+    }
+    
+    // Depurar información de autenticación y datos del formulario
+    console.log('Cookies disponibles:', document.cookie);
+    console.log('Datos del formulario:', {
+        solicitud_id: solicitudId,
+        tipo_solicitud: tipoSolicitud,
+        metodo_pago: metodoPago,
+        tiene_comprobante: !!comprobantePago
+    });
+    
+    // Enviar datos
+    fetch('/ecommerce/procesar_pago_servicio/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken,
+            // No incluir Content-Type aquí, FormData lo establece automáticamente con el boundary correcto
+        },
+        credentials: 'include' // Usar 'include' en lugar de 'same-origin' para asegurar que todas las cookies se envíen
+    })
+    .then(response => {
+        console.log('Status:', response.status);
+        console.log('Headers:', [...response.headers.entries()]);
+        
+        // Verificar el tipo de contenido antes de intentar parsear como JSON
+        const contentType = response.headers.get('content-type');
+        console.log('Content-Type:', contentType);
+        
+        if (contentType && contentType.includes('application/json')) {
+            return response.json().catch(e => {
+                console.error('Error al parsear JSON:', e);
+                throw new Error('Error al procesar la respuesta del servidor');
+            });
+        } else {
+            // Si no es JSON, verificar si es una redirección a la página de inicio de sesión
+            return response.text().then(text => {
+                console.error('Respuesta no-JSON recibida:', text.substring(0, 500));
+                
+                // Verificar si la respuesta contiene indicadores de página de inicio de sesión
+                if (text.includes('INICIAR SESIÓN') || text.includes('login') || text.includes('iniciar_sesion')) {
+                    // La sesión ha expirado, mostrar mensaje pero no redirigir automáticamente
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de autenticación',
+                        text: 'Ha ocurrido un error de autenticación. Por favor, intenta nuevamente.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    throw new Error('Error de autenticación');
+                } else {
+                    throw new Error('El servidor no devolvió una respuesta JSON válida');
+                }
+            });
+        }
+    })
+    .then(data => {
+        console.log('Respuesta del servidor:', data);
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Pago Exitoso!',
+                text: 'El pago ha sido procesado exitosamente. El proveedor será notificado.',
+                confirmButtonColor: '#28a745'
+            }).then(() => {
+                const modalPago = bootstrap.Modal.getInstance(document.getElementById('modalPago'));
+                modalPago.hide();
+                // Recargar la página para actualizar la tabla
+                location.reload();
+            });
+        } else {
+            // Mostrar error específico del servidor
+            const errorMsg = data.error || 'Error desconocido del servidor';
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al procesar el pago',
+                text: errorMsg,
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error completo:', error);
+        let errorMessage = 'Error al procesar el pago. Por favor, intente nuevamente.';
+        
+        if (error.message.includes('HTTP: 403')) {
+            errorMessage = 'Error de permisos. Por favor, recargue la página e intente nuevamente.';
+        } else if (error.message.includes('HTTP: 500')) {
+            errorMessage = 'Error interno del servidor. Contacte al administrador si el problema persiste.';
+        } else if (error.message.includes('HTTP: 404')) {
+            errorMessage = 'Servicio no encontrado. Verifique la configuración del sistema.';
+        } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            errorMessage = 'Error al comunicarse con el servidor. Por favor, intente nuevamente.';
+        } else if (error.name === 'SyntaxError' || error.message.includes('JSON')) {
+            errorMessage = 'Error en la respuesta del servidor. Contacte al administrador.';
+        } else if (error.message.includes('Error de autenticación')) {
+            errorMessage = 'Error de autenticación. Por favor, intente nuevamente.';
+        }
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error al procesar el pago',
+            text: errorMessage,
+            confirmButtonColor: '#dc3545'
+        });
+    })
+    .finally(() => {
+        // Rehabilitar botón
+        btnProcesar.disabled = false;
+        btnProcesar.innerHTML = textoOriginal;
+    });
+}
+</script>
 
 </body>
 </html>

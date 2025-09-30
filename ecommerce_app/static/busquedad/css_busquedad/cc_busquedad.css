@@ -55,7 +55,41 @@
 }
 
 /* Estilos responsivos */
+
+/* Tablets y dispositivos medianos (992px y menos) */
+@media (max-width: 992px) {
+    .ml-horizontal-card-img {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .ml-horizontal-card-title {
+        font-size: 16px;
+    }
+    
+    .ml-horizontal-card-price {
+        font-size: 18px;
+    }
+}
+
+/* Tablets pequeñas (768px y menos) */
 @media (max-width: 768px) {
+    /* Layout principal */
+    .container-lg {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Ocultar sidebar de filtros en móvil */
+    .col-auto.pe-0 {
+        display: none;
+    }
+    
+    .col.ps-0 {
+        padding-left: 1rem !important;
+    }
+    
+    /* Cards horizontales en columna */
     .ml-horizontal-card {
         flex-direction: column;
     }
@@ -63,5 +97,334 @@
     .ml-horizontal-card-img {
         width: 100%;
         height: 200px;
+    }
+    
+    .ml-horizontal-card-body {
+        padding: 12px;
+    }
+    
+    .ml-horizontal-card-title {
+        font-size: 16px;
+    }
+    
+    .ml-horizontal-card-price {
+        font-size: 18px;
+    }
+    
+    /* Botones de acción */
+    .d-flex.gap-2 {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+    
+    #btnGenerarLocalizacion,
+    #btnCercaDeMi {
+        width: 100%;
+        padding: 10px 16px !important;
+        font-size: 0.9rem;
+    }
+    
+    /* Títulos */
+    h4 {
+        font-size: 1.3rem;
+    }
+    
+    h5 {
+        font-size: 1.1rem;
+    }
+    
+    /* Cards de empresas y usuarios */
+    .col-md-6.col-lg-4 {
+        padding: 0.5rem;
+    }
+    
+    .card-body {
+        padding: 1rem !important;
+    }
+    
+    /* Badges */
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+    
+    /* Paginación */
+    .pagination {
+        font-size: 0.9rem;
+    }
+    
+    .page-link {
+        padding: 0.4rem 0.7rem;
+    }
+}
+
+/* Móviles (576px y menos) */
+@media (max-width: 576px) {
+    /* Layout */
+    .container-lg {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    .py-4 {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
+    }
+    
+    /* Cards horizontales */
+    .ml-horizontal-card {
+        margin-bottom: 1rem;
+    }
+    
+    .ml-horizontal-card-img {
+        height: 180px;
+    }
+    
+    .ml-horizontal-card-body {
+        padding: 10px;
+    }
+    
+    .ml-horizontal-card-title {
+        font-size: 15px;
+        margin-bottom: 6px;
+    }
+    
+    .ml-horizontal-card-price {
+        font-size: 17px;
+    }
+    
+    /* Botones */
+    #btnGenerarLocalizacion,
+    #btnCercaDeMi {
+        padding: 8px 12px !important;
+        font-size: 0.85rem;
+    }
+    
+    #btnGenerarLocalizacion .fas,
+    #btnCercaDeMi .fas {
+        font-size: 0.9em;
+    }
+    
+    /* Títulos */
+    h4 {
+        font-size: 1.2rem;
+    }
+    
+    h5 {
+        font-size: 1rem;
+    }
+    
+    h6 {
+        font-size: 0.95rem;
+    }
+    
+    /* Cards de empresas y usuarios */
+    .col-md-6.col-lg-4 {
+        padding: 0.4rem;
+    }
+    
+    .card {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .card-body {
+        padding: 0.75rem !important;
+    }
+    
+    .card-title {
+        font-size: 0.95rem !important;
+    }
+    
+    .card-text {
+        font-size: 0.8rem !important;
+    }
+    
+    /* Badges más pequeños */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.4rem;
+        margin: 0.1rem;
+    }
+    
+    /* Botones de cards */
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    /* Imágenes de perfil */
+    .rounded-circle[style*="width: 80px"] {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    /* Paginación */
+    .pagination {
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .page-item {
+        margin: 0.1rem;
+    }
+    
+    .page-link {
+        padding: 0.35rem 0.6rem;
+    }
+    
+    .pagination-info small {
+        font-size: 0.75rem;
+    }
+    
+    /* Alertas */
+    .alert {
+        font-size: 0.85rem;
+        padding: 0.75rem;
+    }
+    
+    /* Footer */
+    footer {
+        padding: 2rem 0 !important;
+    }
+    
+    footer .col-lg-3,
+    footer .col-md-2,
+    footer .col-md-6 {
+        margin-bottom: 1.5rem;
+    }
+    
+    footer .widget-title {
+        font-size: 1rem;
+    }
+    
+    footer .nav-link {
+        font-size: 0.85rem;
+    }
+    
+    footer img[alt="logo"] {
+        width: 120px !important;
+        height: auto !important;
+    }
+}
+
+/* Móviles muy pequeños (420px y menos) */
+@media (max-width: 420px) {
+    .container-lg {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    /* Cards horizontales */
+    .ml-horizontal-card-img {
+        height: 160px;
+    }
+    
+    .ml-horizontal-card-title {
+        font-size: 14px;
+    }
+    
+    .ml-horizontal-card-price {
+        font-size: 16px;
+    }
+    
+    /* Botones */
+    #btnGenerarLocalizacion,
+    #btnCercaDeMi {
+        padding: 7px 10px !important;
+        font-size: 0.8rem;
+    }
+    
+    /* Títulos */
+    h4 {
+        font-size: 1.1rem;
+    }
+    
+    h5 {
+        font-size: 0.95rem;
+    }
+    
+    /* Cards */
+    .card-body {
+        padding: 0.6rem !important;
+    }
+    
+    .card-title {
+        font-size: 0.9rem !important;
+    }
+    
+    /* Badges */
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.35rem;
+    }
+    
+    /* Paginación */
+    .page-link {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Imágenes de perfil */
+    .rounded-circle[style*="width: 80px"],
+    .rounded-circle[style*="width: 60px"] {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    footer img[alt="logo"] {
+        width: 100px !important;
+    }
+}
+
+/* Móviles extra pequeños (360px y menos) */
+@media (max-width: 360px) {
+    /* Cards horizontales */
+    .ml-horizontal-card-img {
+        height: 140px;
+    }
+    
+    .ml-horizontal-card-body {
+        padding: 8px;
+    }
+    
+    .ml-horizontal-card-title {
+        font-size: 13px;
+    }
+    
+    .ml-horizontal-card-price {
+        font-size: 15px;
+    }
+    
+    /* Botones */
+    #btnGenerarLocalizacion,
+    #btnCercaDeMi {
+        padding: 6px 8px !important;
+        font-size: 0.75rem;
+    }
+    
+    /* Títulos */
+    h4 {
+        font-size: 1rem;
+    }
+    
+    h5 {
+        font-size: 0.9rem;
+    }
+    
+    /* Cards */
+    .card-body {
+        padding: 0.5rem !important;
+    }
+    
+    /* Badges */
+    .badge {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.3rem;
+    }
+    
+    /* Paginación - Ocultar algunos números */
+    .pagination .page-item:not(.active):not(:first-child):not(:last-child):not(:nth-child(2)):not(:nth-last-child(2)) {
+        display: none;
     }
 }
