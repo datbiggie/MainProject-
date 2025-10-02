@@ -113,4 +113,10 @@ urlpatterns = [
     path('obtener_notificaciones/', views.obtener_notificaciones_usuario, name='obtener_notificaciones_usuario'),
     path('notificaciones/', views.notificaciones, name='notificaciones'),
     path('procesar_pago_servicio/', views.procesar_pago_servicio, name='procesar_pago_servicio'),
+    
+    # Reportes
+    path('reporte_ventas/', views.reporte_ventas, name='reporte_ventas'),
+    path('api/obtener_datos_reporte/', views.api_obtener_datos_reporte, name='api_obtener_datos_reporte'),
+    path('reporte_productos/', views.reporte_productos, name='reporte_productos'),
+    path('api/obtener_datos_reporte_productos/', views.api_obtener_datos_reporte_productos, name='api_obtener_datos_reporte_productos'),
 ]

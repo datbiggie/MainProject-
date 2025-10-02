@@ -253,6 +253,30 @@
             {% endif %}
           </li>
           <li class="nav-item">
+            {% if user_info.is_authenticated %}
+              <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasReportesCollapse" aria-expanded="false" aria-controls="offcanvasReportesCollapse" style="box-shadow:none;">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M3 13h2v8H3zm4-6h2v14H7zm4-6h2v20h-2zm4 2h2v18h-2zm4 5h2v13h-2z"/>
+                </svg>
+                <span>Reportes</span>
+                <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
+              </button>
+              <div class="collapse ps-5" id="offcanvasReportesCollapse">
+                <ul class="list-unstyled mb-0">
+                  <li><a class="nav-link no-blue-effect" href="{% url 'reporte_ventas' %}">Reporte de Ventas</a></li>
+                  <li><a class="nav-link no-blue-effect" href="{% url 'reporte_productos' %}">Reporte de Productos</a></li>
+                </ul>
+              </div>
+            {% else %}
+              <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver los reportes')">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M3 13h2v8H3zm4-6h2v14H7zm4-6h2v20h-2zm4 2h2v18h-2zm4 5h2v13h-2z"/>
+                </svg>
+                <span>Reportes</span>
+              </a>
+            {% endif %}
+          </li>
+          <li class="nav-item">
             <a href="#" class="nav-link d-flex align-items-center gap-3">
               <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#user"></use></svg>
               <span>Mi cuenta / Perfil</span>
@@ -263,7 +287,7 @@
       </div>
 
     </div>
-     <header>
+     <header style="position: sticky; top: 0; z-index: 1000; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <div class="container-fluid">
         <div class="row py-3 border-bottom align-items-center">
           

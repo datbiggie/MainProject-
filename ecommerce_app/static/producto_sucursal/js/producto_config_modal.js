@@ -100,9 +100,13 @@ function initializeModalEvents() {
 // ========================= Atributos Dinámicos =========================
 function cargarAtributosDinamicos(categoriaId, productId = null) {
     console.log('cargarAtributosDinamicos llamada con:', categoriaId, productId);
+    const atributosAccordion = document.getElementById('edit-atributos-accordion');
+    
     if (!categoriaId) {
         console.log('No hay categoriaId, ocultando contenedor');
-        document.getElementById('edit-atributos-container').style.display = 'none';
+        if (atributosAccordion) {
+            atributosAccordion.style.display = 'none';
+        }
         return;
     }
     
@@ -123,15 +127,32 @@ function cargarAtributosDinamicos(categoriaId, productId = null) {
         if (data.success && data.atributos && data.atributos.length > 0) {
             console.log('Generando campos para', data.atributos.length, 'atributos');
             generarCamposAtributosEdit(data.atributos, productId);
-            document.getElementById('edit-atributos-container').style.display = 'block';
+            
+            // Mostrar el acordeón de atributos
+            if (atributosAccordion) {
+                atributosAccordion.style.display = 'block';
+                
+                // Actualizar el contador de atributos
+                const badge = document.getElementById('attributes-count');
+                if (badge) {
+                    badge.textContent = data.atributos.length;
+                }
+                
+                // NO expandir automáticamente - dejar contraído
+                // El usuario puede expandirlo manualmente si lo necesita
+            }
         } else {
             console.log('No hay atributos o no exitoso, ocultando contenedor');
-            document.getElementById('edit-atributos-container').style.display = 'none';
+            if (atributosAccordion) {
+                atributosAccordion.style.display = 'none';
+            }
         }
     })
     .catch(error => {
         console.error('Error al cargar atributos:', error);
-        document.getElementById('edit-atributos-container').style.display = 'none';
+        if (atributosAccordion) {
+            atributosAccordion.style.display = 'none';
+        }
     });
 }
 
@@ -156,25 +177,31 @@ function generarCamposAtributosEdit(atributos, productId = null) {
 
 function generarCampoAtributoEdit(atributo) {
     const required = atributo.obligatorio ? 'required' : '';
-    const requiredAsterisk = atributo.obligatorio ? '<span style="color: red;">*</span>' : '';
+    const requiredAsterisk = atributo.obligatorio ? '<span class="text-danger">*</span>' : '';
     
     let inputHtml = '';
+    let iconClass = 'lni lni-text-format'; // Icono por defecto
     
     const attrId = atributo.id_atributo;
     switch (atributo.tipo_dato) {
         case 'texto':
+            iconClass = 'lni lni-text-format';
             inputHtml = `<input type="text" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
             break;
         case 'numero':
+            iconClass = 'lni lni-calculator';
             inputHtml = `<input type="number" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
             break;
         case 'decimal':
+            iconClass = 'lni lni-calculator';
             inputHtml = `<input type="number" step="0.01" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
             break;
         case 'fecha':
+            iconClass = 'lni lni-calendar';
             inputHtml = `<input type="date" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>`;
             break;
         case 'booleano':
+            iconClass = 'lni lni-checkmark-circle';
             inputHtml = `
                 <select class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>
                     <option value="">Seleccione una opción</option>
@@ -183,6 +210,7 @@ function generarCampoAtributoEdit(atributo) {
                 </select>`;
             break;
         case 'lista':
+            iconClass = 'lni lni-list';
             let opciones = '<option value="">Seleccione una opción</option>';
             if (atributo.opciones) {
                 atributo.opciones.forEach(opcion => {
@@ -195,10 +223,20 @@ function generarCampoAtributoEdit(atributo) {
             inputHtml = `<input type="text" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
     }
     
+    // Descripción del atributo si existe
+    const descripcionHtml = atributo.descripcion ? 
+        `<small class="form-text text-muted"><i class="lni lni-information me-1"></i>${atributo.descripcion}</small>` : '';
+    
     return `
-        <div class="form-group">
-            <label for="edit_atributo_${attrId}">${atributo.nombre} ${requiredAsterisk}</label>
-            ${inputHtml}
+        <div class="col-md-6 mb-3">
+            <div class="form-group">
+                <label for="edit_atributo_${attrId}" class="form-label fw-bold">
+                    <i class="${iconClass} me-1"></i>
+                    ${atributo.nombre} ${requiredAsterisk}
+                </label>
+                ${inputHtml}
+                ${descripcionHtml}
+            </div>
         </div>
     `;
 }
