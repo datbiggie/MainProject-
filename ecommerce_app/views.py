@@ -1091,11 +1091,9 @@ def registrar_empresa(request):
             estado_empresa = request.POST.get('estado_empresa')
             tipo_empresa = request.POST.get('tipo_empresa')
             direccion_empresa = request.POST.get('direccion_empresa')
-            latitud = request.POST.get('latitud')
-            longitud = request.POST.get('longitud')
 
             # Validar que todos los campos estén completos
-            if not nombre_empresa or not correo_empresa or not password_empresa or not confirm_password or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa or not latitud or not longitud:
+            if not nombre_empresa or not correo_empresa or not password_empresa or not confirm_password or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa:
                 logger.warning("Campos obligatorios faltantes en registro de empresa")
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1191,9 +1189,7 @@ def registrar_empresa(request):
                 pais_empresa=pais_empresa,
                 estado_empresa=estado_empresa,
                 tipo_empresa=tipo_empresa,  
-                direccion_empresa=direccion_empresa,
-                latitud_empresa=latitud,
-                longitud_empresa=longitud
+                direccion_empresa=direccion_empresa
             )
             nueva_empresa.save()
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
@@ -3087,6 +3083,18 @@ def editar_producto(request):
                     if categoria_id:
                         try:
                             categoria_obj = categoria_producto_empresa.objects.get(id_categoria_prod_empresa=categoria_id)
+                            
+                            # Detectar si cambió la categoría
+                            categoria_cambio = producto_obj.id_categoria_prod_fk != categoria_obj
+                            
+                            if categoria_cambio:
+                                # Eliminar todos los valores de atributos antiguos asociados a la categoría anterior
+                                from .models import ValorAtributoProducto
+                                valores_eliminados = ValorAtributoProducto.objects.filter(
+                                    producto_empresa=producto_obj
+                                ).delete()
+                                logger.info(f"Categoría cambiada. Eliminados {valores_eliminados[0]} valores de atributos antiguos")
+                            
                             producto_obj.id_categoria_prod_fk = categoria_obj
                         except categoria_producto_empresa.DoesNotExist:
                             return JsonResponse({
@@ -3196,6 +3204,18 @@ def editar_producto(request):
                     if categoria_id:
                         try:
                             categoria_obj = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
+                            
+                            # Detectar si cambió la categoría
+                            categoria_cambio = producto_obj.id_categoria_prod_fk != categoria_obj
+                            
+                            if categoria_cambio:
+                                # Eliminar todos los valores de atributos antiguos asociados a la categoría anterior
+                                from .models import ValorAtributoProducto
+                                valores_eliminados = ValorAtributoProducto.objects.filter(
+                                    producto_usuario=producto_obj
+                                ).delete()
+                                logger.info(f"Categoría cambiada. Eliminados {valores_eliminados[0]} valores de atributos antiguos")
+                            
                             producto_obj.id_categoria_prod_fk = categoria_obj
                         except categoria_producto_usuario.DoesNotExist:
                             return JsonResponse({
@@ -11421,14 +11441,26 @@ def api_obtener_atributos_categoria(request):
         # Obtener atributos según el tipo de cuenta
         if account_type == 'empresa':
             # Para empresas, buscar en categoria_empresa
+            logger.info(f"Buscando atributos para empresa - categoria_empresa_id={categoria_id}")
             atributos_categoria = CategoriaAtributo.objects.filter(
                 categoria_empresa_id=categoria_id
             ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+            logger.info(f"Encontrados {atributos_categoria.count()} atributos para empresa")
         else:
             # Para usuarios, buscar en categoria_usuario
+            logger.info(f"Buscando atributos para usuario - categoria_usuario_id={categoria_id}")
             atributos_categoria = CategoriaAtributo.objects.filter(
                 categoria_usuario_id=categoria_id
             ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+            logger.info(f"Encontrados {atributos_categoria.count()} atributos para usuario")
+            
+            # Si no hay atributos para usuario, intentar buscar en empresa
+            if atributos_categoria.count() == 0:
+                logger.warning(f"No se encontraron atributos en categoria_usuario. Intentando en categoria_empresa...")
+                atributos_categoria = CategoriaAtributo.objects.filter(
+                    categoria_empresa_id=categoria_id
+                ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+                logger.info(f"Encontrados {atributos_categoria.count()} atributos en categoria_empresa")
         
         # Construir la lista de atributos
         atributos_list = []
