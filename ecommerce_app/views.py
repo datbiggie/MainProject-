@@ -542,8 +542,8 @@ def api_filtrar_productos(request):
                     'stock_producto_usuario': prod.stock_producto_usuario or 0,
                     'condicion_producto_usuario': prod.condicion_producto_usuario or '',
                     'estatus_producto_usuario': prod.estatus_producto_usuario or '',
-                    'latitud_producto_usuario': str(prod.latitud_producto_usuario) if prod.latitud_producto_usuario else '',
-                    'longitud_producto_usuario': str(prod.longitud_producto_usuario) if prod.longitud_producto_usuario else '',
+                    'latitud_producto_usuario': str(prod.latitud_entrega_producto) if prod.latitud_entrega_producto else '',
+                    'longitud_producto_usuario': str(prod.longitud_entrega_producto) if prod.longitud_entrega_producto else '',
                     'serial': idx,
                     'imagen_url': imagen_url
                 })
@@ -1091,11 +1091,9 @@ def registrar_empresa(request):
             estado_empresa = request.POST.get('estado_empresa')
             tipo_empresa = request.POST.get('tipo_empresa')
             direccion_empresa = request.POST.get('direccion_empresa')
-            latitud = request.POST.get('latitud')
-            longitud = request.POST.get('longitud')
 
             # Validar que todos los campos estén completos
-            if not nombre_empresa or not correo_empresa or not password_empresa or not confirm_password or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa or not latitud or not longitud:
+            if not nombre_empresa or not correo_empresa or not password_empresa or not confirm_password or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa:
                 logger.warning("Campos obligatorios faltantes en registro de empresa")
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1191,9 +1189,7 @@ def registrar_empresa(request):
                 pais_empresa=pais_empresa,
                 estado_empresa=estado_empresa,
                 tipo_empresa=tipo_empresa,  
-                direccion_empresa=direccion_empresa,
-                latitud_empresa=latitud,
-                longitud_empresa=longitud
+                direccion_empresa=direccion_empresa
             )
             nueva_empresa.save()
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
@@ -2939,6 +2935,15 @@ def producto_config_funcion(request):
         producto_sucursal_all = producto_sucursal.objects.select_related('id_producto_fk').filter(id_producto_fk__id_empresa_fk=empresa_obj)
         categoria_producto_all = categoria_producto_empresa.objects.filter(id_empresa_fk=empresa_obj)
         
+        # Calcular estadísticas de productos para empresa
+        # Para empresas, contamos productos únicos que tienen al menos una sucursal con ese estatus
+        total_productos = productos_all.count()
+        # Productos que tienen al menos una sucursal activa
+        productos_activos = productos_all.filter(sucursales_producto__estatus_producto_sucursal='Activo').distinct().count()
+        # Productos que solo tienen sucursales inactivas o no tienen sucursales
+        productos_con_sucursal = productos_all.filter(sucursales_producto__isnull=False).distinct()
+        productos_inactivos = productos_all.exclude(sucursales_producto__estatus_producto_sucursal='Activo').distinct().count()
+        
         # Agregar la primera imagen de cada producto y las sucursales asignadas
         productos_con_imagenes = []
         for prod in productos_all:
@@ -2964,6 +2969,11 @@ def producto_config_funcion(request):
         producto_sucursal_all = []  # Los usuarios no tienen sucursales
         categoria_producto_all = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
         
+        # Calcular estadísticas de productos
+        total_productos = productos_all.count()
+        productos_activos = productos_all.filter(estatus_producto_usuario='Activo').count()
+        productos_inactivos = productos_all.filter(estatus_producto_usuario='Inactivo').count()
+        
         # Agregar la primera imagen de cada producto
         productos_con_imagenes = []
         for prod in productos_all:
@@ -2975,7 +2985,10 @@ def producto_config_funcion(request):
         'producto_sucursal_all': productos_con_imagenes,  # Mantenemos el mismo nombre de variable para no cambiar la plantilla
         'producto_sucursal_relaciones': producto_sucursal_all,  # Añadimos las relaciones
         'categoria_producto_all': categoria_producto_all,
-        'user_info': user_info
+        'user_info': user_info,
+        'total_productos': total_productos,
+        'productos_activos': productos_activos,
+        'productos_inactivos': productos_inactivos
     })
 
 
@@ -3070,6 +3083,18 @@ def editar_producto(request):
                     if categoria_id:
                         try:
                             categoria_obj = categoria_producto_empresa.objects.get(id_categoria_prod_empresa=categoria_id)
+                            
+                            # Detectar si cambió la categoría
+                            categoria_cambio = producto_obj.id_categoria_prod_fk != categoria_obj
+                            
+                            if categoria_cambio:
+                                # Eliminar todos los valores de atributos antiguos asociados a la categoría anterior
+                                from .models import ValorAtributoProducto
+                                valores_eliminados = ValorAtributoProducto.objects.filter(
+                                    producto_empresa=producto_obj
+                                ).delete()
+                                logger.info(f"Categoría cambiada. Eliminados {valores_eliminados[0]} valores de atributos antiguos")
+                            
                             producto_obj.id_categoria_prod_fk = categoria_obj
                         except categoria_producto_empresa.DoesNotExist:
                             return JsonResponse({
@@ -3099,6 +3124,32 @@ def editar_producto(request):
                     
                     producto_obj.save()
                     logger.info(f"Producto de empresa actualizado exitosamente: {producto_obj.nombre_producto_empresa}")
+                    
+                    # Procesar atributos EAV dinámicos
+                    from .models import AtributoProducto, ValorAtributoProducto
+                    from .eav_helpers import EAVHelper
+                    
+                    for key, value in request.POST.items():
+                        if key.startswith('atributo_'):
+                            try:
+                                atributo_id = key.replace('atributo_', '')
+                                atributo = AtributoProducto.objects.get(id_atributo=atributo_id)
+                                
+                                # Si el valor está vacío, eliminar el valor existente si existe
+                                if not value or not value.strip():
+                                    ValorAtributoProducto.objects.filter(
+                                        producto_empresa=producto_obj,
+                                        atributo=atributo
+                                    ).delete()
+                                    logger.info(f"Atributo {atributo.nombre} eliminado (valor vacío)")
+                                else:
+                                    # Guardar o actualizar el valor
+                                    EAVHelper.asignar_valor_producto_empresa(producto_obj, atributo, value)
+                                    logger.info(f"Atributo {atributo.nombre} actualizado con valor: {value}")
+                            except AtributoProducto.DoesNotExist:
+                                logger.warning(f"Atributo con ID {atributo_id} no encontrado")
+                            except Exception as e:
+                                logger.error(f"Error al guardar atributo {key}: {str(e)}")
                     
                     return JsonResponse({
                         'success': True,
@@ -3153,6 +3204,18 @@ def editar_producto(request):
                     if categoria_id:
                         try:
                             categoria_obj = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
+                            
+                            # Detectar si cambió la categoría
+                            categoria_cambio = producto_obj.id_categoria_prod_fk != categoria_obj
+                            
+                            if categoria_cambio:
+                                # Eliminar todos los valores de atributos antiguos asociados a la categoría anterior
+                                from .models import ValorAtributoProducto
+                                valores_eliminados = ValorAtributoProducto.objects.filter(
+                                    producto_usuario=producto_obj
+                                ).delete()
+                                logger.info(f"Categoría cambiada. Eliminados {valores_eliminados[0]} valores de atributos antiguos")
+                            
                             producto_obj.id_categoria_prod_fk = categoria_obj
                         except categoria_producto_usuario.DoesNotExist:
                             return JsonResponse({
@@ -3182,6 +3245,32 @@ def editar_producto(request):
                     
                     producto_obj.save()
                     logger.info(f"Producto de usuario actualizado exitosamente: {producto_obj.nombre_producto_usuario}")
+                    
+                    # Procesar atributos EAV dinámicos
+                    from .models import AtributoProducto, ValorAtributoProducto
+                    from .eav_helpers import EAVHelper
+                    
+                    for key, value in request.POST.items():
+                        if key.startswith('atributo_'):
+                            try:
+                                atributo_id = key.replace('atributo_', '')
+                                atributo = AtributoProducto.objects.get(id_atributo=atributo_id)
+                                
+                                # Si el valor está vacío, eliminar el valor existente si existe
+                                if not value or not value.strip():
+                                    ValorAtributoProducto.objects.filter(
+                                        producto_usuario=producto_obj,
+                                        atributo=atributo
+                                    ).delete()
+                                    logger.info(f"Atributo {atributo.nombre} eliminado (valor vacío)")
+                                else:
+                                    # Guardar o actualizar el valor
+                                    EAVHelper.asignar_valor_producto_usuario(producto_obj, atributo, value)
+                                    logger.info(f"Atributo {atributo.nombre} actualizado con valor: {value}")
+                            except AtributoProducto.DoesNotExist:
+                                logger.warning(f"Atributo con ID {atributo_id} no encontrado")
+                            except Exception as e:
+                                logger.error(f"Error al guardar atributo {key}: {str(e)}")
                     
                     return JsonResponse({
                         'success': True,
@@ -4965,11 +5054,31 @@ def vista_items(request):
                 }
                 for v in valores_atributos
             ]
+        
+        # Verificar si el item está en favoritos del usuario
+        es_favorito = False
+        if current_user and account_type == 'usuario' and item_data:
+            favorito_filter = {'id_usuario_fk': current_user}
+            
+            if item_tipo == 'producto':
+                if item_origen == 'empresa':
+                    favorito_filter['id_producto_sucursal_fk'] = item_data['id']
+                else:
+                    favorito_filter['id_producto_usuario_fk'] = item_data['id']
+            elif item_tipo == 'servicio':
+                if item_origen == 'empresa':
+                    favorito_filter['id_servicio_sucursal_fk'] = item_data['id']
+                else:
+                    favorito_filter['id_servicio_usuario_fk'] = item_data['id']
+            
+            es_favorito = favorito_usuario.objects.filter(**favorito_filter).exists()
+        
         context = {
             'item': item_data,
             'imagenes': imagenes,
             'user_info': user_info,
-            'atributos_producto': atributos_producto
+            'atributos_producto': atributos_producto,
+            'es_favorito': es_favorito
         }
 
         print(f"DEBUG: Renderizando vista_items exitosamente para {item_data['tipo']}: {item_data['nombre']}")
@@ -11332,14 +11441,26 @@ def api_obtener_atributos_categoria(request):
         # Obtener atributos según el tipo de cuenta
         if account_type == 'empresa':
             # Para empresas, buscar en categoria_empresa
+            logger.info(f"Buscando atributos para empresa - categoria_empresa_id={categoria_id}")
             atributos_categoria = CategoriaAtributo.objects.filter(
                 categoria_empresa_id=categoria_id
             ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+            logger.info(f"Encontrados {atributos_categoria.count()} atributos para empresa")
         else:
             # Para usuarios, buscar en categoria_usuario
+            logger.info(f"Buscando atributos para usuario - categoria_usuario_id={categoria_id}")
             atributos_categoria = CategoriaAtributo.objects.filter(
                 categoria_usuario_id=categoria_id
             ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+            logger.info(f"Encontrados {atributos_categoria.count()} atributos para usuario")
+            
+            # Si no hay atributos para usuario, intentar buscar en empresa
+            if atributos_categoria.count() == 0:
+                logger.warning(f"No se encontraron atributos en categoria_usuario. Intentando en categoria_empresa...")
+                atributos_categoria = CategoriaAtributo.objects.filter(
+                    categoria_empresa_id=categoria_id
+                ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+                logger.info(f"Encontrados {atributos_categoria.count()} atributos en categoria_empresa")
         
         # Construir la lista de atributos
         atributos_list = []
@@ -12595,3 +12716,669 @@ def procesar_pago_servicio(request):
         logger.error(f"Error en procesar_pago_servicio: {str(e)}")
         logger.error(traceback.format_exc())
         return JsonResponse({'success': False, 'error': f'Error interno del servidor: {str(e)}'})
+
+
+# ==================== REPORTES DE VENTAS ====================
+
+@require_login
+def reporte_ventas(request):
+    """
+    Vista principal para el reporte de ventas con filtros personalizables
+    """
+    try:
+        current_user = get_current_user(request)
+        if not current_user:
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Obtener user_info
+        user_info = get_user_info_with_avatar(current_user, account_type)
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+        }
+        
+        return render(request, 'ecommerce_app/reporte_ventas.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en reporte_ventas: {str(e)}")
+        return redirect('/ecommerce/index/')
+
+
+@require_http_methods(["GET"])
+def api_obtener_datos_reporte(request):
+    """
+    API para obtener los datos del reporte de ventas según los filtros aplicados
+    """
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Sum, Count, Avg, Q
+        from decimal import Decimal
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'error': 'Usuario no autenticado'})
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Obtener parámetros de filtro
+        fecha_inicio = request.GET.get('fecha_inicio')
+        fecha_fin = request.GET.get('fecha_fin')
+        tipo_reporte = request.GET.get('tipo_reporte', 'personalizado')  # diario, semanal, mensual, personalizado
+        sucursal_id = request.GET.get('sucursal_id')
+        
+        # Configurar fechas según el tipo de reporte
+        if tipo_reporte == 'diario':
+            fecha_fin = timezone.now()
+            fecha_inicio = fecha_fin - timedelta(days=1)
+        elif tipo_reporte == 'semanal':
+            fecha_fin = timezone.now()
+            fecha_inicio = fecha_fin - timedelta(days=7)
+        elif tipo_reporte == 'mensual':
+            fecha_fin = timezone.now()
+            fecha_inicio = fecha_fin - timedelta(days=30)
+        else:
+            # Personalizado - usar las fechas proporcionadas
+            if fecha_inicio:
+                fecha_inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+                fecha_inicio = timezone.make_aware(fecha_inicio)
+            else:
+                fecha_inicio = timezone.now() - timedelta(days=30)
+            
+            if fecha_fin:
+                fecha_fin = datetime.strptime(fecha_fin, '%Y-%m-%d')
+                fecha_fin = timezone.make_aware(fecha_fin.replace(hour=23, minute=59, second=59))
+            else:
+                fecha_fin = timezone.now()
+        
+        # Inicializar variables
+        ventas_data = []
+        total_ventas = Decimal('0.00')
+        total_pedidos = 0
+        ticket_promedio = Decimal('0.00')
+        productos_vendidos = []
+        ventas_por_dia = []
+        
+        if account_type == 'empresa':
+            # Filtrar ventas de la empresa
+            query_usuario = Q(
+                id_fk_producto_sucursal_empresa__id_sucursal_fk__id_empresa_fk=current_user,
+                id_pedido_fk__fecha_pedido__range=[fecha_inicio, fecha_fin],
+                id_pedido_fk__estado_pedido__in=['confirmado', 'enviado', 'entregado']
+            )
+            
+            query_empresa = Q(
+                id_fk_producto_sucursal_empresa__id_sucursal_fk__id_empresa_fk=current_user,
+                id_pedido_fk__fecha_pedido__range=[fecha_inicio, fecha_fin],
+                id_pedido_fk__estado_pedido__in=['confirmado', 'enviado', 'entregado']
+            )
+            
+            # Si se especifica sucursal, filtrar por ella
+            if sucursal_id:
+                query_usuario &= Q(id_fk_producto_sucursal_empresa__id_sucursal_fk__id_sucursal=sucursal_id)
+                query_empresa &= Q(id_fk_producto_sucursal_empresa__id_sucursal_fk__id_sucursal=sucursal_id)
+            
+            # Obtener detalles de pedidos de usuarios
+            detalles_usuario = detalle_pedido_usuario.objects.filter(query_usuario).select_related(
+                'id_pedido_fk',
+                'id_fk_producto_sucursal_empresa__id_producto_fk',
+                'id_fk_producto_sucursal_empresa__id_sucursal_fk'
+            )
+            
+            # Obtener detalles de pedidos de empresas
+            detalles_empresa = detalle_pedido_empresa.objects.filter(query_empresa).select_related(
+                'id_pedido_fk',
+                'id_fk_producto_sucursal_empresa__id_producto_fk',
+                'id_fk_producto_sucursal_empresa__id_sucursal_fk'
+            )
+            
+            # Procesar detalles de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                sucursal_venta = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk
+                
+                ventas_data.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha': pedido.fecha_pedido.strftime('%Y-%m-%d %H:%M'),
+                    'producto': producto.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': float(detalle.precio_unitario_pedido),
+                    'subtotal': float(detalle.subtotal_detalle_pedido),
+                    'estado': pedido.estado_pedido,
+                    'sucursal': sucursal_venta.nombre_sucursal,
+                    'tipo_comprador': 'Usuario'
+                })
+                
+                total_ventas += detalle.subtotal_detalle_pedido
+            
+            # Procesar detalles de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                sucursal_venta = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk
+                
+                ventas_data.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha': pedido.fecha_pedido.strftime('%Y-%m-%d %H:%M'),
+                    'producto': producto.nombre_producto_empresa,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': float(detalle.precio_unitario_pedido),
+                    'subtotal': float(detalle.subtotal_detalle_pedido),
+                    'estado': pedido.estado_pedido,
+                    'sucursal': sucursal_venta.nombre_sucursal,
+                    'tipo_comprador': 'Empresa'
+                })
+                
+                total_ventas += detalle.subtotal_detalle_pedido
+            
+            # Calcular productos más vendidos
+            productos_vendidos_query = detalle_pedido_usuario.objects.filter(query_usuario).values(
+                'id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido')
+            ).order_by('-total_cantidad')[:5]
+            
+            productos_vendidos_query_empresa = detalle_pedido_empresa.objects.filter(query_empresa).values(
+                'id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido')
+            ).order_by('-total_cantidad')[:5]
+            
+            # Combinar productos vendidos
+            productos_dict = {}
+            for p in productos_vendidos_query:
+                nombre = p['id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa']
+                if nombre in productos_dict:
+                    productos_dict[nombre]['cantidad'] += p['total_cantidad']
+                    productos_dict[nombre]['ingresos'] += float(p['total_ingresos'])
+                else:
+                    productos_dict[nombre] = {
+                        'nombre': nombre,
+                        'cantidad': p['total_cantidad'],
+                        'ingresos': float(p['total_ingresos'])
+                    }
+            
+            for p in productos_vendidos_query_empresa:
+                nombre = p['id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa']
+                if nombre in productos_dict:
+                    productos_dict[nombre]['cantidad'] += p['total_cantidad']
+                    productos_dict[nombre]['ingresos'] += float(p['total_ingresos'])
+                else:
+                    productos_dict[nombre] = {
+                        'nombre': nombre,
+                        'cantidad': p['total_cantidad'],
+                        'ingresos': float(p['total_ingresos'])
+                    }
+            
+            productos_vendidos = sorted(productos_dict.values(), key=lambda x: x['cantidad'], reverse=True)[:5]
+            
+            # Obtener pedidos únicos
+            pedidos_unicos_usuario = detalle_pedido_usuario.objects.filter(query_usuario).values('id_pedido_fk').distinct()
+            pedidos_unicos_empresa = detalle_pedido_empresa.objects.filter(query_empresa).values('id_pedido_fk').distinct()
+            total_pedidos = pedidos_unicos_usuario.count() + pedidos_unicos_empresa.count()
+            
+        else:
+            # Usuario individual
+            query_usuario = Q(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__fecha_pedido__range=[fecha_inicio, fecha_fin],
+                id_pedido_fk__estado_pedido__in=['confirmado', 'enviado', 'entregado']
+            )
+            
+            query_empresa = Q(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__fecha_pedido__range=[fecha_inicio, fecha_fin],
+                id_pedido_fk__estado_pedido__in=['confirmado', 'enviado', 'entregado']
+            )
+            
+            # Obtener detalles de pedidos de usuarios
+            detalles_usuario = detalle_pedido_usuario.objects.filter(query_usuario).select_related(
+                'id_pedido_fk',
+                'idproducto_fk_usuario'
+            )
+            
+            # Obtener detalles de pedidos de empresas
+            detalles_empresa = detalle_pedido_empresa.objects.filter(query_empresa).select_related(
+                'id_pedido_fk',
+                'idproducto_fk_usuario'
+            )
+            
+            # Procesar detalles de usuarios
+            for detalle in detalles_usuario:
+                pedido = detalle.id_pedido_fk
+                producto = detalle.idproducto_fk_usuario
+                
+                ventas_data.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha': pedido.fecha_pedido.strftime('%Y-%m-%d %H:%M'),
+                    'producto': producto.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': float(detalle.precio_unitario_pedido),
+                    'subtotal': float(detalle.subtotal_detalle_pedido),
+                    'estado': pedido.estado_pedido,
+                    'tipo_comprador': 'Usuario'
+                })
+                
+                total_ventas += detalle.subtotal_detalle_pedido
+            
+            # Procesar detalles de empresas
+            for detalle in detalles_empresa:
+                pedido = detalle.id_pedido_fk
+                producto = detalle.idproducto_fk_usuario
+                
+                ventas_data.append({
+                    'numero_pedido': pedido.numero_pedido,
+                    'fecha': pedido.fecha_pedido.strftime('%Y-%m-%d %H:%M'),
+                    'producto': producto.nombre_producto_usuario,
+                    'cantidad': detalle.cantidad_detalle_pedido,
+                    'precio_unitario': float(detalle.precio_unitario_pedido),
+                    'subtotal': float(detalle.subtotal_detalle_pedido),
+                    'estado': pedido.estado_pedido,
+                    'tipo_comprador': 'Empresa'
+                })
+                
+                total_ventas += detalle.subtotal_detalle_pedido
+            
+            # Calcular productos más vendidos
+            productos_vendidos_query = detalle_pedido_usuario.objects.filter(query_usuario).values(
+                'idproducto_fk_usuario__nombre_producto_usuario'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido')
+            ).order_by('-total_cantidad')[:5]
+            
+            productos_vendidos_query_empresa = detalle_pedido_empresa.objects.filter(query_empresa).values(
+                'idproducto_fk_usuario__nombre_producto_usuario'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido')
+            ).order_by('-total_cantidad')[:5]
+            
+            # Combinar productos vendidos
+            productos_dict = {}
+            for p in productos_vendidos_query:
+                nombre = p['idproducto_fk_usuario__nombre_producto_usuario']
+                if nombre in productos_dict:
+                    productos_dict[nombre]['cantidad'] += p['total_cantidad']
+                    productos_dict[nombre]['ingresos'] += float(p['total_ingresos'])
+                else:
+                    productos_dict[nombre] = {
+                        'nombre': nombre,
+                        'cantidad': p['total_cantidad'],
+                        'ingresos': float(p['total_ingresos'])
+                    }
+            
+            for p in productos_vendidos_query_empresa:
+                nombre = p['idproducto_fk_usuario__nombre_producto_usuario']
+                if nombre in productos_dict:
+                    productos_dict[nombre]['cantidad'] += p['total_cantidad']
+                    productos_dict[nombre]['ingresos'] += float(p['total_ingresos'])
+                else:
+                    productos_dict[nombre] = {
+                        'nombre': nombre,
+                        'cantidad': p['total_cantidad'],
+                        'ingresos': float(p['total_ingresos'])
+                    }
+            
+            productos_vendidos = sorted(productos_dict.values(), key=lambda x: x['cantidad'], reverse=True)[:5]
+            
+            # Obtener pedidos únicos
+            pedidos_unicos_usuario = detalle_pedido_usuario.objects.filter(query_usuario).values('id_pedido_fk').distinct()
+            pedidos_unicos_empresa = detalle_pedido_empresa.objects.filter(query_empresa).values('id_pedido_fk').distinct()
+            total_pedidos = pedidos_unicos_usuario.count() + pedidos_unicos_empresa.count()
+        
+        # Calcular ticket promedio
+        if total_pedidos > 0:
+            ticket_promedio = total_ventas / total_pedidos
+        
+        # Calcular ventas por día para el gráfico
+        ventas_por_dia_dict = {}
+        for venta in ventas_data:
+            fecha_venta = venta['fecha'].split(' ')[0]
+            if fecha_venta in ventas_por_dia_dict:
+                ventas_por_dia_dict[fecha_venta] += venta['subtotal']
+            else:
+                ventas_por_dia_dict[fecha_venta] = venta['subtotal']
+        
+        ventas_por_dia = [{'fecha': k, 'total': v} for k, v in sorted(ventas_por_dia_dict.items())]
+        
+        # Obtener sucursales (solo para empresas)
+        sucursales_list = []
+        if account_type == 'empresa':
+            sucursales_obj = sucursal.objects.filter(id_empresa_fk=current_user)
+            sucursales_list = [{'id': s.id_sucursal, 'nombre': s.nombre_sucursal} for s in sucursales_obj]
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'ventas': ventas_data,
+                'total_ventas': float(total_ventas),
+                'total_pedidos': total_pedidos,
+                'ticket_promedio': float(ticket_promedio),
+                'productos_vendidos': productos_vendidos,
+                'ventas_por_dia': ventas_por_dia,
+                'sucursales': sucursales_list,
+                'fecha_inicio': fecha_inicio.strftime('%Y-%m-%d'),
+                'fecha_fin': fecha_fin.strftime('%Y-%m-%d')
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en api_obtener_datos_reporte: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al obtener datos del reporte: {str(e)}'})
+
+
+@require_login
+def reporte_productos(request):
+    """
+    Vista principal para el reporte de ventas por producto
+    """
+    try:
+        current_user = get_current_user(request)
+        if not current_user:
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Obtener user_info
+        user_info = get_user_info_with_avatar(current_user, account_type)
+        
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+        }
+        
+        return render(request, 'ecommerce_app/reporte_productos.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error en reporte_productos: {str(e)}")
+        return redirect('/ecommerce/index/')
+
+
+@require_http_methods(["GET"])
+def api_obtener_datos_reporte_productos(request):
+    """
+    API para obtener datos del reporte de productos
+    """
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Sum, Count, Avg, Q, F
+        from decimal import Decimal
+        
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'error': 'Usuario no autenticado'})
+        
+        account_type = request.session.get('account_type', 'usuario')
+        
+        # Obtener parámetros de filtro
+        fecha_inicio = request.GET.get('fecha_inicio')
+        fecha_fin = request.GET.get('fecha_fin')
+        tipo_reporte = request.GET.get('tipo_reporte', 'mensual')
+        sucursal_id = request.GET.get('sucursal_id')
+        categoria_id = request.GET.get('categoria_id')
+        
+        # Configurar fechas según el tipo de reporte
+        if tipo_reporte == 'semanal':
+            fecha_fin = timezone.now()
+            fecha_inicio = fecha_fin - timedelta(days=7)
+        elif tipo_reporte == 'mensual':
+            fecha_fin = timezone.now()
+            fecha_inicio = fecha_fin - timedelta(days=30)
+        elif tipo_reporte == 'trimestral':
+            fecha_fin = timezone.now()
+            fecha_inicio = fecha_fin - timedelta(days=90)
+        else:
+            # Personalizado
+            if fecha_inicio:
+                fecha_inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+                fecha_inicio = timezone.make_aware(fecha_inicio)
+            else:
+                fecha_inicio = timezone.now() - timedelta(days=30)
+            
+            if fecha_fin:
+                fecha_fin = datetime.strptime(fecha_fin, '%Y-%m-%d')
+                fecha_fin = timezone.make_aware(fecha_fin.replace(hour=23, minute=59, second=59))
+            else:
+                fecha_fin = timezone.now()
+        
+        productos_data = []
+        productos_mas_vendidos = []
+        productos_menos_vendidos = []
+        productos_sin_movimiento = []
+        
+        if account_type == 'empresa':
+            # Filtrar por empresa
+            query_base = Q(
+                id_fk_producto_sucursal_empresa__id_sucursal_fk__id_empresa_fk=current_user,
+                id_pedido_fk__fecha_pedido__range=[fecha_inicio, fecha_fin],
+                id_pedido_fk__estado_pedido__in=['confirmado', 'enviado', 'entregado']
+            )
+            
+            if sucursal_id:
+                query_base &= Q(id_fk_producto_sucursal_empresa__id_sucursal_fk__id_sucursal=sucursal_id)
+            
+            if categoria_id:
+                query_base &= Q(id_fk_producto_sucursal_empresa__id_producto_fk__id_categoria_prod_fk__id_categoria_prod_empresa=categoria_id)
+            
+            # Obtener ventas de productos de usuarios que compraron
+            ventas_usuario = detalle_pedido_usuario.objects.filter(query_base).values(
+                'id_fk_producto_sucursal_empresa__id_producto_fk__id_producto_empresa',
+                'id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido'),
+                num_ventas=Count('id_detalle_pedido_usuario')
+            )
+            
+            # Obtener ventas de productos de empresas que compraron
+            ventas_empresa = detalle_pedido_empresa.objects.filter(query_base).values(
+                'id_fk_producto_sucursal_empresa__id_producto_fk__id_producto_empresa',
+                'id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido'),
+                num_ventas=Count('id_detalle_pedido_empresa')
+            )
+            
+            # Combinar resultados
+            productos_dict = {}
+            for venta in ventas_usuario:
+                prod_id = venta['id_fk_producto_sucursal_empresa__id_producto_fk__id_producto_empresa']
+                if prod_id in productos_dict:
+                    productos_dict[prod_id]['cantidad'] += venta['total_cantidad']
+                    productos_dict[prod_id]['ingresos'] += float(venta['total_ingresos'])
+                    productos_dict[prod_id]['num_ventas'] += venta['num_ventas']
+                else:
+                    productos_dict[prod_id] = {
+                        'id': prod_id,
+                        'nombre': venta['id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa'],
+                        'cantidad': venta['total_cantidad'],
+                        'ingresos': float(venta['total_ingresos']),
+                        'num_ventas': venta['num_ventas']
+                    }
+            
+            for venta in ventas_empresa:
+                prod_id = venta['id_fk_producto_sucursal_empresa__id_producto_fk__id_producto_empresa']
+                if prod_id in productos_dict:
+                    productos_dict[prod_id]['cantidad'] += venta['total_cantidad']
+                    productos_dict[prod_id]['ingresos'] += float(venta['total_ingresos'])
+                    productos_dict[prod_id]['num_ventas'] += venta['num_ventas']
+                else:
+                    productos_dict[prod_id] = {
+                        'id': prod_id,
+                        'nombre': venta['id_fk_producto_sucursal_empresa__id_producto_fk__nombre_producto_empresa'],
+                        'cantidad': venta['total_cantidad'],
+                        'ingresos': float(venta['total_ingresos']),
+                        'num_ventas': venta['num_ventas']
+                    }
+            
+            # Calcular precio promedio y rentabilidad
+            for prod_id, data in productos_dict.items():
+                data['precio_promedio'] = data['ingresos'] / data['cantidad'] if data['cantidad'] > 0 else 0
+                data['rentabilidad'] = (data['ingresos'] / data['num_ventas']) if data['num_ventas'] > 0 else 0
+            
+            productos_data = list(productos_dict.values())
+            
+            # Productos sin movimiento (productos que existen pero no tienen ventas)
+            query_sin_movimiento = Q(id_sucursal_fk__id_empresa_fk=current_user)
+            
+            if sucursal_id:
+                query_sin_movimiento &= Q(id_sucursal_fk__id_sucursal=sucursal_id)
+            
+            if categoria_id:
+                query_sin_movimiento &= Q(id_producto_fk__id_categoria_prod_fk__id_categoria_prod_empresa=categoria_id)
+            
+            productos_sucursal = producto_sucursal.objects.filter(
+                query_sin_movimiento
+            ).exclude(
+                id_producto_fk__id_producto_empresa__in=productos_dict.keys()
+            ).select_related('id_producto_fk')[:10]
+            
+            productos_sin_movimiento = [
+                {
+                    'id': p.id_producto_fk.id_producto_empresa,
+                    'nombre': p.id_producto_fk.nombre_producto_empresa,
+                    'stock': p.stock_producto_sucursal,
+                    'precio': float(p.precio_producto_sucursal)
+                }
+                for p in productos_sucursal
+            ]
+            
+        else:
+            # Usuario individual
+            query_base = Q(
+                idproducto_fk_usuario__id_usuario_fk=current_user,
+                id_pedido_fk__fecha_pedido__range=[fecha_inicio, fecha_fin],
+                id_pedido_fk__estado_pedido__in=['confirmado', 'enviado', 'entregado']
+            )
+            
+            if categoria_id:
+                query_base &= Q(idproducto_fk_usuario__id_categoria_prod_fk__id_categoria_prod_usuario=categoria_id)
+            
+            # Ventas de usuarios
+            ventas_usuario = detalle_pedido_usuario.objects.filter(query_base).values(
+                'idproducto_fk_usuario__id_producto_usuario',
+                'idproducto_fk_usuario__nombre_producto_usuario'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido'),
+                num_ventas=Count('id_detalle_pedido_usuario')
+            )
+            
+            # Ventas de empresas
+            ventas_empresa = detalle_pedido_empresa.objects.filter(query_base).values(
+                'idproducto_fk_usuario__id_producto_usuario',
+                'idproducto_fk_usuario__nombre_producto_usuario'
+            ).annotate(
+                total_cantidad=Sum('cantidad_detalle_pedido'),
+                total_ingresos=Sum('subtotal_detalle_pedido'),
+                num_ventas=Count('id_detalle_pedido_empresa')
+            )
+            
+            # Combinar resultados
+            productos_dict = {}
+            for venta in ventas_usuario:
+                prod_id = venta['idproducto_fk_usuario__id_producto_usuario']
+                if prod_id in productos_dict:
+                    productos_dict[prod_id]['cantidad'] += venta['total_cantidad']
+                    productos_dict[prod_id]['ingresos'] += float(venta['total_ingresos'])
+                    productos_dict[prod_id]['num_ventas'] += venta['num_ventas']
+                else:
+                    productos_dict[prod_id] = {
+                        'id': prod_id,
+                        'nombre': venta['idproducto_fk_usuario__nombre_producto_usuario'],
+                        'cantidad': venta['total_cantidad'],
+                        'ingresos': float(venta['total_ingresos']),
+                        'num_ventas': venta['num_ventas']
+                    }
+            
+            for venta in ventas_empresa:
+                prod_id = venta['idproducto_fk_usuario__id_producto_usuario']
+                if prod_id in productos_dict:
+                    productos_dict[prod_id]['cantidad'] += venta['total_cantidad']
+                    productos_dict[prod_id]['ingresos'] += float(venta['total_ingresos'])
+                    productos_dict[prod_id]['num_ventas'] += venta['num_ventas']
+                else:
+                    productos_dict[prod_id] = {
+                        'id': prod_id,
+                        'nombre': venta['idproducto_fk_usuario__nombre_producto_usuario'],
+                        'cantidad': venta['total_cantidad'],
+                        'ingresos': float(venta['total_ingresos']),
+                        'num_ventas': venta['num_ventas']
+                    }
+            
+            # Calcular métricas
+            for prod_id, data in productos_dict.items():
+                data['precio_promedio'] = data['ingresos'] / data['cantidad'] if data['cantidad'] > 0 else 0
+                data['rentabilidad'] = (data['ingresos'] / data['num_ventas']) if data['num_ventas'] > 0 else 0
+            
+            productos_data = list(productos_dict.values())
+            
+            # Productos sin movimiento
+            query_sin_movimiento_usuario = Q(id_usuario_fk=current_user)
+            
+            if categoria_id:
+                query_sin_movimiento_usuario &= Q(id_categoria_prod_fk__id_categoria_prod_usuario=categoria_id)
+            
+            productos_usuario = producto_usuario.objects.filter(
+                query_sin_movimiento_usuario
+            ).exclude(
+                id_producto_usuario__in=productos_dict.keys()
+            )[:10]
+            
+            productos_sin_movimiento = [
+                {
+                    'id': p.id_producto_usuario,
+                    'nombre': p.nombre_producto_usuario,
+                    'stock': p.stock_producto_usuario,
+                    'precio': float(p.precio_producto_usuario)
+                }
+                for p in productos_usuario
+            ]
+        
+        # Ordenar productos
+        productos_mas_vendidos = sorted(productos_data, key=lambda x: x['cantidad'], reverse=True)[:10]
+        productos_menos_vendidos = sorted(productos_data, key=lambda x: x['cantidad'])[:10]
+        
+        # Obtener sucursales (solo para empresas)
+        sucursales_list = []
+        if account_type == 'empresa':
+            sucursales_obj = sucursal.objects.filter(id_empresa_fk=current_user)
+            sucursales_list = [{'id': s.id_sucursal, 'nombre': s.nombre_sucursal} for s in sucursales_obj]
+        
+        # Obtener categorías de productos
+        categorias_list = []
+        if account_type == 'empresa':
+            categorias_obj = categoria_producto_empresa.objects.filter(id_empresa_fk=current_user)
+            categorias_list = [{'id': c.id_categoria_prod_empresa, 'nombre': c.nombre_categoria_prod_empresa} for c in categorias_obj]
+        else:
+            categorias_obj = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
+            categorias_list = [{'id': c.id_categoria_prod_usuario, 'nombre': c.nombre_categoria_prod_usuario} for c in categorias_obj]
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'productos_mas_vendidos': productos_mas_vendidos,
+                'productos_menos_vendidos': productos_menos_vendidos,
+                'productos_sin_movimiento': productos_sin_movimiento,
+                'todos_productos': productos_data,
+                'sucursales': sucursales_list,
+                'categorias': categorias_list,
+                'fecha_inicio': fecha_inicio.strftime('%Y-%m-%d'),
+                'fecha_fin': fecha_fin.strftime('%Y-%m-%d')
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en api_obtener_datos_reporte_productos: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al obtener datos del reporte: {str(e)}'})

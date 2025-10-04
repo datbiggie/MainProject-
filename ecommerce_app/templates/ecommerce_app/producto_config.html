@@ -33,14 +33,30 @@
     
     <!-- Start Features Area -->
     <div class="container-fluid">
-        <div class="floating-header">
-            <h1 class="page-title">Gestión de Productos</h1>
-            <p class="page-subtitle">Administra y organiza tus productos de manera eficiente</p>
-        </div>
+ 
         
         <!-- Contenedor Principal -->
         <div class="container" style="max-width: 1200px; margin-top: 2rem;" data-user-type="{{ user_info.tipo }}">
             <div class="glass-card">
+                <!-- Tarjetas de Estadísticas -->
+                <div class="stats-container">
+                    <div class="stats-card stats-card-total">
+                        <i class="lni lni-package stats-icon"></i>
+                        <div class="stats-number">{{ total_productos }}</div>
+                        <div class="stats-label">Total Productos</div>
+                    </div>
+                    <div class="stats-card stats-card-active">
+                        <i class="lni lni-checkmark-circle stats-icon"></i>
+                        <div class="stats-number">{{ productos_activos }}</div>
+                        <div class="stats-label">Activos</div>
+                    </div>
+                    <div class="stats-card stats-card-inactive">
+                        <i class="lni lni-circle-minus stats-icon"></i>
+                        <div class="stats-number">{{ productos_inactivos }}</div>
+                        <div class="stats-label">Inactivos</div>
+                    </div>
+                </div>
+                
                 <!-- Sección de Búsqueda y Filtros -->
                 <div class="search-container">
                     <div class="row g-3 align-items-center justify-content-center">
@@ -113,9 +129,6 @@
                                 <!-- Información del Producto para Empresa -->
                                 <div class="product-content">
                                     <h3 class="product-title">{{ producto_all.nombre_producto_empresa }}</h3>
-                                    <div class="product-meta">
-                                        <span class="product-type">Empresa</span>
-                                    </div>
                                     <div class="product-branches">
                                         <strong>Sucursales asignadas:</strong>
                                         {% if producto_all.sucursales_asignadas %}
@@ -154,9 +167,6 @@
                                 <!-- Información del Producto para Sucursal -->
                                 <div class="product-content">
                                     <h3 class="product-title">{{ producto_all.nombre_producto_sucursal }}</h3>
-                                    <div class="product-meta">
-                                        <span class="product-type">Sucursal</span>
-                                    </div>
                                 </div>
                                     
                                 <!-- Acciones del Producto -->
@@ -183,26 +193,9 @@
                 <!-- Información del Producto para Usuario -->
                 <div class="product-content">
                     <h3 class="product-title">{{ producto_all.nombre_producto_usuario }}</h3>
-                    <div class="product-details">
-                        <div class="product-info-item">
-                            <strong>Categoría:</strong>
-                            <span>{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'Sin categoría' }}</span>
-                        </div>
-                        <div class="product-info-item">
-                            <strong>Condición:</strong>
-                            <span class="condition-badge condition-{{ producto_all.condicion_producto_usuario|lower|default:'nuevo' }}">{{ producto_all.condicion_producto_usuario|default:'Nuevo' }}</span>
-                        </div>
-                        <div class="product-info-item">
-                            <strong>Estado:</strong>
-                            <span class="status-badge status-{{ producto_all.estatus_producto_usuario|lower|default:'activo' }}">{{ producto_all.estatus_producto_usuario|default:'Activo' }}</span>
-                        </div>
-                        <div class="product-info-item price-item">
-                            <strong>Precio:</strong>
-                            <span class="product-price">${{ producto_all.precio_producto_usuario|default:'0'|floatformat:2 }}</span>
-                        </div>
-                    </div>
-                    <div class="product-meta">
-                        <span class="product-type">Usuario</span>
+                    <div class="product-details-centered">
+                        <span class="status-badge status-{{ producto_all.estatus_producto_usuario|lower|default:'activo' }}">{{ producto_all.estatus_producto_usuario|default:'Activo' }}</span>
+                        <div class="product-price">${{ producto_all.precio_producto_usuario|default:'0'|floatformat:2 }}</div>
                     </div>
                 </div>
                                     
@@ -240,7 +233,7 @@
 
     <!-- Modal de Edición de Producto ------->
     <div id="EditProductModal" class="modal fade">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <form method="POST" action="{% url 'editar_producto' %}" id="editProductoForm" enctype="multipart/form-data" onsubmit="return false;">
                     {% csrf_token %}
@@ -249,130 +242,264 @@
                     {% else %}
                         <input type="hidden" name="id_producto_usuario" id="edit_id_producto_usuario">
                     {% endif %}
-                    <div class="modal-header">
-                        <h4 class="modal-title">Editar Producto</h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-header bg-primary text-white">
+                        <h4 class="modal-title">
+                            <i class="lni lni-pencil me-2"></i>
+                            Editar Producto
+                        </h4>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Nombre del Producto</label>
-                                    {% if user_info.tipo == 'empresa' %}
-                                        <input type="text" class="form-control enhanced-input" name="nombre_producto_empresa" id="edit_nombre" required>
-                                    {% else %}
-                                        <input type="text" class="form-control enhanced-input" name="nombre_producto_usuario" id="edit_nombre" required>
-                                    {% endif %}
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Categoría</label>
-                                    <select class="form-control enhanced-input" name="categoria_producto" id="edit_categoria" required>
-                                        <option value="">Seleccione una categoría</option>
-                                        {% for categoria in categoria_producto_all  %}
-                                            {% if user_info.tipo == 'empresa' %}
-                                                <option value="{{ categoria.id_categoria_prod_empresa }}">{{ categoria.nombre_categoria_prod_empresa }}</option>
-                                            {% else %}
-                                                <option value="{{ categoria.id_categoria_prod_usuario }}">{{ categoria.nombre_categoria_prod_usuario }}</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Descripción</label>
-                                    {% if user_info.tipo == 'empresa' %}
-                                        <textarea class="form-control enhanced-input" name="descripcion_producto_empresa" id="edit_descripcion" style="height: 80px;"></textarea>
-                                    {% else %}
-                                        <textarea class="form-control enhanced-input" name="descripcion_producto_usuario" id="edit_descripcion" style="height: 80px;"></textarea>
-                                    {% endif %}
-                                </div>
-                                <div class="form-group">
-                                    <label>Características Generales</label>
-                                    <textarea class="form-control enhanced-input" name="caracteristicas_generales" id="edit_caracteristicas" style="height: 80px;" required></textarea>
-                                </div>
-                                
-                                <!-- Contenedor para campos dinámicos de atributos -->
-                                <div id="edit-atributos-container" style="display: none;">
-                                    <div class="form-group">
-                                        <h6 class="mb-3" style="color: #495057; font-weight: 600;">Atributos Específicos de la Categoría</h6>
-                                        <div id="edit-atributos-fields"></div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Campos adicionales solo para usuarios con rol 'persona' -->
-                                {% if user_info.tipo == 'persona' %}
-                                <div class="form-group">
-                                    <label>Stock</label>
-                                    <input type="number" class="form-control enhanced-input" name="stock_producto_usuario" id="edit_stock" min="0">
-                                </div>
-                                <div class="form-group">
-                                    <label>Precio</label>
-                                    <input type="number" class="form-control enhanced-input" name="precio_producto_usuario" id="edit_precio" step="0.01" min="0">
-                                </div>
-                                <div class="form-group">
-                                    <label>Condición</label>
-                                    <select class="form-control enhanced-input" name="condicion_producto_usuario" id="edit_condicion">
-                                        <option value="Nuevo">Nuevo</option>
-                                        <option value="Usado">Usado</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Estatus</label>
-                                    <select class="form-control enhanced-input" name="estatus_producto_usuario" id="edit_estatus">
-                                        <option value="Activo">Activo</option>
-                                        <option value="Inactivo">Inactivo</option>
-                                    </select>
-                                </div>
-                                
-                                <!-- Sección de Mapa para Punto de Entrega -->
-                                <div class="form-group">
-                                    <label>Punto de Entrega del Producto</label>
-                                    <div id="edit_map_container" style="height: 300px; width: 100%; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
-                                        <div id="edit_map" style="height: 100%; width: 100%;"></div>
-                                    </div>
-                                    <div id="edit_map_status" class="alert alert-info" style="display: none; margin-top: 10px;">
-                                        <span id="edit_map_status_text">Cargando mapa...</span>
-                                    </div>
-                                    <button type="button" id="edit_retry_map" class="btn btn-secondary btn-sm" style="display: none; margin-top: 10px;">
-                                        Reintentar cargar mapa
+                    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                        <!-- Acordeón para organizar las secciones -->
+                        <div class="accordion" id="editProductAccordion">
+                            
+                            <!-- Sección 1: Información Básica -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingBasicInfo">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBasicInfo" aria-expanded="false" aria-controls="collapseBasicInfo">
+                                        <i class="lni lni-package me-2"></i>
+                                        <strong>Información Básica del Producto</strong>
                                     </button>
-                                    <input type="hidden" id="edit_latitud_entrega" name="latitud_entrega_producto">
-                                    <input type="hidden" id="edit_longitud_entrega" name="longitud_entrega_producto">
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Imágenes Actuales del Producto</label>
-                                    <div id="current_images_container" class="row mb-3" data-user-type="{{ user_info.tipo }}">
-                                        <!-- Las imágenes actuales se cargarán aquí dinámicamente -->
-                                    </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>Agregar Nuevas Imágenes</label>
-                                    <div class="file-upload-wrapper" style="max-width: 200px;">
-                                        <div class="file-upload-container">
-                                            <input type="file" name="imagenes_producto" id="edit_imagenes_producto" class="form-control file-input" accept="image/*" multiple>
-                                            <div class="file-upload-placeholder">
-                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                    <path d="M17 8L12 3L7 8" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                    <path d="M12 3V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                </svg>
-                                                <span>Agregar más imágenes</span>
+                                </h2>
+                                <div id="collapseBasicInfo" class="accordion-collapse collapse" aria-labelledby="headingBasicInfo" data-bs-parent="#editProductAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-tag me-1"></i>
+                                                        Nombre del Producto <span class="text-danger">*</span>
+                                                    </label>
+                                                    {% if user_info.tipo == 'empresa' %}
+                                                        <input type="text" class="form-control enhanced-input" name="nombre_producto_empresa" id="edit_nombre" required placeholder="Ej: Laptop Dell Inspiron 15">
+                                                    {% else %}
+                                                        <input type="text" class="form-control enhanced-input" name="nombre_producto_usuario" id="edit_nombre" required placeholder="Ej: Laptop Dell Inspiron 15">
+                                                    {% endif %}
+                                                </div>
                                             </div>
-                                            <div class="image-preview" id="edit_imagePreview"></div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-list me-1"></i>
+                                                        Categoría <span class="text-danger">*</span>
+                                                    </label>
+                                                    <select class="form-control enhanced-input" name="categoria_producto" id="edit_categoria" required>
+                                                        <option value="">Seleccione una categoría</option>
+                                                        {% for categoria in categoria_producto_all  %}
+                                                            {% if user_info.tipo == 'empresa' %}
+                                                                <option value="{{ categoria.id_categoria_prod_empresa }}">{{ categoria.nombre_categoria_prod_empresa }}</option>
+                                                            {% else %}
+                                                                <option value="{{ categoria.id_categoria_prod_usuario }}">{{ categoria.nombre_categoria_prod_usuario }}</option>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-text-format me-1"></i>
+                                                        Descripción
+                                                    </label>
+                                                    {% if user_info.tipo == 'empresa' %}
+                                                        <textarea class="form-control enhanced-input" name="descripcion_producto_empresa" id="edit_descripcion" rows="3" placeholder="Describe tu producto..."></textarea>
+                                                    {% else %}
+                                                        <textarea class="form-control enhanced-input" name="descripcion_producto_usuario" id="edit_descripcion" rows="3" placeholder="Describe tu producto..."></textarea>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-checkmark-circle me-1"></i>
+                                                        Características Generales <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea class="form-control enhanced-input" name="caracteristicas_generales" id="edit_caracteristicas" rows="3" required placeholder="Ej: Pantalla de 15.6 pulgadas, Teclado retroiluminado..."></textarea>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="form-text">Puedes agregar más imágenes (máximo 5 en total).</div>
                                 </div>
                             </div>
+
+                            <!-- Sección 2: Atributos Específicos (EAV) -->
+                            <div class="accordion-item" id="edit-atributos-accordion" style="display: none;">
+                                <h2 class="accordion-header" id="headingAttributes">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttributes" aria-expanded="false" aria-controls="collapseAttributes">
+                                        <i class="lni lni-cog me-2"></i>
+                                        <strong>Características Específicas de la Categoría</strong>
+                                        <span class="badge bg-info ms-2" id="attributes-count">0</span>
+                                    </button>
+                                </h2>
+                                <div id="collapseAttributes" class="accordion-collapse collapse" aria-labelledby="headingAttributes" data-bs-parent="#editProductAccordion">
+                                    <div class="accordion-body">
+                                        <div class="alert alert-info">
+                                            <i class="lni lni-information me-2"></i>
+                                            Estos campos son específicos de la categoría seleccionada. Los campos marcados con <span class="text-danger">*</span> son obligatorios.
+                                        </div>
+                                        <div id="edit-atributos-fields" class="row"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección 3: Precio y Stock (solo para usuarios persona) -->
+                            {% if user_info.tipo == 'persona' %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingPricing">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePricing" aria-expanded="false" aria-controls="collapsePricing">
+                                        <i class="lni lni-dollar me-2"></i>
+                                        <strong>Precio y Disponibilidad</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapsePricing" class="accordion-collapse collapse" aria-labelledby="headingPricing" data-bs-parent="#editProductAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-money-protection me-1"></i>
+                                                        Precio
+                                                    </label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control enhanced-input" name="precio_producto_usuario" id="edit_precio" step="0.01" min="0" placeholder="0.00">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-archive me-1"></i>
+                                                        Stock
+                                                    </label>
+                                                    <input type="number" class="form-control enhanced-input" name="stock_producto_usuario" id="edit_stock" min="0" placeholder="0">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-star me-1"></i>
+                                                        Condición
+                                                    </label>
+                                                    <select class="form-control enhanced-input" name="condicion_producto_usuario" id="edit_condicion">
+                                                        <option value="Nuevo">Nuevo</option>
+                                                        <option value="Usado">Usado</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">
+                                                        <i class="lni lni-circle-minus me-1"></i>
+                                                        Estatus
+                                                    </label>
+                                                    <select class="form-control enhanced-input" name="estatus_producto_usuario" id="edit_estatus">
+                                                        <option value="Activo">Activo</option>
+                                                        <option value="Inactivo">Inactivo</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección 4: Ubicación de Entrega -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingLocation">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLocation" aria-expanded="false" aria-controls="collapseLocation">
+                                        <i class="lni lni-map-marker me-2"></i>
+                                        <strong>Punto de Entrega</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseLocation" class="accordion-collapse collapse" aria-labelledby="headingLocation" data-bs-parent="#editProductAccordion">
+                                    <div class="accordion-body">
+                                        <div class="alert alert-info">
+                                            <i class="lni lni-information me-2"></i>
+                                            Selecciona en el mapa el punto donde entregarás el producto.
+                                        </div>
+                                        <div id="edit_map_container" style="height: 400px; width: 100%; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px;">
+                                            <div id="edit_map" style="height: 100%; width: 100%;"></div>
+                                        </div>
+                                        <div id="edit_map_status" class="alert alert-info" style="display: none; margin-top: 10px;">
+                                            <span id="edit_map_status_text">Cargando mapa...</span>
+                                        </div>
+                                        <button type="button" id="edit_retry_map" class="btn btn-secondary btn-sm" style="display: none; margin-top: 10px;">
+                                            <i class="lni lni-reload me-1"></i>
+                                            Reintentar cargar mapa
+                                        </button>
+                                        <input type="hidden" id="edit_latitud_entrega" name="latitud_entrega_producto">
+                                        <input type="hidden" id="edit_longitud_entrega" name="longitud_entrega_producto">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Sección 5: Imágenes del Producto -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingImages">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImages" aria-expanded="false" aria-controls="collapseImages">
+                                        <i class="lni lni-image me-2"></i>
+                                        <strong>Imágenes del Producto</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseImages" class="accordion-collapse collapse" aria-labelledby="headingImages" data-bs-parent="#editProductAccordion">
+                                    <div class="accordion-body">
+                                        <div class="form-group mb-4">
+                                            <label class="form-label fw-bold">
+                                                <i class="lni lni-gallery me-1"></i>
+                                                Imágenes Actuales
+                                            </label>
+                                            <div id="current_images_container" class="row g-2" data-user-type="{{ user_info.tipo }}">
+                                                <!-- Las imágenes actuales se cargarán aquí dinámicamente -->
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label fw-bold">
+                                                <i class="lni lni-cloud-upload me-1"></i>
+                                                Agregar Nuevas Imágenes
+                                            </label>
+                                            <div class="file-upload-wrapper">
+                                                <div class="file-upload-container">
+                                                    <input type="file" name="imagenes_producto" id="edit_imagenes_producto" class="form-control file-input" accept="image/*" multiple>
+                                                    <div class="file-upload-placeholder">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                            <path d="M17 8L12 3L7 8" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                            <path d="M12 3V15" stroke="#536387" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        </svg>
+                                                        <span>Agregar más imágenes</span>
+                                                    </div>
+                                                    <div class="image-preview" id="edit_imagePreview"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-text">
+                                                <i class="lni lni-information me-1"></i>
+                                                Puedes agregar más imágenes (máximo 5 en total).
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="lni lni-close me-1"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="lni lni-save me-1"></i>
+                            Guardar Cambios
+                        </button>
                     </div>
                 </form>
             </div>

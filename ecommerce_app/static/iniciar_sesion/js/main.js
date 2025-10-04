@@ -1,4 +1,4 @@
-// ===== JAVASCRIPT PERSONALIZADO PARA INICIO DE SESIÓN =====
+// ===== MODERN LOGIN PAGE JAVASCRIPT =====
 
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar el dropdown
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Código existente para el manejo del email y contraseña
+    // Elementos del formulario
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const emailField = document.getElementById('emailField');
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const backButton = document.getElementById('backButton');
     const createAccountDropdown = document.getElementById('createAccountDropdown');
     const loginForm = document.getElementById('loginForm');
-    const title = document.querySelector('.login100-form-title');
+    const title = document.querySelector('.login-title');
 
     // Función para validar campos obligatorios
     function validateRequiredField(field) {
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Por favor ingrese su correo electrónico',
                 icon: 'warning',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
             emailInput.focus();
             return;
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Por favor ingrese un correo electrónico válido',
                 icon: 'error',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
             emailInput.focus();
             return;
@@ -124,9 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.exists) {
-                title.classList.add('slide-up');
                 emailField.classList.add('hidden');
-                // Ocultar inmediatamente el campo de correo
                 emailField.style.display = 'none';
                 
                 setTimeout(() => {
@@ -136,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     nextButton.textContent = 'Entrar';
                     nextButton.type = 'submit';
                     createAccountDropdown.style.display = 'none';
-                    backButton.style.display = 'block';
+                    backButton.style.display = 'flex';
                 }, 300);
             } else {
                 Swal.fire({
@@ -144,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: 'El correo electrónico no está registrado en nuestro sistema',
                     icon: 'error',
                     confirmButtonText: 'Aceptar',
-                    confirmButtonColor: '#3b82f6'
+                    confirmButtonColor: '#2196F3'
                 });
             }
         })
@@ -155,17 +153,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Ocurrió un error al validar el correo. Por favor, inténtelo de nuevo.',
                 icon: 'error',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
         });
     });
 
     // Manejar el botón de regresar
     backButton.addEventListener('click', function() {
-        title.classList.remove('slide-up');
         passwordField.classList.remove('visible');
         passwordField.classList.add('hidden');
-        // Ocultar inmediatamente el campo de contraseña
         passwordField.style.display = 'none';
         
         setTimeout(() => {
@@ -177,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
             createAccountDropdown.style.display = 'block';
             backButton.style.display = 'none';
             // Limpiar el campo de contraseña
-            document.getElementById('password').value = '';
+            passwordInput.value = '';
         }, 300);
     });
 
@@ -195,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Por favor ingrese su correo electrónico',
                 icon: 'warning',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
             emailInput.focus();
             return false;
@@ -207,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Por favor ingrese un correo electrónico válido',
                 icon: 'error',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
             emailInput.focus();
             return false;
@@ -219,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Por favor ingrese su contraseña',
                 icon: 'warning',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
             passwordInput.focus();
             return false;
@@ -243,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: data.message,
                     icon: 'success',
                     confirmButtonText: 'Aceptar',
-                    confirmButtonColor: '#3b82f6'
+                    confirmButtonColor: '#2196F3'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         window.location.href = data.redirect_url || '/ecommerce/';
@@ -255,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: data.message || 'Credenciales incorrectas',
                     icon: 'error',
                     confirmButtonText: 'Aceptar',
-                    confirmButtonColor: '#3b82f6'
+                    confirmButtonColor: '#2196F3'
                 });
             }
         })
@@ -266,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Ocurrió un error al procesar la solicitud. Por favor, inténtelo de nuevo.',
                 icon: 'error',
                 confirmButtonText: 'Aceptar',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#2196F3'
             });
         });
     });

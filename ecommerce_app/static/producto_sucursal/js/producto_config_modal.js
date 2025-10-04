@@ -3,6 +3,7 @@
 // Variables globales
 let currentProductId = null;
 let userType = null;
+let categoriaAnteriorId = null; // Para guardar la categoría anterior al cambiar
 
 // Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
@@ -94,19 +95,25 @@ function initializeModalEvents() {
     editModal.addEventListener('hidden.bs.modal', function() {
         clearModalForm();
         currentProductId = null;
+        categoriaAnteriorId = null;
     });
 }
 
 // ========================= Atributos Dinámicos =========================
 function cargarAtributosDinamicos(categoriaId, productId = null) {
-    console.log('cargarAtributosDinamicos llamada con:', categoriaId, productId);
+    console.log('🔄 cargarAtributosDinamicos llamada con:', categoriaId, productId);
+    console.log('🔍 Tipo de usuario actual:', userType);
+    const atributosAccordion = document.getElementById('edit-atributos-accordion');
+    
     if (!categoriaId) {
-        console.log('No hay categoriaId, ocultando contenedor');
-        document.getElementById('edit-atributos-container').style.display = 'none';
+        console.log('⚠️ No hay categoriaId, ocultando contenedor');
+        if (atributosAccordion) {
+            atributosAccordion.style.display = 'none';
+        }
         return;
     }
     
-    console.log('Haciendo fetch a:', `/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`);
+    console.log('🌐 Haciendo fetch a:', `/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`);
     fetch(`/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`, {
         method: 'GET',
         headers: {
@@ -115,66 +122,113 @@ function cargarAtributosDinamicos(categoriaId, productId = null) {
         }
     })
     .then(response => {
-        console.log('Respuesta recibida:', response.status);
+        console.log('📡 Respuesta recibida:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         return response.json();
     })
     .then(data => {
-        console.log('Datos de atributos recibidos:', data);
+        console.log('📦 Datos de atributos recibidos:', data);
+        console.log('✅ Success:', data.success);
+        console.log('📋 Cantidad de atributos:', data.atributos ? data.atributos.length : 0);
+        
         if (data.success && data.atributos && data.atributos.length > 0) {
-            console.log('Generando campos para', data.atributos.length, 'atributos');
+            console.log('✨ Generando campos para', data.atributos.length, 'atributos');
             generarCamposAtributosEdit(data.atributos, productId);
-            document.getElementById('edit-atributos-container').style.display = 'block';
+            
+            // Mostrar el acordeón de atributos
+            if (atributosAccordion) {
+                console.log('👁️ Mostrando acordeón de atributos');
+                atributosAccordion.style.display = 'block';
+                
+                // Actualizar el contador de atributos
+                const badge = document.getElementById('attributes-count');
+                if (badge) {
+                    badge.textContent = data.atributos.length;
+                    console.log('🔢 Badge actualizado con:', data.atributos.length);
+                }
+                
+                // NO expandir automáticamente - dejar contraído
+                // El usuario puede expandirlo manualmente si lo necesita
+            } else {
+                console.error('❌ No se encontró el elemento edit-atributos-accordion');
+            }
         } else {
-            console.log('No hay atributos o no exitoso, ocultando contenedor');
-            document.getElementById('edit-atributos-container').style.display = 'none';
+            console.log('⚠️ No hay atributos o no exitoso, ocultando contenedor');
+            if (atributosAccordion) {
+                atributosAccordion.style.display = 'none';
+            }
         }
     })
     .catch(error => {
-        console.error('Error al cargar atributos:', error);
-        document.getElementById('edit-atributos-container').style.display = 'none';
+        console.error('❌ Error al cargar atributos:', error);
+        if (atributosAccordion) {
+            atributosAccordion.style.display = 'none';
+        }
     });
 }
 
 function generarCamposAtributosEdit(atributos, productId = null) {
+    console.log('🏗️ generarCamposAtributosEdit llamada con', atributos.length, 'atributos, productId:', productId);
     const container = document.getElementById('edit-atributos-fields');
+    
+    if (!container) {
+        console.error('❌ No se encontró el contenedor edit-atributos-fields');
+        return;
+    }
+    
+    console.log('🧹 Limpiando contenedor anterior');
     container.innerHTML = '';
     
-    atributos.forEach(atributo => {
+    console.log('🔨 Generando campos HTML...');
+    atributos.forEach((atributo, index) => {
+        console.log(`  📝 Atributo ${index + 1}:`, atributo.nombre, '- Tipo:', atributo.tipo_dato);
         const fieldHtml = generarCampoAtributoEdit(atributo);
         container.insertAdjacentHTML('beforeend', fieldHtml);
     });
+    
+    console.log('✅ Campos HTML insertados. Total de campos en el contenedor:', container.children.length);
     
     // Si hay un productId, cargar los valores existentes después de que los campos se hayan insertado
     if (productId) {
         // Usar un timeout más largo para asegurar que los campos estén completamente renderizados
         setTimeout(() => {
-            console.log('Intentando cargar valores después del timeout para productId:', productId);
+            console.log('⏰ Intentando cargar valores después del timeout para productId:', productId);
             cargarValoresAtributosExistentes(productId);
         }, 300);
+    } else {
+        console.log('ℹ️ No hay productId, campos generados sin valores previos');
     }
 }
 
 function generarCampoAtributoEdit(atributo) {
     const required = atributo.obligatorio ? 'required' : '';
-    const requiredAsterisk = atributo.obligatorio ? '<span style="color: red;">*</span>' : '';
+    const requiredAsterisk = atributo.obligatorio ? '<span class="text-danger">*</span>' : '';
     
     let inputHtml = '';
+    let iconClass = 'lni lni-text-format'; // Icono por defecto
     
     const attrId = atributo.id_atributo;
     switch (atributo.tipo_dato) {
         case 'texto':
+            iconClass = 'lni lni-text-format';
             inputHtml = `<input type="text" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
             break;
         case 'numero':
+            iconClass = 'lni lni-calculator';
             inputHtml = `<input type="number" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
             break;
         case 'decimal':
+            iconClass = 'lni lni-calculator';
             inputHtml = `<input type="number" step="0.01" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
             break;
         case 'fecha':
+            iconClass = 'lni lni-calendar';
             inputHtml = `<input type="date" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>`;
             break;
         case 'booleano':
+            iconClass = 'lni lni-checkmark-circle';
             inputHtml = `
                 <select class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" ${required}>
                     <option value="">Seleccione una opción</option>
@@ -183,6 +237,7 @@ function generarCampoAtributoEdit(atributo) {
                 </select>`;
             break;
         case 'lista':
+            iconClass = 'lni lni-list';
             let opciones = '<option value="">Seleccione una opción</option>';
             if (atributo.opciones) {
                 atributo.opciones.forEach(opcion => {
@@ -195,10 +250,20 @@ function generarCampoAtributoEdit(atributo) {
             inputHtml = `<input type="text" class="form-control enhanced-input" name="atributo_${attrId}" id="edit_atributo_${attrId}" placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
     }
     
+    // Descripción del atributo si existe
+    const descripcionHtml = atributo.descripcion ? 
+        `<small class="form-text text-muted"><i class="lni lni-information me-1"></i>${atributo.descripcion}</small>` : '';
+    
     return `
-        <div class="form-group">
-            <label for="edit_atributo_${attrId}">${atributo.nombre} ${requiredAsterisk}</label>
-            ${inputHtml}
+        <div class="col-md-6 mb-3">
+            <div class="form-group">
+                <label for="edit_atributo_${attrId}" class="form-label fw-bold">
+                    <i class="${iconClass} me-1"></i>
+                    ${atributo.nombre} ${requiredAsterisk}
+                </label>
+                ${inputHtml}
+                ${descripcionHtml}
+            </div>
         </div>
     `;
 }
@@ -279,6 +344,7 @@ function populateEditForm(data) {
             if (option.text === data.categoria) {
                 option.selected = true;
                 categoriaId = option.value;
+                categoriaAnteriorId = categoriaId; // Guardar la categoría actual
                 break;
             }
         }
@@ -316,7 +382,64 @@ function populateEditForm(data) {
 
 function handleCategoriaChange(event) {
     const categoriaId = event.target.value;
-    cargarAtributosDinamicos(categoriaId, currentProductId);
+    console.log('🔄 Cambio de categoría detectado');
+    console.log('   📋 Categoría seleccionada:', categoriaId);
+    console.log('   📋 Categoría anterior:', categoriaAnteriorId);
+    console.log('   🆔 Producto actual:', currentProductId);
+    console.log('   👤 Tipo de usuario:', userType);
+    
+    // Mostrar mensaje de confirmación al usuario si hay un producto existente
+    if (currentProductId && categoriaAnteriorId && categoriaId !== categoriaAnteriorId) {
+        console.log('⚠️ Cambio de categoría en producto existente - Mostrando confirmación');
+        Swal.fire({
+            title: '¿Cambiar categoría?',
+            html: `
+                <div class="alert alert-warning">
+                    <i class="lni lni-warning me-2"></i>
+                    <strong>Atención:</strong> Al cambiar la categoría, se eliminarán todos los valores de atributos guardados anteriormente.
+                </div>
+                <p>Los atributos se actualizarán según la nueva categoría seleccionada.</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, cambiar categoría',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                console.log('✅ Usuario confirmó el cambio de categoría');
+                // Limpiar los valores de atributos actuales
+                const container = document.getElementById('edit-atributos-fields');
+                if (container) {
+                    console.log('🧹 Limpiando contenedor de atributos');
+                    container.innerHTML = '';
+                }
+                
+                // Cargar los nuevos atributos de la categoría seleccionada (sin valores previos)
+                console.log('🔄 Cargando nuevos atributos para categoría:', categoriaId);
+                cargarAtributosDinamicos(categoriaId, null);
+                
+                // Actualizar la categoría anterior
+                categoriaAnteriorId = categoriaId;
+                
+                // Notificar al usuario
+                showAlert('Los atributos antiguos serán eliminados al guardar el producto', 'info');
+            } else {
+                console.log('❌ Usuario canceló el cambio de categoría');
+                // El usuario canceló, restaurar la categoría anterior
+                const categoriaSelect = document.getElementById('edit_categoria');
+                if (categoriaSelect && categoriaAnteriorId) {
+                    categoriaSelect.value = categoriaAnteriorId;
+                }
+            }
+        });
+    } else {
+        console.log('ℹ️ Cargando atributos sin confirmación (producto nuevo o primera carga)');
+        // Si es un producto nuevo o no cambió realmente la categoría, simplemente cargar los atributos
+        cargarAtributosDinamicos(categoriaId, currentProductId);
+        categoriaAnteriorId = categoriaId;
+    }
 }
 
 // ========================= Utility Functions =========================
@@ -570,14 +693,20 @@ function initializeFormSubmission() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showAlert('Producto actualizado correctamente', 'success');
                 // Cerrar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('EditProductModal'));
                 modal.hide();
-                // Recargar página para mostrar cambios
-                setTimeout(() => {
+                
+                // Mostrar SweetAlert de éxito
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: 'Producto actualizado correctamente',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
                     window.location.reload();
-                }, 1000);
+                });
             } else {
                 showAlert('Error al actualizar el producto: ' + (data.message || 'Error desconocido'), 'error');
             }
