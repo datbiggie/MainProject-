@@ -181,18 +181,12 @@
     </style>
 </head>
 <body>
-    <!-- Preloader -->
-    <div id="preloader">
-        <div class="preloader-inner">
-            <div class="preloader-icon">
-                <span></span>
-                <span></span>
-            </div>
+    <div class="preloader-wrapper">
+        <div class="preloader">
         </div>
     </div>
-    <!-- End Preloader -->
 
-    {% include 'ecommerce_app/header.html' %}
+    {% include 'ecommerce_app/barra_superior_index.html' %}
 
     <!-- Hero Section -->
     <section class="hero-section" style="background: linear-gradient(135deg, #1769aa 0%, #a3be4c 100%); min-height: 300px; display: flex; align-items: center; color: white;">
@@ -201,7 +195,7 @@
                 <div class="col-12">
                     <nav aria-label="breadcrumb" class="mb-4">
                         <ol class="breadcrumb" style="background: transparent; margin-bottom: 0;">
-                            <li class="breadcrumb-item"><a href="{% url 'ecommerce_app:index' %}" style="color: rgba(255,255,255,0.8);">Inicio</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'index' %}" style="color: rgba(255,255,255,0.8);">Inicio</a></li>
                             <li class="breadcrumb-item active" aria-current="page" style="color: white;">Políticas de Privacidad</li>
                         </ol>
                     </nav>

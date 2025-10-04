@@ -17,6 +17,9 @@
         <symbol xmlns="http://www.w3.org/2000/svg" id="home" viewBox="0 0 24 24"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8z"/></symbol>
         <symbol xmlns="http://www.w3.org/2000/svg" id="user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="3"/><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/></g></symbol>
         <symbol xmlns="http://www.w3.org/2000/svg" id="faq" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41c0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="info" viewBox="0 0 24 24"><path fill="currentColor" d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="chatbot" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V7H9V9H3V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V9H21ZM7 15V17H17V15H7Z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="chevron-down" viewBox="0 0 24 24"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6l-6-6l1.41-1.41z"/></symbol>
     </defs>
 </svg>
 <body>
@@ -104,7 +107,25 @@
         <h2 class="" style="text-align: center;">Crear Cuenta Persona</h2>
       </div>
 
-      <div class="formbold-input-flex">
+      <!-- SECCIÓN 1: INFORMACIÓN BÁSICA -->
+      <div class="accordion-section">
+        <div class="accordion-header">
+          <div class="accordion-title">
+            <div class="accordion-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <use xlink:href="#info"></use>
+              </svg>
+            </div>
+            <span>Información Básica</span>
+          </div>
+          <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <use xlink:href="#chevron-down"></use>
+          </svg>
+        </div>
+        <div class="accordion-content">
+          <div class="accordion-body">
+
+            <div class="formbold-input-flex">
         <div>
           <label for="nombre_usuario" class="formbold-form-label">Nombre</label>
           <input type="text" name="nombre_usuario" id="nombre_usuario" class="formbold-form-input" required
@@ -136,7 +157,17 @@
           <label for="telefono" class="formbold-form-label">
             Telefono
           </label>
-          <input type="text" name="telefono" id="telefono" class="formbold-form-input" />
+          <input 
+            type="tel" 
+            name="telefono" 
+            id="telefono" 
+            class="formbold-form-input" 
+            pattern="[0-9]{11}" 
+            maxlength="11" 
+            minlength="11"
+            placeholder="xxxx xxxxxxx"
+            title="Ingresa exactamente 11 dígitos numéricos (ej: 04249692650)"
+          />
         </div>
       </div>
 
@@ -178,6 +209,28 @@
           </select>
         </div>
       </div>
+
+          </div>
+        </div>
+      </div>
+
+            <!-- SECCIÓN 2: PERSONALIZACIÓN DE CHATBOT -->
+      <div class="accordion-section">
+        <div class="accordion-header">
+          <div class="accordion-title">
+            <div class="accordion-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <use xlink:href="#chatbot"></use>
+              </svg>
+            </div>
+            <span>Personaliza tu Chatbot</span>
+          </div>
+          <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <use xlink:href="#chevron-down"></use>
+          </svg>
+        </div>
+        <div class="accordion-content">
+          <div class="accordion-body">
 
       <div class="formbold-input-flex">
         <div class="col-12" style="width: 100% !important;">
@@ -282,8 +335,9 @@
         </div>
       </div>
 
-     
-
+          </div>
+        </div>
+      </div>
 
       <div class="formbold-checkbox-wrapper">
         <label for="supportCheckbox" class="formbold-checkbox-label">
@@ -310,8 +364,8 @@
               </span>
             </div>
           </div>
-          I agree to the defined
-          <a href="#"> terms, conditions, and policies</a>
+          Estoy de acuerdo con
+          <a href="{% url 'politicas_privacidad' %}"> Politicas de Privacidad</a>
         </label>
       </div>
 
@@ -330,880 +384,5 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{% static 'registrar_persona/js/main.js' %}"></script>
-<style>
-/* ===== ESTILOS PARA PERSONALIZACIÓN DE CHATBOT ===== */
-.chatbot-customization-section {
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
-    border-radius: 20px;
-    padding: 0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-    margin-bottom: 30px;
-}
-
-.chatbot-header {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    padding: 30px;
-    text-align: center;
-    color: white;
-    position: relative;
-}
-
-.chatbot-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
-    opacity: 0.3;
-}
-
-.chatbot-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    margin-bottom: 15px;
-    backdrop-filter: blur(10px);
-    position: relative;
-    z-index: 1;
-}
-
-.chatbot-icon svg {
-    width: 28px;
-    height: 28px;
-    color: white;
-}
-
-.chatbot-header h3 {
-    font-size: 28px;
-    font-weight: 700;
-    margin: 0 0 10px 0;
-    position: relative;
-    z-index: 1;
-}
-
-.chatbot-header p {
-    font-size: 16px;
-    opacity: 0.9;
-    margin: 0;
-    position: relative;
-    z-index: 1;
-}
-
-.avatar-selection-container {
-    padding: 40px;
-}
-
-.avatar-section-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #2d3748;
-    margin-bottom: 25px;
-    text-align: center;
-    position: relative;
-}
-
-.avatar-section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 50px;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #2563eb);
-    border-radius: 2px;
-}
-
-/* ===== ESTILOS PARA PREVIEW DE AVATAR ===== */
-.selected-avatar-preview {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 30px;
-    transition: all 0.3s ease;
-}
-
-.selected-avatar-preview:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.1);
-}
-
-.preview-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.avatar-preview-image {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
-    padding: 3px;
-}
-
-.avatar-preview-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 50%;
-}
-
-.preview-info span {
-    font-size: 16px;
-    font-weight: 600;
-    color: #2d3748;
-    display: block;
-}
-
-.preview-info p {
-    font-size: 14px;
-    color: #718096;
-    margin: 5px 0 0 0;
-}
-
-.change-avatar-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.change-avatar-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
-}
-
-/* ===== ESTILOS PARA MODAL ===== */
-.avatar-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
-    z-index: 1050;
-    animation: fadeIn 0.3s ease;
-}
-
-.avatar-modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-}
-
-.modal-content {
-    background: white;
-    border-radius: 20px;
-    max-width: 600px;
-    width: 100%;
-    max-height: 75vh;
-    overflow: hidden;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-    animation: slideUp 0.3s ease;
-}
-
-.modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 25px 30px;
-    border-bottom: 1px solid #e2e8f0;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-}
-
-.close-modal {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: white;
-}
-
-.close-modal:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
-}
-
-.modal-body {
-    padding: 20px;
-    max-height: 50vh;
-    overflow-y: auto;
-}
-
-.avatars-modal-grid {
-    display: none;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 20px;
-}
-
-.avatars-modal-grid.show {
-    display: grid;
-}
-
-.avatar-modal-card {
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-}
-
-.avatar-modal-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-    border-color: #3b82f6;
-}
-
-.avatar-modal-card.selected {
-    border-color: #3b82f6;
-    background: linear-gradient(145deg, #f7fafc, #edf2f7);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
-}
-
-.avatar-modal-image {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 15px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
-    padding: 3px;
-}
-
-.avatar-modal-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 50%;
-    transition: transform 0.3s ease;
-}
-
-.avatar-modal-card:hover .avatar-modal-image img {
-    transform: scale(1.05);
-}
-
-.avatar-modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(59, 130, 246, 0.9);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.avatar-modal-card.selected .avatar-modal-overlay {
-    opacity: 1;
-}
-
-.check-icon {
-    background: white;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.check-icon svg {
-    color: #667eea;
-}
-
-.avatar-modal-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #2d3748;
-    display: block;
-}
-
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-    padding: 25px 30px;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
-}
-
-.btn-cancel, .btn-confirm {
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn-cancel {
-    background: #e2e8f0;
-    color: #4a5568;
-}
-
-.btn-cancel:hover {
-    background: #cbd5e0;
-}
-
-.btn-confirm {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-}
-
-.btn-confirm:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ===== RESPONSIVE DESIGN ===== */
-@media (max-width: 768px) {
-    .modal-content {
-        margin: 10px;
-        max-height: 95vh;
-    }
-    
-    .modal-header {
-        padding: 20px;
-    }
-    
-    .modal-body {
-        padding: 20px;
-    }
-    
-    .avatars-modal-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
-    
-    .selected-avatar-preview {
-        flex-direction: column;
-        text-align: center;
-        gap: 15px;
-    }
-    
-    .preview-container {
-        justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .avatars-modal-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .modal-footer {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .btn-cancel, .btn-confirm {
-        width: 100%;
-    }
-}
-
-/* ===== SECCIÓN DE UPLOAD PERSONALIZADO ===== */
-.custom-upload-section {
-    margin-top: 30px;
-}
-
-.upload-divider {
-    text-align: center;
-    margin: 30px 0;
-    position: relative;
-}
-
-.upload-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
-}
-
-.upload-divider span {
-    background: white;
-    padding: 0 20px;
-    color: #a0aec0;
-    font-weight: 500;
-    position: relative;
-    z-index: 1;
-}
-
-.custom-avatar-card {
-    position: relative;
-}
-
-.custom-avatar-card input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.custom-avatar-label {
-    display: block;
-    cursor: pointer;
-    text-align: center;
-    padding: 30px;
-    border: 2px dashed #cbd5e0;
-    border-radius: 16px;
-    background: #f7fafc;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.custom-avatar-label:hover {
-    border-color: #3b82f6;
-    background: #edf2f7;
-    transform: translateY(-2px);
-}
-
-.custom-avatar-card input[type="radio"]:checked + .custom-avatar-label {
-    border-color: #3b82f6;
-    background: linear-gradient(145deg, #f7fafc, #edf2f7);
-    border-style: solid;
-}
-
-.upload-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    border-radius: 50%;
-    margin-bottom: 15px;
-    color: white;
-}
-
-.custom-avatar-label h5 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #2d3748;
-    margin: 0 0 8px 0;
-}
-
-.custom-avatar-label p {
-    font-size: 14px;
-    color: #718096;
-    margin: 0;
-}
-
-.file-upload-area {
-    margin-top: 20px;
-    border: 2px dashed #cbd5e0;
-    border-radius: 12px;
-    padding: 30px;
-    text-align: center;
-    background: white;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.file-upload-area:hover {
-    border-color: #667eea;
-    background: #f7fafc;
-}
-
-.file-input {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.upload-placeholder {
-    pointer-events: none;
-}
-
-.upload-placeholder svg {
-    color: #a0aec0;
-    margin-bottom: 15px;
-}
-
-.upload-placeholder span {
-    display: block;
-    font-size: 16px;
-    font-weight: 500;
-    color: #4a5568;
-    margin-bottom: 8px;
-}
-
-.upload-placeholder small {
-    color: #a0aec0;
-    font-size: 12px;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .avatars-grid {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .avatar-image-container {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .chatbot-header {
-        padding: 25px 20px;
-    }
-    
-    .avatar-selection-container {
-        padding: 30px 20px;
-    }
-}
-
-@media (min-width: 1200px) {
-    .avatars-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 30px;
-    }
-}
-
-@media (max-width: 480px) {
-    .avatars-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-</style>
-
-<script>
-// Variables globales para el modal de avatares
-let selectedAvatarData = {
-    path: 'avatars/Cartoon Style Robot.jpg',
-    name: 'Robot Cartoon'
-};
-
-// Función para cargar avatares dinámicamente
-function loadAvatars() {
-    fetch('/ecommerce/api/get_avatars/')
-        .then(response => response.json())
-        .then(data => {
-            const loadingDiv = document.getElementById('avatars-loading');
-            const gridDiv = document.getElementById('avatars-modal-grid');
-            
-            if (data.success && data.avatars) {
-                // Ocultar mensaje de carga
-                loadingDiv.style.display = 'none';
-                
-                // Limpiar grid
-                gridDiv.innerHTML = '';
-                
-                // Crear tarjetas de avatares dinámicamente
-                data.avatars.forEach(avatar => {
-                    const avatarCard = document.createElement('div');
-                    avatarCard.className = 'avatar-modal-card';
-                    avatarCard.setAttribute('data-avatar', avatar.path);
-                    avatarCard.setAttribute('data-name', avatar.name);
-                    
-                    avatarCard.innerHTML = `
-                        <div class="avatar-modal-image">
-                            <img src="/static/${avatar.path}" alt="${avatar.name}">
-                            <div class="avatar-modal-overlay">
-                                <div class="check-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="white"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <span class="avatar-modal-name">${avatar.name}</span>
-                    `;
-                    
-                    // Agregar event listener para selección
-                    avatarCard.addEventListener('click', function() {
-                        // Remover selección anterior
-                        document.querySelectorAll('.avatar-modal-card').forEach(c => c.classList.remove('selected'));
-                        
-                        // Agregar selección al avatar clickeado
-                        this.classList.add('selected');
-                        
-                        // Actualizar datos del avatar seleccionado
-                        selectedAvatarData = {
-                            path: this.getAttribute('data-avatar'),
-                            name: this.getAttribute('data-name')
-                        };
-                    });
-                    
-                    gridDiv.appendChild(avatarCard);
-                });
-                
-                // Mostrar grid
-                gridDiv.classList.add('show');
-            } else {
-                loadingDiv.innerHTML = 'Error al cargar avatares';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('avatars-loading').innerHTML = 'Error al cargar avatares';
-        });
-}
-
-// Función para abrir el modal
-function openAvatarModal() {
-    const modal = document.getElementById('avatarModal');
-    modal.classList.add('show');
-    document.body.style.overflow = 'hidden';
-    loadAvatars();
-}
-
-// Función para cerrar el modal
-function closeAvatarModal() {
-    const modal = document.getElementById('avatarModal');
-    modal.classList.remove('show');
-    document.body.style.overflow = 'auto';
-}
-
-// Función para confirmar la selección
-function confirmAvatarSelection() {
-    // Actualizar el preview en el formulario principal
-    const previewImage = document.getElementById('selected_avatar_preview');
-    const previewName = document.getElementById('selected_avatar_name');
-    const hiddenInput = document.getElementById('selected_avatar_input');
-    
-    if (previewImage) previewImage.src = "/static/" + selectedAvatarData.path;
-    if (previewName) previewName.textContent = selectedAvatarData.name;
-    if (hiddenInput) hiddenInput.value = selectedAvatarData.path;
-    
-    // Cerrar el modal
-    closeAvatarModal();
-}
-
-// JavaScript para manejar la selección de avatares
-document.addEventListener('DOMContentLoaded', function() {
-    // Manejar clicks en las tarjetas del modal
-    const avatarModalCards = document.querySelectorAll('.avatar-modal-card');
-    avatarModalCards.forEach(card => {
-        card.addEventListener('click', function() {
-            // Remover selección anterior
-            avatarModalCards.forEach(c => c.classList.remove('selected'));
-            
-            // Agregar selección al avatar clickeado
-            this.classList.add('selected');
-            
-            // Actualizar datos del avatar seleccionado
-            selectedAvatarData = {
-                path: this.getAttribute('data-avatar'),
-                name: this.getAttribute('data-name')
-            };
-        });
-    });
-    
-    // Cerrar modal al hacer click fuera de él
-    const modal = document.getElementById('avatarModal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                closeAvatarModal();
-            }
-        });
-    }
-    
-    // Cerrar modal con tecla Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeAvatarModal();
-        }
-    });
-    
-    // Seleccionar el primer avatar por defecto
-    const firstAvatar = document.querySelector('.avatar-modal-card');
-    if (firstAvatar) {
-        firstAvatar.classList.add('selected');
-    }
-    
-    const avatarOptions = document.querySelectorAll('input[name="avatar_option"]');
-    const customUploadSection = document.getElementById('custom_upload_section');
-    const avatarFileInput = document.getElementById('avatar_chatbot');
-    
-    avatarOptions.forEach(option => {
-        option.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customUploadSection.style.display = 'block';
-                avatarFileInput.required = false;
-            } else {
-                customUploadSection.style.display = 'none';
-                avatarFileInput.value = '';
-                avatarFileInput.required = false;
-            }
-        });
-    });
-    
-    // Manejar la subida de archivos con drag & drop
-    const fileUploadArea = document.querySelector('.file-upload-area');
-    const fileInput = document.getElementById('avatar_chatbot');
-    const uploadPlaceholder = document.querySelector('.upload-placeholder');
-    
-    if (fileUploadArea && fileInput) {
-        // Prevenir comportamiento por defecto del drag & drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileUploadArea.addEventListener(eventName, preventDefaults, false);
-        });
-        
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        // Resaltar área de drop
-        ['dragenter', 'dragover'].forEach(eventName => {
-            fileUploadArea.addEventListener(eventName, highlight, false);
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            fileUploadArea.addEventListener(eventName, unhighlight, false);
-        });
-        
-        function highlight(e) {
-            fileUploadArea.style.borderColor = '#667eea';
-            fileUploadArea.style.background = '#f0f4ff';
-        }
-        
-        function unhighlight(e) {
-            fileUploadArea.style.borderColor = '#cbd5e0';
-            fileUploadArea.style.background = 'white';
-        }
-        
-        // Manejar archivos soltados
-        fileUploadArea.addEventListener('drop', handleDrop, false);
-        
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFileSelect(files[0]);
-            }
-        }
-        
-        // Manejar selección de archivo
-        fileInput.addEventListener('change', function(e) {
-            if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
-            }
-        });
-        
-        function handleFileSelect(file) {
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    uploadPlaceholder.innerHTML = `
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <img src="${e.target.result}" alt="Preview" style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; margin-bottom: 10px; border: 3px solid #667eea;">
-                            <span style="color: #667eea; font-weight: 600;">${file.name}</span>
-                            <small style="color: #a0aec0;">Imagen seleccionada correctamente</small>
-                        </div>
-                    `;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-    }
-    
-    // Los avatares se cargan automáticamente cuando se abre el modal
-    
-    // Agregar animaciones suaves a las tarjetas de avatar
-    const avatarCards = document.querySelectorAll('.avatar-card');
-    avatarCards.forEach((card, index) => {
-        card.style.animationDelay = `${index * 0.1}s`;
-        card.style.animation = 'fadeInUp 0.6s ease forwards';
-    });
-    
-    // Agregar animación CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .avatar-card {
-            opacity: 0;
-        }
-    `;
-    document.head.appendChild(style);
-});
-</script>
-
 </body>
 </html>

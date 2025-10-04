@@ -1,113 +1,94 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-	<title>INICIAR SESIÓN</title>
+	<title>Iniciar Sesión</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-<!--===============================================================================================-->	
 	<link rel="icon" href="{% static 'iniciar_sesion/images/icons/favicon.ico' %}"/>
-<!--===============================================================================================-->
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
-<!--===============================================================================================-->
 	<link rel="stylesheet" href="{% static 'iniciar_sesion/fonts/font-awesome-4.7.0/css/font-awesome.min.css' %}">
-<!--===============================================================================================-->
-	<link rel="stylesheet"  href="{% static 'iniciar_sesion/fonts/iconic/css/material-design-iconic-font.min.css' %}">
-<!--===============================================================================================-->
-	
-<!--===============================================================================================-->
-	<link rel="stylesheet"  href="{% static 'iniciar_sesion/css/util.css' %}">
+	<link rel="stylesheet" href="{% static 'iniciar_sesion/fonts/iconic/css/material-design-iconic-font.min.css' %}">
+	<link rel="stylesheet" href="{% static 'iniciar_sesion/css/util.css' %}">
     <link rel="stylesheet" href="{% static 'iniciar_sesion/css/main.css' %}">
     <link rel="stylesheet" href="{% static 'barra_superior/css/main.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!--===============================================================================================-->
 
-{% include 'ecommerce_app/barra_superior_bienvenido.html' %}
-  
+	{% include 'ecommerce_app/barra_superior_bienvenido.html' %}
 </head>
 <body>
-	<div class="contenedor-general">
-		<img class="gif-login" src="{% static 'iniciar_sesion/images/1.jpg' %}">
-  <form method="POST" id="loginForm">
-    {% csrf_token %}
-	<div class="limiter">
-		<div class="container-login100" >
-			<div class="wrap-login100 p-l-55 p-r-55 p-t-65 p-b-54">
-				<form class="login100-form validate-form">
-                  
-					<span class="login100-form-title p-b-49">
-						Iniciar sesión
-						
-					</span>
-
-					<div class="input-container">
-						<div class="input-field" id="emailField">
-							<div class="wrap-input100 validate-input m-b-23" data-validate="Email is required">
-								<label for="email" class="formbold-form-label" style="color: #1a1a1a; font-weight: 600;"> Correo Electrónico </label>
-								<input class="input100" type="email" name="email" id="email" placeholder="Ingrese su correo electrónico" required>
-								<span class="focus-input100" data-symbol="&#xf206;"></span>
-							</div>
-						</div>
-
-						<div class="input-field hidden" id="passwordField">
-							<div class="wrap-input100 validate-input m-b-23" data-validate="Password is required">
-								<label for="password" class="formbold-form-label" style="color: #1a1a1a; font-weight: 600;"> Contraseña </label>
-								<input class="input100" type="password" name="password" id="password" placeholder="Ingrese su contraseña" required>
-								<span class="focus-input100" data-symbol="&#xf190;"></span>
-							</div>
-						</div>
-					</div>
-					
-					<div class="button-container">
-						<div class="top-buttons">
-							<button type="button" class="custom-button" id="nextButton">
-								Siguiente
-							</button>
-							
-							<div class="dropdown" id="createAccountDropdown">
-								<button class="custom-button dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-									Crear cuenta
-								</button>
-								<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-									<li><a class="dropdown-item" href="{% url 'registrar_persona' %}">Persona</a></li>
-									<li><a class="dropdown-item" href="{% url 'registrar_empresa' %}">Empresa</a></li>
-								</ul>
-							</div>
-							<button type="button" class="custom-button" id="backButton" style="display: none;">
-								Regresar
-							</button>
-						</div>
-						
-						<button class="google-button">
-							<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="google-icon" alt="Google">
-							Continuar con Google
-						</button>
-					</div>
-					
-					
-					
-
+	<div class="login-page">
+		<div class="login-container">
+			<form method="POST" id="loginForm" class="login-form">
+				{% csrf_token %}
 				
-				</form>
-			</div>
+				<div class="login-header">
+					<h1 class="login-title">Bienvenido</h1>
+					<p class="login-subtitle">Ingresa a tu cuenta</p>
+				</div>
+
+				<div class="input-container">
+					<div class="input-field" id="emailField">
+						<div class="form-group">
+							<label for="email" class="form-label">
+								<i class="zmdi zmdi-email"></i>
+								Correo Electrónico
+							</label>
+							<input 
+								class="form-input" 
+								type="email" 
+								name="email" 
+								id="email" 
+								placeholder="ejemplo@correo.com" 
+								required>
+						</div>
+					</div>
+
+					<div class="input-field hidden" id="passwordField">
+						<div class="form-group">
+							<label for="password" class="form-label">
+								<i class="zmdi zmdi-lock"></i>
+								Contraseña
+							</label>
+							<input 
+								class="form-input" 
+								type="password" 
+								name="password" 
+								id="password" 
+								placeholder="Ingresa tu contraseña" 
+								required>
+						</div>
+					</div>
+				</div>
+				
+				<div class="button-container">
+					<button type="button" class="btn-primary" id="nextButton">
+						Siguiente
+					</button>
+					
+					<div class="dropdown" id="createAccountDropdown">
+						<button class="btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+							Crear cuenta
+						</button>
+						<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+							<li><a class="dropdown-item" href="{% url 'registrar_persona' %}">
+								<i class="zmdi zmdi-account"></i> Persona
+							</a></li>
+							<li><a class="dropdown-item" href="{% url 'registrar_empresa' %}">
+								<i class="zmdi zmdi-city-alt"></i> Empresa
+							</a></li>
+						</ul>
+					</div>
+					
+					<button type="button" class="btn-back" id="backButton" style="display: none;">
+						<i class="zmdi zmdi-arrow-left"></i> Regresar
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
-</form>
-	
-</div>
-	
-
-
-
-
-	
 
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
 	<script src="{% static 'iniciar_sesion/js/main.js' %}"></script>
-
-		
-	
-
-
 </body>
 </html>
