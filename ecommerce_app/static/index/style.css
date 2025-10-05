@@ -1,11 +1,13 @@
-/* Carrusel principal SIEMPRE del mismo tamaño, imágenes siempre iguales */
+/* Carrusel principal responsive con viewport height */
 .main-swiper.hero-carousel {
-  height: 280px !important;
+  height: 35vh !important;
+  min-height: 280px !important;
+  max-height: 450px !important;
   display: flex;
   align-items: center;
   flex-direction: column;
   overflow: hidden;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0 !important;
 }
 .main-swiper.hero-carousel .swiper-slide {
   height: 100% !important;
@@ -21,6 +23,17 @@
   object-fit: cover;
   display: block;
   margin: 0 auto;
+}
+
+/* Ajustes para la sección hero completa */
+.hero-home {
+  padding-bottom: 1rem !important;
+}
+
+/* Wrapper de las cards debajo del carrusel */
+.hero-cards-wrapper {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 body {
   --heading-font        : "Inter", sans-serif;
@@ -701,6 +714,8 @@ a.btn-link.text-light:after {
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   border-radius: 1.25rem;
   cursor: pointer;
+  max-width: 280px;
+  margin: 0 auto;
 }
 .card-info-hero:hover {
   background: #f0f6ff;
@@ -713,13 +728,18 @@ a.btn-link.text-light:after {
   color: #fff;
   border: none;
   border-radius: 2rem;
-  padding: 0.75rem 2.5rem;
+  padding: 0.75rem 1.5rem;
   font-weight: 600;
   font-size: 1rem;
   box-shadow: 0 2px 8px rgba(23,105,170,0.08);
   margin: 0 auto 0.5rem auto;
   display: block;
   width: 80%;
+  max-width: 200px;
+  min-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.18s;
   letter-spacing: 0.01em;
 }
@@ -1594,6 +1614,20 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
 
 /* ===== RESPONSIVE STYLES ===== */
 
+/* Pantallas grandes (1200px y más) */
+@media screen and (min-width: 1200px) {
+  .card-info-hero {
+    max-width: 240px;
+  }
+}
+
+/* Pantallas extra grandes (1400px y más) */
+@media screen and (min-width: 1400px) {
+  .card-info-hero {
+    max-width: 260px;
+  }
+}
+
 /* Tablets y dispositivos medianos (992px y menos) */
 @media screen and (max-width: 992px) {
   .container, .container-fluid, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
@@ -1601,21 +1635,34 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
   }
   
   .main-swiper.hero-carousel {
-    height: 350px !important;
-    min-height: 350px !important;
-    max-height: 350px !important;
+    height: 32vh !important;
+    min-height: 250px !important;
+    max-height: 380px !important;
+  }
+  
+  /* Cards hero en tablets medianas */
+  .hero-cards-wrapper {
+    margin-top: 1.2rem;
+  }
+  .card-info-hero {
+    max-width: 260px;
+  }
+  .card-info-hero h5 {
+    font-size: 1rem;
+  }
+  .card-info-hero p {
+    font-size: 0.88rem;
+  }
+  .card-info-hero .btn-primary-soft {
+    padding: 0.7rem 1.3rem;
+    font-size: 0.95rem;
+    width: 85%;
+    max-width: 195px;
+    min-width: 95px;
   }
   
   .section-header h2 {
     font-size: 1.5rem;
-  }
-  
-  .card-info-hero h5 {
-    font-size: 1rem;
-  }
-  
-  .card-info-hero p {
-    font-size: 0.85rem;
   }
 }
 
@@ -1626,9 +1673,30 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
   }
   
   .main-swiper.hero-carousel {
-    height: 300px !important;
-    min-height: 300px !important;
-    max-height: 300px !important;
+    height: 28vh !important;
+    min-height: 220px !important;
+    max-height: 320px !important;
+  }
+  
+  /* Cards hero responsivas en tablets pequeñas */
+  .hero-cards-wrapper .row {
+    row-gap: 1rem;
+  }
+  .card-info-hero {
+    max-width: 320px;
+  }
+  .card-info-hero h5 {
+    font-size: 1rem;
+  }
+  .card-info-hero p {
+    font-size: 0.9rem;
+  }
+  .card-info-hero .btn-primary-soft {
+    padding: 0.65rem 1.2rem;
+    font-size: 0.9rem;
+    width: 85%;
+    max-width: 190px;
+    min-width: 90px;
   }
   
   .section-header {
@@ -1668,16 +1736,45 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
 
 /* Móviles (576px y menos) */
 @media screen and (max-width: 576px) {
+  /* Carrusel hero: reduce altura en móviles */
+  .main-swiper.hero-carousel {
+    height: 25vh !important;
+    min-height: 200px !important;
+    max-height: 280px !important;
+  }
+  
+  /* Cards hero: stack vertical en móviles con max-width */
+  .hero-cards-wrapper {
+    margin-top: 1rem;
+  }
+  .hero-cards-wrapper .row {
+    row-gap: 1rem;
+  }
+  .card-info-hero {
+    max-width: 100%;
+    width: 100%;
+  }
+  .card-info-hero h5 {
+    font-size: 1rem;
+  }
+  .card-info-hero p {
+    font-size: 0.85rem;
+  }
+  .card-info-hero .btn-primary-soft {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    width: 85%;
+    max-width: 180px;
+    min-width: 80px;
+  }
+  .card-info-hero .icon-box svg {
+    width: 48px;
+    height: 48px;
+  }
   .container, .container-fluid, .container-lg, .container-md, .container-sm, .container-xl, .container-xxl {
     --bs-gutter-x: 1rem;
     padding-left: 1rem;
     padding-right: 1rem;
-  }
-  
-  .main-swiper.hero-carousel {
-    height: 250px !important;
-    min-height: 250px !important;
-    max-height: 250px !important;
   }
   
   .card-info-hero {
@@ -1807,9 +1904,9 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
 /* Móviles muy pequeños (420px y menos) */
 @media screen and (max-width: 420px) {
   .main-swiper.hero-carousel {
-    height: 200px !important;
-    min-height: 200px !important;
-    max-height: 200px !important;
+    height: 22vh !important;
+    min-height: 180px !important;
+    max-height: 240px !important;
   }
   
   .section-title {
@@ -1818,6 +1915,14 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
   
   .card-info-hero h5 {
     font-size: 0.9rem;
+  }
+  
+  .card-info-hero .btn-primary-soft {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    width: 90%;
+    max-width: 150px;
+    min-width: 70px;
   }
   
   .product-item h3 {
@@ -1838,9 +1943,9 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
 /* Móviles extra pequeños (360px y menos) */
 @media screen and (max-width: 360px) {
   .main-swiper.hero-carousel {
-    height: 180px !important;
-    min-height: 180px !important;
-    max-height: 180px !important;
+    height: 20vh !important;
+    min-height: 160px !important;
+    max-height: 220px !important;
   }
   
   .card-info-hero {
@@ -1850,6 +1955,14 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
   .card-info-hero svg {
     width: 40px !important;
     height: 40px !important;
+  }
+  
+  .card-info-hero .btn-primary-soft {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.75rem;
+    width: 95%;
+    max-width: 130px;
+    min-width: 60px;
   }
   
   .section-title {
