@@ -1,8 +1,6 @@
 /* Carrusel principal SIEMPRE del mismo tamaño, imágenes siempre iguales */
 .main-swiper.hero-carousel {
-  height: 400px !important;
-  min-height: 400px !important;
-  max-height: 400px !important;
+  height: 280px !important;
   display: flex;
   align-items: center;
   flex-direction: column;
