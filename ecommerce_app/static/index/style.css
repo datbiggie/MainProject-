@@ -881,13 +881,7 @@ a.btn-link.text-light:after {
   justify-content: flex-end;
 }
 /* Efecto hover para las tarjetas de la sección py-5 igual que card-info-hero */
-.py-5 .card:hover {
-  background: #f0f6ff;
-  box-shadow: 0 8px 32px rgba(0, 80, 180, 0.10), 0 2px 8px rgba(0,0,0,0.08);
-  transform: translateY(-4px) scale(1.03);
-  transition: box-shadow 0.25s, background 0.25s, transform 0.18s;
-  cursor: pointer;
-}
+
 
 /* --- ULTRA ELEGANT WHITE SIDEBAR MENU --- */
 .offcanvas.offcanvas-start {
@@ -1520,6 +1514,22 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
   filter: drop-shadow(0 2px 4px rgba(46, 204, 113, 0.5));
 }
 
+/* Remove any underline / bottom-border that can appear next to the
+   icon labels on the right side of the navbar (profile, bell, heart, cart)
+   Some templates render those labels as anchors outside .navbar-nav so
+   enforce no text-decoration / border here. */
+.navbar .d-flex.list-unstyled li a,
+.navbar .d-flex.list-unstyled li a span {
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+.navbar .d-flex.list-unstyled li a:hover,
+.navbar .d-flex.list-unstyled li a:focus {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
 /* ===== COLORES DE REDES SOCIALES ===== */
 .social-facebook {
   transition: all 0.3s ease;
@@ -1865,4 +1875,61 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
     width: 12px !important;
     height: 12px !important;
   }
+}
+
+/* === Operaciones: etiquetas en negro, iconos conservan su color === */
+/* Solo el texto/labels (span) se pone negro para no afectar a los SVG coloreados */
+.navbar .d-flex.list-unstyled li a span {
+  color: #000 !important;
+}
+
+/* Dropdowns y submenus (desktop): seleccionar los spans de texto dentro de los items */
+.navbar .dropdown-menu .dropdown-item span,
+.navbar .dropdown-menu a span {
+  color: #000 !important;
+}
+
+/* Offcanvas / mobile menu: aplicar solo a los spans de las nav-links y dropdown-items */
+.offcanvas .nav-link span,
+.offcanvas .dropdown-item,
+.offcanvas .menu-list .nav-link span {
+  color: #000 !important;
+}
+
+/* Hover/active states: aplicar contraste a la etiqueta (span) y fondo al elemento */
+.dropdown-menu .dropdown-item:hover span,
+.offcanvas .dropdown-item:hover,
+.navbar .d-flex.list-unstyled li a:hover span {
+  color: #000 !important;
+}
+
+/* Mantener sin subrayado/bordes en las etiquetas */
+.navbar .d-flex.list-unstyled li a,
+.navbar .d-flex.list-unstyled li a span {
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+/* Also ensure dropdown anchors (which often don't wrap text in a span) are black */
+.navbar .dropdown-menu .dropdown-item,
+.navbar .dropdown-menu a,
+.navbar .dropdown-menu .dropdown-item:link,
+.navbar .dropdown-menu .dropdown-item:visited {
+  color: #000 !important;
+}
+
+/* Offcanvas anchors too */
+.offcanvas .nav-link,
+.offcanvas .menu-list .nav-link,
+.offcanvas .menu-list .nav-link span,
+.offcanvas .menu-list .nav-link:link,
+.offcanvas .menu-list .nav-link:visited {
+  color: #000 !important;
+}
+
+/* Hover backgrounds keep contrast */
+.navbar .dropdown-menu .dropdown-item:hover,
+.offcanvas .menu-list .nav-link:hover {
+  color: #000 !important;
+  background: #f8f9fa !important;
 }

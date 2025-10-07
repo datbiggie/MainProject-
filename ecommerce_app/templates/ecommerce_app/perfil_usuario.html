@@ -55,8 +55,14 @@
           {% endif %}
         </div>
         <div class="col-md-10">
-    <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ usuario.nombre_usuario|default:'Nombre del Usuario' }}</h1>
-    
+          <div class="d-flex align-items-center mb-2">
+            <h1 class="fw-bold mb-0" style="font-size:2rem;">{{ usuario.nombre_usuario|default:'Nombre del Usuario' }}</h1>
+            {% if user_info.is_authenticated and not user_info.is_public_profile %}
+              <a href="{% url 'editar_perfil_usuario' usuario_id=usuario.id_usuario %}" class="btn btn-outline-secondary btn-sm ms-3">
+                <i class="fas fa-pencil-alt me-1"></i> Editar Perfil
+              </a>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>

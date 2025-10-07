@@ -1,280 +1,3 @@
-// Variables globales para el mapa
-let map = null;
-let marker = null;
-let geocoder = null;
-let locationObtained = false;
-let mapInitialized = false;
-
-// Función para limpiar el estado del mapa
-function clearMapState() {
-    if (map) {
-        // Limpiar eventos del mapa
-        google.maps.event.clearInstanceListeners(map);
-    }
-    if (marker) {
-        // Limpiar eventos del marcador
-        google.maps.event.clearInstanceListeners(marker);
-        marker.setMap(null);
-    }
-    
-    map = null;
-    marker = null;
-    geocoder = null;
-    locationObtained = false;
-    mapInitialized = false;
-    
-    console.log('Estado del mapa limpiado');
-}
-
-// Función de fallback si Google Maps no se carga
-function initMapFallback() {
-    console.log('Intentando inicializar mapa con fallback...');
-    setTimeout(function() {
-        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-            initMap();
-        } else {
-            console.error('Google Maps no se pudo cargar');
-            const locationStatus = document.getElementById('locationStatus');
-            if (locationStatus) {
-                locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error al cargar Google Maps. Recarga la página.';
-                locationStatus.style.color = '#dc3545';
-            }
-        }
-    }, 2000);
-}
-
-// Función para obtener ubicación automáticamente
-function getCurrentLocation() {
-    const locationStatus = document.getElementById('locationStatus');
-    const locationIcon = document.getElementById('locationIcon');
-    
-    if (navigator.geolocation) {
-        // Configurar opciones de alta precisión
-        const options = {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000 // 5 minutos de cache
-        };
-        
-        locationStatus.innerHTML = '<span id="locationIcon">⏳</span> Obteniendo ubicación con alta precisión...';
-        document.getElementById('retryButton').style.display = 'none';
-        
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const userLocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
-                
-                // Actualizar el mapa
-                map.setCenter(userLocation);
-                map.setZoom(16); // Zoom más cercano para mejor precisión
-                marker.setPosition(userLocation);
-                
-                // Actualizar campos de coordenadas
-                document.getElementById('latitud').value = userLocation.lat.toFixed(6);
-                document.getElementById('longitud').value = userLocation.lng.toFixed(6);
-                
-                // Obtener la dirección con alta precisión
-                geocoder.geocode({ 
-                    'location': userLocation,
-                    'language': 'es' // Forzar idioma español
-                }, function(results, status) {
-                    if (status === 'OK' && results[0]) {
-                        document.getElementById('direccion_empresa').value = results[0].formatted_address;
-                        
-                        // Mostrar éxito
-                        locationStatus.innerHTML = '<span id="locationIcon">✅</span> Ubicación obtenida correctamente';
-                        locationStatus.style.color = '#28a745';
-                        document.getElementById('retryButton').style.display = 'none';
-                        locationObtained = true;
-                    } else {
-                        locationStatus.innerHTML = '<span id="locationIcon">⚠️</span> Ubicación obtenida pero no se pudo obtener la dirección';
-                        locationStatus.style.color = '#ffc107';
-                        document.getElementById('retryButton').style.display = 'inline-block';
-                    }
-                });
-            },
-            function(error) {
-                let errorMessage = 'Error al obtener la ubicación';
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = 'Permiso denegado. Por favor, permite el acceso a tu ubicación.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Información de ubicación no disponible.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = 'Tiempo de espera agotado. Verifica tu conexión a internet.';
-                        break;
-                }
-                
-                locationStatus.innerHTML = '<span id="locationIcon">❌</span> ' + errorMessage;
-                locationStatus.style.color = '#dc3545';
-                document.getElementById('retryButton').style.display = 'inline-block';
-                
-                Swal.fire({
-                    title: 'Error de ubicación',
-                    text: errorMessage + '\n\nPuedes hacer clic en "Reintentar" o arrastrar el marcador en el mapa para seleccionar tu ubicación manualmente.',
-                    icon: 'warning',
-                    confirmButtonText: 'Reintentar',
-                    cancelButtonText: 'Cancelar',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3b82f6',
-                    cancelButtonColor: '#6c757d'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        retryLocation();
-                    }
-                });
-            },
-            options
-        );
-    } else {
-        locationStatus.innerHTML = '<span id="locationIcon">❌</span> Tu navegador no soporta geolocalización';
-        locationStatus.style.color = '#dc3545';
-        document.getElementById('retryButton').style.display = 'inline-block';
-        
-        Swal.fire({
-            title: 'Error',
-            text: 'Tu navegador no soporta geolocalización',
-            icon: 'error',
-            confirmButtonText: 'Aceptar',
-            confirmButtonColor: '#3b82f6'
-        });
-    }
-}
-
-// Función para inicializar el mapa - Versión mejorada para evitar problemas de caché
-function initMap() {
-    console.log('Inicializando mapa...');
-    
-    // Evitar inicializaciones múltiples
-    if (mapInitialized) {
-        console.log('El mapa ya está inicializado');
-        return;
-    }
-    
-    try {
-        // Verificar que Google Maps esté cargado
-        if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-            console.error('Google Maps no está cargado, reintentando en 1 segundo...');
-            setTimeout(initMap, 1000);
-            return;
-        }
-        
-        // Limpiar estado anterior si existe
-        clearMapState();
-        
-        // Crear el mapa inicialmente centrado en Venezuela
-        const venezuela = { lat: 6.42375, lng: -66.58973 };
-        const mapElement = document.getElementById('map');
-        
-        if (!mapElement) {
-            console.error('No se encontró el elemento del mapa');
-            return;
-        }
-
-        map = new google.maps.Map(mapElement, {
-            center: venezuela,
-            zoom: 6,
-            mapTypeControl: true,
-            streetViewControl: true,
-            fullscreenControl: true,
-            // Mejorar la precisión del mapa
-            gestureHandling: 'cooperative',
-            zoomControl: true,
-            mapTypeId: google.maps.MapTypeId.ROADMAP
-        });
-
-        // Inicializar el geocoder
-        geocoder = new google.maps.Geocoder();
-
-        // Crear el marcador inicial
-        marker = new google.maps.Marker({
-            position: venezuela,
-            map: map,
-            draggable: true,
-            title: 'Ubicación de la empresa',
-            // Mejorar la apariencia del marcador
-            icon: {
-                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                scaledSize: new google.maps.Size(32, 32)
-            }
-        });
-
-        // Obtener ubicación automáticamente después de un breve delay
-        setTimeout(function() {
-            getCurrentLocation();
-        }, 1000);
-        
-        console.log('Mapa inicializado correctamente');
-        
-        // Actualizar estado inicial
-        const locationStatus = document.getElementById('locationStatus');
-        if (locationStatus) {
-            locationStatus.innerHTML = '<span id="locationIcon">📍</span> Obteniendo ubicación automáticamente...';
-            locationStatus.style.color = '#2196F3';
-        }
-        
-        // Agregar función para reintentar ubicación
-        window.retryLocation = function() {
-            const locationStatus = document.getElementById('locationStatus');
-            locationStatus.innerHTML = '<span id="locationIcon">⏳</span> Reintentando obtener ubicación...';
-            locationStatus.style.color = '#2196F3';
-            document.getElementById('retryButton').style.display = 'none';
-            getCurrentLocation();
-        };
-
-        // Actualizar coordenadas cuando se arrastra el marcador
-        google.maps.event.addListener(marker, 'dragend', function() {
-            const position = marker.getPosition();
-            document.getElementById('latitud').value = position.lat().toFixed(6);
-            document.getElementById('longitud').value = position.lng().toFixed(6);
-
-            // Obtener la dirección al soltar el marcador con alta precisión
-            geocoder.geocode({ 
-                'location': position,
-                'language': 'es' // Forzar idioma español
-            }, function(results, status) {
-                if (status === 'OK' && results[0]) {
-                    document.getElementById('direccion_empresa').value = results[0].formatted_address;
-                    
-                    // Mostrar confirmación de actualización
-                    const locationStatus = document.getElementById('locationStatus');
-                    if (locationStatus) {
-                        locationStatus.innerHTML = '<span id="locationIcon">📍</span> Ubicación actualizada manualmente';
-                        locationStatus.style.color = '#2196F3';
-                    }
-                } else {
-                    console.warn('No se pudo obtener la dirección para las coordenadas:', position.lat(), position.lng());
-                }
-            });
-        });
-
-
-
-        console.log('Mapa inicializado correctamente');
-        mapInitialized = true;
-    } catch (error) {
-        console.error('Error al inicializar el mapa:', error);
-        mapInitialized = false;
-        const mapElement = document.getElementById('map');
-        if (mapElement) {
-            mapElement.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #721c24; background-color: #f8d7da; border-radius: 8px;">
-                    <h3>Error al cargar el mapa</h3>
-                    <p>Por favor, verifica tu conexión a internet y recarga la página.</p>
-                    <p>Si el problema persiste, contacta al administrador.</p>
-                    <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Recargar Página
-                    </button>
-                </div>
-            `;
-        }
-    }
-}
-
 // Función para previsualizar la imagen
 function previewImage(input) {
     const preview = document.getElementById('imagePreview');
@@ -309,6 +32,29 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
 
 // Inicialización cuando el documento está listo
 $(document).ready(function() {
+    // ===== VALIDACIÓN SOLO NÚMEROS EN TELÉFONO =====
+    $('#phone').on('input', function() {
+        // Eliminar cualquier carácter que no sea número
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // ===== FUNCIONALIDAD DE ACORDEÓN =====
+    $('.accordion-header').on('click', function() {
+        const section = $(this).parent('.accordion-section');
+        const isActive = section.hasClass('active');
+        
+        // Cerrar todas las secciones
+        $('.accordion-section').removeClass('active');
+        
+        // Abrir la sección clickeada si no estaba activa
+        if (!isActive) {
+            section.addClass('active');
+        }
+    });
+    
+    // Abrir la primera sección por defecto
+    $('.accordion-section').first().addClass('active');
+
     // Inicializar Select2 para estados
     $('#state').select2({
         theme: 'bootstrap-5',
@@ -343,6 +89,24 @@ $(document).ready(function() {
         theme: 'bootstrap-5',
         width: '100%',
         placeholder: 'Selecciona el tipo de empresa',
+        allowClear: true,
+        minimumResultsForSearch: -1,
+        language: {
+            noResults: function() {
+                return "No se encontraron resultados";
+            },
+            searching: function() {
+                return "Buscando...";
+            }
+        },
+        dropdownCssClass: 'select2-dropdown-custom'
+    });
+
+    // Inicializar Select2 para sector de empresa
+    $('#sector_empresa').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Selecciona el sector de la empresa',
         allowClear: true,
         minimumResultsForSearch: -1,
         language: {
@@ -408,18 +172,6 @@ $(document).ready(function() {
         }
     });
 
-    // Validación para coordenadas
-    $('#latitud, #longitud').on('blur', function() {
-        const value = $(this).val();
-        if (!value) {
-            $(this).addClass('required-error');
-            $(this).attr('title', 'Debe seleccionar una ubicación en el mapa');
-        } else {
-            $(this).removeClass('required-error');
-            $(this).removeAttr('title');
-        }
-    });
-
     // Validación para checkbox de términos
     $('#supportCheckbox').on('change', function() {
         if (!$(this).is(':checked')) {
@@ -448,14 +200,12 @@ $(document).ready(function() {
             const estado_empresa = $('#state').val();
             const tipo_empresa = $('#tipo_empresa').val();
             const direccion_empresa = $('#direccion_empresa').val().trim();
-            const latitud = $('#latitud').val();
-            const longitud = $('#longitud').val();
 
             // Validar checkbox de términos y condiciones
             const checkbox = $('#supportCheckbox').is(':checked');
 
             // Validar campos vacíos
-            if (!nombre_empresa || !descripcion_empresa || !pais_empresa || !estado_empresa || !tipo_empresa || !direccion_empresa || !latitud || !longitud) {
+            if (!nombre_empresa || !descripcion_empresa || !pais_empresa || !estado_empresa || !tipo_empresa || !direccion_empresa) {
                 Swal.fire({
                     title: 'Campos obligatorios',
                     text: 'Todos los campos son obligatorios. Por favor complete todos los campos.',
@@ -527,51 +277,9 @@ $(document).ready(function() {
     }
 });
 
-// Función para cargar Google Maps de forma robusta
-function loadGoogleMapsRobustly() {
-    // Verificar si ya está cargado
-    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-        console.log('Google Maps ya está cargado, inicializando mapa...');
-        initMap();
-        return;
-    }
-
-    // Si no está cargado, esperar y reintentar
-    console.log('Esperando a que Google Maps se cargue...');
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    const checkGoogleMaps = function() {
-        attempts++;
-        console.log(`Intento ${attempts} de ${maxAttempts} para cargar Google Maps...`);
-        
-        if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-            console.log('Google Maps cargado exitosamente, inicializando mapa...');
-            initMap();
-        } else if (attempts < maxAttempts) {
-            setTimeout(checkGoogleMaps, 1000);
-        } else {
-            console.error('No se pudo cargar Google Maps después de múltiples intentos');
-            const locationStatus = document.getElementById('locationStatus');
-            if (locationStatus) {
-                locationStatus.innerHTML = '<span id="locationIcon">❌</span> Error al cargar Google Maps. <button onclick="reloadPageWithCacheClear()" style="background: none; border: none; color: #007bff; text-decoration: underline; cursor: pointer;">Recargar página</button>';
-                locationStatus.style.color = '#dc3545';
-            }
-        }
-    };
-    
-    // Iniciar el proceso de verificación
-    setTimeout(checkGoogleMaps, 500);
-}
-
-// Función para recargar la página limpiando el caché
+// Function to reload the page clearing cache
 function reloadPageWithCacheClear() {
-    console.log('Recargando página con limpieza de caché...');
-    
-    // Limpiar el estado del mapa antes de recargar
-    clearMapState();
-    
-    // Forzar recarga sin caché
+    console.log('Reloading page clearing cache...');
     window.location.reload(true);
 }
 
@@ -611,6 +319,213 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Iniciar la carga robusta de Google Maps
-    loadGoogleMapsRobustly();
+   
+});
+
+
+// ===== CÓDIGO PARA MODAL DE AVATARES =====
+// Variables globales para el modal de avatares
+let selectedAvatarData = {
+    path: 'avatars/Cartoon Style Robot.jpg',
+    name: 'Robot Cartoon'
+};
+
+// Función para cargar avatares dinámicamente
+function loadAvatars() {
+    fetch('/ecommerce/api/get_avatars/')
+        .then(response => response.json())
+        .then(data => {
+            const loadingDiv = document.getElementById('avatars-loading');
+            const gridDiv = document.getElementById('avatars-modal-grid');
+            
+            if (data.success && data.avatars) {
+                // Ocultar mensaje de carga
+                loadingDiv.style.display = 'none';
+                
+                // Limpiar grid
+                gridDiv.innerHTML = '';
+                
+                // Crear tarjetas de avatares dinámicamente
+                data.avatars.forEach(avatar => {
+                    const avatarCard = document.createElement('div');
+                    avatarCard.className = 'avatar-modal-card';
+                    avatarCard.setAttribute('data-avatar', avatar.path);
+                    avatarCard.setAttribute('data-name', avatar.name);
+                    
+                    avatarCard.innerHTML = `
+                        <div class="avatar-modal-image">
+                            <img src="/static/${avatar.path}" alt="${avatar.name}">
+                            <div class="avatar-modal-overlay">
+                                <div class="check-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="white"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="avatar-modal-name">${avatar.name}</span>
+                    `;
+                    
+                    // Agregar event listener para selección
+                    avatarCard.addEventListener('click', function() {
+                        // Remover selección anterior
+                        document.querySelectorAll('.avatar-modal-card').forEach(c => c.classList.remove('selected'));
+                        
+                        // Agregar selección al avatar clickeado
+                        this.classList.add('selected');
+                        
+                        // Actualizar datos del avatar seleccionado
+                        selectedAvatarData = {
+                            path: this.getAttribute('data-avatar'),
+                            name: this.getAttribute('data-name')
+                        };
+                    });
+                    
+                    gridDiv.appendChild(avatarCard);
+                });
+                
+                // Mostrar grid
+                gridDiv.classList.add('show');
+            } else {
+                loadingDiv.innerHTML = 'Error al cargar avatares';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('avatars-loading').innerHTML = 'Error al cargar avatares';
+        });
+}
+
+// Función para abrir el modal
+function openAvatarModal() {
+    const modal = document.getElementById('avatarModal');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    loadAvatars();
+}
+
+// Función para cerrar el modal
+function closeAvatarModal() {
+    const modal = document.getElementById('avatarModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+
+// Función para confirmar la selección
+function confirmAvatarSelection() {
+    // Actualizar el preview en el formulario principal
+    const previewImage = document.getElementById('selected_avatar_preview');
+    const previewName = document.getElementById('selected_avatar_name');
+    const hiddenInput = document.getElementById('selected_avatar_input');
+    
+    if (previewImage) previewImage.src = "/static/" + selectedAvatarData.path;
+    if (previewName) previewName.textContent = selectedAvatarData.name;
+    if (hiddenInput) hiddenInput.value = selectedAvatarData.path;
+    
+    // Cerrar el modal
+    closeAvatarModal();
+}
+
+// Inicialización de avatares
+document.addEventListener('DOMContentLoaded', function() {
+    // Cerrar modal al hacer click fuera de él
+    const modal = document.getElementById('avatarModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeAvatarModal();
+            }
+        });
+    }
+    
+    // Cerrar modal con tecla Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAvatarModal();
+        }
+    });
+    
+    // Manejar opciones de avatar (predefinido vs custom)
+    const avatarOptions = document.querySelectorAll('input[name="avatar_option"]');
+    const customUploadSection = document.getElementById('custom_upload_section');
+    const avatarFileInput = document.getElementById('avatar_chatbot');
+    
+    if (avatarOptions.length > 0 && customUploadSection) {
+        avatarOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customUploadSection.style.display = 'block';
+                } else {
+                    customUploadSection.style.display = 'none';
+                    if (avatarFileInput) {
+                        avatarFileInput.value = '';
+                    }
+                }
+            });
+        });
+    }
+    
+    // Manejar la subida de archivos con drag & drop
+    const fileUploadArea = document.querySelector('.file-upload-area');
+    const fileInput = document.getElementById('avatar_chatbot');
+    const uploadPlaceholder = document.querySelector('.upload-placeholder');
+    
+    if (fileUploadArea && fileInput && uploadPlaceholder) {
+        // Prevenir comportamiento por defecto del drag & drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileUploadArea.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        
+        // Resaltar área de drop
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileUploadArea.addEventListener(eventName, function() {
+                fileUploadArea.style.borderColor = '#667eea';
+                fileUploadArea.style.background = '#f0f4ff';
+            }, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileUploadArea.addEventListener(eventName, function() {
+                fileUploadArea.style.borderColor = '#cbd5e0';
+                fileUploadArea.style.background = 'white';
+            }, false);
+        });
+        
+        // Manejar archivos soltados
+        fileUploadArea.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect(files[0]);
+            }
+        }, false);
+        
+        // Manejar selección de archivo
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        function handleFileSelect(file) {
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadPlaceholder.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <img src="${e.target.result}" alt="Preview" style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; margin-bottom: 10px; border: 3px solid #667eea;">
+                            <span style="color: #667eea; font-weight: 600;">${file.name}</span>
+                            <small style="color: #a0aec0;">Imagen seleccionada correctamente</small>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    }
 });

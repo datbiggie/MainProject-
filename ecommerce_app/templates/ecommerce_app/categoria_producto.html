@@ -1,360 +1,155 @@
 {% load static %}       
-{% include 'ecommerce_app/barra_superior_operaciones.html' %}
 <!doctype html>
 <html lang="es">
   <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,900&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{% static 'categoria_producto/css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'categoria_producto/css/style.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-    
-    <!-- Estilos personalizados para Select2 -->
-    <style>
-        /* Contenedor principal del select */
-        .select2-container--bootstrap-5 .select2-selection--multiple {
-            min-height: 50px;
-            border: 1px solid #e1f5fe;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #fafafa 0%, #f0f4f8 100%);
-            box-shadow: 0 1px 4px rgba(33, 150, 243, 0.08);
-            transition: all 0.3s ease;
-            padding: 5px 10px;
-        }
-        
-        .select2-container--bootstrap-5 .select2-selection--multiple:hover {
-            border-color: #81d4fa;
-            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.12);
-        }
-        
-        .select2-container--bootstrap-5.select2-container--focus .select2-selection--multiple {
-            border-color: #81d4fa;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.08);
-        }
-        
-        /* Ocultar elementos seleccionados (tags) dentro del input */
-         .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
-             display: none !important;
-         }
-         
-         /* Estilos para la lista de atributos seleccionados debajo */
-          .atributo-seleccionado {
-              background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-              border: 1px solid #90caf9;
-              color: #1565c0;
-              padding: 8px 15px;
-              border-radius: 20px;
-              font-size: 0.9em;
-              font-weight: 500;
-              box-shadow: 0 2px 4px rgba(33, 150, 243, 0.15);
-              transition: all 0.2s ease;
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              cursor: pointer;
-          }
-          
-          .atributo-seleccionado:hover {
-              transform: translateY(-1px);
-              background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
-              box-shadow: 0 4px 8px rgba(33, 150, 243, 0.25);
-              border-color: #64b5f6;
-          }
-         
-         .atributo-seleccionado .remove-btn {
-              background: rgba(21, 101, 192, 0.1);
-              border: none;
-              color: #1565c0;
-              border-radius: 50%;
-              width: 20px;
-              height: 20px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 0.8em;
-              cursor: pointer;
-              transition: all 0.2s ease;
-          }
-          
-          .atributo-seleccionado .remove-btn:hover {
-              background: rgba(21, 101, 192, 0.2);
-              color: #0d47a1;
-              transform: scale(1.1);
-          }
-        
-        /* Dropdown */
-        .select2-dropdown {
-            border: 1px solid #e1f5fe;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1);
-            overflow: hidden;
-        }
-        
-        /* Campo de búsqueda */
-        .select2-search--dropdown {
-            padding: 15px;
-            background: linear-gradient(135deg, #fafafa 0%, #f0f4f8 100%);
-            border-bottom: 1px solid #e1f5fe;
-        }
-        
-        .select2-search--dropdown .select2-search__field {
-            border: 1px solid #e1f5fe;
-            border-radius: 25px;
-            padding: 12px 20px;
-            font-size: 0.95em;
-            background: linear-gradient(135deg, #fafafa 0%, #f0f4f8 100%);
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        
-        .select2-search--dropdown .select2-search__field:focus {
-            border-color: #81d4fa;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.08);
-            outline: none;
-        }
-        
-        /* Resultados */
-        .select2-result-atributo {
-            padding: 15px 20px;
-            border-bottom: 1px solid #f0f0f0;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            position: relative;
-        }
-        
-        .select2-result-atributo:hover {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
-            transform: translateX(5px);
-        }
-        
-        .select2-result-atributo:last-child {
-            border-bottom: none;
-        }
-        
-        .select2-result-atributo__title {
-            font-weight: 600;
-            color: #2c3e50;
-            font-size: 1em;
-            display: flex;
-            align-items: center;
-        }
-        
-        .select2-result-atributo__title:before {
-            content: "🏷️";
-            margin-right: 10px;
-            font-size: 1.1em;
-        }
-        
-        /* Opciones resaltadas */
-        .select2-results__option--highlighted .select2-result-atributo {
-            background: linear-gradient(135deg, #81d4fa 0%, #64b5f6 100%) !important;
-            color: #1565c0 !important;
-            transform: translateX(8px);
-        }
-        
-        .select2-results__option--highlighted .select2-result-atributo__title {
-            color: #1565c0 !important;
-        }
-        
-        /* Placeholder mejorado */
-        .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__placeholder {
-            color: #6c757d;
-            font-style: italic;
-            margin-top: 8px;
-        }
-        
-        /* Animación de carga */
-        .select2-results__option[aria-disabled=true] {
-            display: none;
-        }
-        
-        /* Estilo para cuando no hay resultados */
-         .select2-results__option[role=group] {
-             padding: 20px;
-             text-align: center;
-             color: #6c757d;
-             font-style: italic;
-         }
-         
-         /* Estilos para el botón de agregar atributo */
-         .btn-agregar-atributo {
-             border-radius: 25px;
-             padding: 10px 20px;
-             font-weight: 500;
-             border: 2px solid #007bff;
-             transition: all 0.3s ease;
-             display: inline-flex;
-             align-items: center;
-             gap: 8px;
-             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-         }
-         
-         .btn-agregar-atributo:hover {
-             background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-             color: white;
-             transform: translateY(-2px);
-             box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-         }
-         
-         .btn-agregar-atributo:active {
-             transform: translateY(0);
-         }
-         
-         /* Mejoras para el texto informativo */
-         .info-text {
-             color: #6c757d;
-             font-size: 0.9em;
-             display: flex;
-             align-items: center;
-             gap: 6px;
-             margin-top: 8px;
-         }
-         
-         .info-text i {
-             color: #007bff;
-         }
-     </style>
 
     <title>Categoria producto</title>
 
   </head>
   <body>
+{% include 'ecommerce_app/barra_superior_operaciones.html' %}
 
     <div class="content">
       <div class="container">
         <div class="row align-items-stretch no-gutters contact-wrap">
-          <div class="col-md-8">
+          <div class="col-md-12">
             <div class="form h-100">
               <h1 class="text-center mb-4" style="color: #333; font-weight: 700; letter-spacing: 1px;">CATEGORÍA DE PRODUCTOS</h1>
               <form class="mb-5" method="post" action="{% url 'categoria_producto_funcion' %}" id="categoriaForm" name="categoriaForm">
                 {% csrf_token %}
-                <div class="row">
-                  <div class="col-md-12 form-group mb-5">
-                    <label for="nombre_categoria" class="col-form-label">Nombre de Categoría*</label>
-                    <input type="text" class="form-control" name="nombre_categoria" id="nombre_categoria" placeholder="Ingrese el nombre de la categoría" style="max-width: 300px;">
-                  </div>
-                </div>
 
-                <div class="row">
-                  <div class="col-md-12 form-group mb-5">
-                    <label for="descripcion_categoria" class="col-form-label">Descripción Categoría</label>
-                    <textarea class="form-control" name="descripcion_categoria" id="descripcion_categoria" cols="30" rows="3" placeholder="Ingrese la descripción de la categoría" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
+                <!-- Acordeón: Sección 1 - Información General -->
+                <div class="accordion-section">
+                  <div class="accordion-header">
+                    <div class="accordion-title">
+                      <div class="accordion-icon">🏷️</div>
+                      <span>Información General</span>
+                    </div>
+                    <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
                   </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-md-6 form-group mb-5">
-                    <label for="estatus_categoria" class="col-form-label">Estatus Categoría *</label>
-                    <select class="form-control" name="estatus_categoria" id="estatus_categoria">
-                      <option value="">Seleccione un estatus</option>
-                      <option value="Activo">Activo</option>
-                      <option value="Inactivo">Inactivo</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6 form-group mb-5">
-                    <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría*</label>
-                    <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" disabled>
-                  </div>
-                </div>
-
-                <!-- Sección de Atributos -->
-                <div class="row">
-                  <div class="col-md-12 form-group mb-5">
-                    <label class="col-form-label" style="font-weight: 600; color: #2c3e50; font-size: 1.1em; margin-bottom: 15px; display: flex; align-items: center;">
-                      <span style="margin-right: 10px; font-size: 1.2em;">🏷️</span>
-                      Atributos de la Categoría
-                    </label>
-                    <div class="card" style="border: 2px solid #e3f2fd; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1); overflow: hidden;">
-                      <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%); border-bottom: 2px solid #e9ecef;">
-                        <h6 class="mb-0" style="color: #2c3e50; font-weight: 600; display: flex; align-items: center;">
-                          <span style="margin-right: 8px;">⚙️</span>
-                          Gestionar Atributos
-                        </h6>
+                  <div class="accordion-content">
+                    <div class="accordion-body">
+                      <div class="row">
+                        <div class="col-12 form-group mb-3">
+                          <label for="nombre_categoria" class="col-form-label">Nombre de Categoría*</label>
+                          <input type="text" class="form-control input-nombre" name="nombre_categoria" id="nombre_categoria" placeholder="Ingrese el nombre de la categoría">
+                        </div>
                       </div>
-                      <div class="card-body" style="padding: 25px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                        <!-- Sección de Atributos Existentes -->
-                        <div class="mb-4">
-                          <h6 class="mb-3" style="color: #2c3e50; font-weight: 600; display: flex; align-items: center; font-size: 1em;">
-                            <span style="margin-right: 10px; font-size: 1.1em;">📋</span>
-                            Seleccionar Atributos Existentes
-                          </h6>
-                          <div style="position: relative;">
-                            <select class="form-control" name="atributos_existentes" id="atributos_existentes" multiple="multiple" style="width: 100%;">
-                              <option></option>
-                              {% for atributo in atributos_disponibles %}
-                               <option value="{{ atributo.id_atributo }}" 
-                                        data-tipo="{{ atributo.get_tipo_dato_display }}">
-                                  {{ atributo.nombre }}
-                                </option>
-                                {% endfor %}
-                             </select>
-                          </div>
-                          
-                          <!-- Lista de atributos seleccionados -->
-                          <div id="atributos-seleccionados-lista" style="margin-top: 15px; display: none;">
-                            <h6 style="color: #2c3e50; font-weight: 600; font-size: 0.9em; margin-bottom: 10px; display: flex; align-items: center;">
-                              <span style="margin-right: 8px;">✅</span>
-                              Atributos Seleccionados:
-                            </h6>
-                            <div id="lista-atributos" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-                          </div>
-                          
-                          <div class="info-text">
-                            <i class="fas fa-info-circle"></i>
-                            <span>Busca y selecciona múltiples atributos. Los seleccionados aparecerán debajo.</span>
-                          </div>
+
+                      <div class="row">
+                        <div class="col-12 form-group mb-3">
+                          <label for="descripcion_categoria" class="col-form-label">Descripción Categoría</label>
+                          <textarea class="form-control" name="descripcion_categoria" id="descripcion_categoria" cols="30" rows="3" placeholder="Ingrese la descripción de la categoría"></textarea>
                         </div>
-                        
-                        <!-- Separador elegante -->
-                        <div style="position: relative; margin: 30px 0;">
-                          <hr style="border: none; height: 1px; background: linear-gradient(90deg, transparent, #e9ecef, transparent); margin: 0;">
-                          <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #f8f9fa; padding: 0 15px; color: #6c757d; font-size: 0.9em; font-weight: 500;">o</div>
+                      </div>
+
+                      <div class="row">
+                        <div class="col-md-6 col-12 form-group mb-3">
+                          <label for="estatus_categoria" class="col-form-label">Estatus Categoría *</label>
+                          <select class="form-control" name="estatus_categoria" id="estatus_categoria">
+                            <option value="">Seleccione un estatus</option>
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                          </select>
                         </div>
-                        
-                        <!-- Sección de Nuevos Atributos -->
-                        <div>
-                          <h6 class="mb-3" style="color: #2c3e50; font-weight: 600; display: flex; align-items: center; font-size: 1em;">
-                            <span style="margin-right: 10px; font-size: 1.1em;">✨</span>
-                            Crear Nuevos Atributos
-                          </h6>
-                          <div id="nuevos-atributos" style="margin-bottom: 20px;">
-                            <!-- Los nuevos atributos se agregarán aquí dinámicamente -->
-                          </div>
-                          <button type="button" class="btn btn-outline-primary btn-agregar-atributo" onclick="agregarNuevoAtributo()">
-                            <span style="font-size: 1.1em;">➕</span>
-                            Agregar Nuevo Atributo
-                          </button>
+                        <div class="col-md-6 col-12 form-group mb-3">
+                          <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría*</label>
+                          <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" disabled>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="row">
-                  <div class="col-md-12 form-group">
-                    <input type="submit" value="Guardar Categoría" class="btn btn-primary rounded-0 py-2 px-4">
-                    <a href="{% url 'categ_producto_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500;">
-                      Ver Categorías
+                <!-- Acordeón: Sección 2 - Atributos -->
+                <div class="accordion-section">
+                  <div class="accordion-header">
+                    <div class="accordion-title">
+                      <div class="accordion-icon">⚙️</div>
+                      <span>Atributos de la Categoría</span>
+                    </div>
+                    <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-body">
+
+                      <div class="card" style="border: 2px solid #e3f2fd; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1); overflow: hidden;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%); border-bottom: 2px solid #e9ecef;">
+                          <h6 class="mb-0" style="color: #2c3e50; font-weight: 600; display: flex; align-items: center;"><span style="margin-right:8px;">📋</span>Gestionar Atributos</h6>
+                        </div>
+                        <div class="card-body" style="padding: 25px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                          <div class="mb-4">
+                            <div style="position: relative;">
+                              <select class="form-control" name="atributos_existentes" id="atributos_existentes" multiple="multiple" style="width: 100%;">
+                                <option></option>
+                                {% for atributo in atributos_disponibles %}
+                                 <option value="{{ atributo.id_atributo }}" data-tipo="{{ atributo.get_tipo_dato_display }}">{{ atributo.nombre }}</option>
+                                {% endfor %}
+                               </select>
+                            </div>
+
+                            <div id="atributos-seleccionados-lista" style="margin-top: 15px; display: none;">
+                              <h6 style="color: #2c3e50; font-weight: 600; font-size: 0.9em; margin-bottom: 10px; display: flex; align-items: center;"><span style="margin-right:8px;">✅</span>Atributos Seleccionados:</h6>
+                              <div id="lista-atributos" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                            </div>
+
+                            <div class="info-text">
+                              <i class="fas fa-info-circle"></i>
+                              <span>Busca y selecciona múltiples atributos. Los seleccionados aparecerán debajo.</span>
+                            </div>
+                          </div>
+
+                          <div style="position: relative; margin: 30px 0;">
+                            <hr style="border: none; height: 1px; background: linear-gradient(90deg, transparent, #e9ecef, transparent); margin: 0;">
+                            <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #f8f9fa; padding: 0 15px; color: #6c757d; font-size: 0.9em; font-weight: 500;">o</div>
+                          </div>
+
+                          <div>
+                            <h6 class="mb-3" style="color: #2c3e50; font-weight: 600; font-size: 1em;"><span style="margin-right:10px;">✨</span>Crear Nuevos Atributos</h6>
+                            <div id="nuevos-atributos" style="margin-bottom:20px;"></div>
+                            <button type="button" class="btn btn-outline-primary btn-agregar-atributo" onclick="agregarNuevoAtributo()">➕ Agregar Nuevo Atributo</button>
+                          </div>
+
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Botones de Acción (fuera del acordeón) -->
+                <div class="row mt-4">
+                  <div class="col-12 form-group">
+                    <button type="submit" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #0077b6, #0096c7) !important; color: #fff; margin-right: 15px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-2" viewBox="0 0 16 16">
+                        <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                      </svg>
+                      Guardar
+                    </button>
+                    <a href="{% url 'categ_producto_config_funcion' %}" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #06d6a0, #018158) !important; color: #fff;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul me-2" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                      </svg>
+                      Ver
                     </a>
                     <span class="submitting"></span>
                   </div>
                 </div>
+
               </form>
             </div>
           </div>
-          <div class="col-md-4">
-            <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
-              <img src="{% static 'categoria_producto/images/servicios.jpg' %}" alt="Servicios" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(1.05) contrast(1.05);">
-            </div>
-          </div>
+          <!-- columna derecha eliminada -->
         </div>
       </div>
     </div>
@@ -368,242 +163,8 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="{% static 'categoria_producto/js/main.js' %}"></script>
     
-    <!-- Script para manejo de atributos -->
-    <script>
-    let contadorAtributos = 0;
-    
-    // Inicializar Select2 cuando el documento esté listo
-    $(document).ready(function() {
-        var $select = $('#atributos_existentes');
-         var $listaContainer = $('#atributos-seleccionados-lista');
-         var $lista = $('#lista-atributos');
-        
-        // Inicializar Select2 para atributos existentes
-        $select.select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Buscar y seleccionar atributos...',
-            allowClear: true,
-            closeOnSelect: true,
-            language: {
-                noResults: function() {
-                    return "No se encontraron atributos";
-                },
-                searching: function() {
-                    return "Buscando atributos...";
-                },
-                inputTooShort: function() {
-                    return "Escribe para buscar atributos";
-                },
-                maximumSelected: function(e) {
-                    return "Solo puedes seleccionar " + e.maximum + " atributos";
-                }
-            },
-            templateResult: function(option) {
-                 if (!option.id) {
-                     return option.text;
-                 }
-                 
-                 var $option = $(
-                     '<div class="select2-result-atributo">' +
-                         '<div class="select2-result-atributo__title">' + option.text + '</div>' +
-                     '</div>'
-                 );
-                 return $option;
-             },
-             templateSelection: function(option) {
-                 if (!option.id) {
-                     return option.text;
-                 }
-                 return option.text;
-             }
-        });
-        
-        // Función para actualizar la lista de atributos seleccionados
-        function actualizarListaAtributos() {
-            var valoresSeleccionados = $select.val() || [];
-            $lista.empty();
-            
-            if (valoresSeleccionados.length === 0) {
-                $listaContainer.hide();
-                return;
-            }
-            
-            $listaContainer.show();
-            
-            valoresSeleccionados.forEach(function(valor) {
-                var $option = $select.find('option[value="' + valor + '"]');
-                var nombreAtributo = $option.text();
-                
-                var $atributoTag = $('<div class="atributo-seleccionado">' +
-                    '<span>' + nombreAtributo + '</span>' +
-                    '<button type="button" class="remove-btn" data-value="' + valor + '">×</button>' +
-                    '</div>');
-                
-                $lista.append($atributoTag);
-            });
-        }
-        
-        // Evento cuando cambia la selección
-        $select.on('change', function() {
-            actualizarListaAtributos();
-        });
-        
-        // Evento para remover atributos desde la lista
-        $lista.on('click', '.remove-btn', function(e) {
-            e.preventDefault();
-            var valorARemover = $(this).data('value');
-            var valoresActuales = $select.val() || [];
-            var nuevosValores = valoresActuales.filter(function(valor) {
-                return valor !== valorARemover.toString();
-            });
-            
-            $select.val(nuevosValores).trigger('change');
-        });
-        
-        // Evento para enfocar el campo de búsqueda cuando se abre el select
-        $select.on('select2:open', function() {
-            setTimeout(function() {
-                document.querySelector('.select2-search__field').focus();
-            }, 0);
-        });
-        
-        // Inicializar la lista si ya hay valores seleccionados
-        actualizarListaAtributos();
-    });
-    
-    function agregarNuevoAtributo() {
-        contadorAtributos++;
-        const container = document.getElementById('nuevos-atributos');
-        
-        const atributoDiv = document.createElement('div');
-        atributoDiv.className = 'border p-3 mb-3';
-        atributoDiv.id = `nuevo-atributo-${contadorAtributos}`;
-        
-        atributoDiv.innerHTML = `
-            <div class="row">
-                <div class="col-md-4">
-                    <label class="form-label">Nombre del Atributo *</label>
-                    <input type="text" class="form-control" name="nuevo_atributo_nombre_${contadorAtributos}" placeholder="Ej: Color, Tamaño, Marca" required onblur="validarNombreAtributo(this, ${contadorAtributos})">
-                    <div id="error-nombre-${contadorAtributos}" class="text-danger small" style="display: none;"></div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Tipo de Dato *</label>
-                    <select class="form-control" name="nuevo_atributo_tipo_${contadorAtributos}" onchange="manejarTipoAtributo(${contadorAtributos}, this.value)" required>
-                        <option value="">Seleccionar</option>
-                        <option value="texto">Texto</option>
-                        <option value="numero">Número</option>
-                        <option value="decimal">Decimal</option>
-                        <option value="fecha">Fecha</option>
-                        <option value="booleano">Booleano</option>
-                        <option value="lista">Lista de opciones</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Obligatorio</label>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" name="nuevo_atributo_obligatorio_${contadorAtributos}" value="1">
-                        <label class="form-check-label">Sí</label>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="button" class="btn btn-danger btn-sm d-block" onclick="eliminarAtributo(${contadorAtributos})">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-2">
-                <div class="col-md-8">
-                    <label class="form-label">Descripción</label>
-                    <textarea class="form-control" name="nuevo_atributo_descripcion_${contadorAtributos}" rows="2" placeholder="Descripción opcional del atributo"></textarea>
-                </div>
-                <div class="col-md-4" id="opciones-container-${contadorAtributos}" style="display: none;">
-                    <label class="form-label">Opciones (separadas por coma)</label>
-                    <textarea class="form-control" name="nuevo_atributo_opciones_${contadorAtributos}" rows="2" placeholder="Opción1, Opción2, Opción3"></textarea>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(atributoDiv);
-    }
-    
-    function manejarTipoAtributo(id, tipo) {
-        const opcionesContainer = document.getElementById(`opciones-container-${id}`);
-        if (tipo === 'lista') {
-            opcionesContainer.style.display = 'block';
-        } else {
-            opcionesContainer.style.display = 'none';
-        }
-    }
-    
-    function eliminarAtributo(id) {
-        const elemento = document.getElementById(`nuevo-atributo-${id}`);
-        if (elemento) {
-            elemento.remove();
-        }
-    }
-    
-    // Función para validar nombres de atributos duplicados
-    function validarNombreAtributo(input, id) {
-        const nombre = input.value.trim();
-        const errorDiv = document.getElementById(`error-nombre-${id}`);
-        
-        if (!nombre) {
-            errorDiv.style.display = 'none';
-            return;
-        }
-        
-        // Verificar duplicados en atributos existentes
-        const atributosExistentes = document.querySelectorAll('input[name^="atributo_"]');
-        let duplicadoEncontrado = false;
-        
-        atributosExistentes.forEach(function(atributoInput) {
-            if (atributoInput.checked) {
-                const labelElement = document.querySelector(`label[for="${atributoInput.id}"]`);
-                if (labelElement && labelElement.textContent.trim().toLowerCase() === nombre.toLowerCase()) {
-                    duplicadoEncontrado = true;
-                }
-            }
-        });
-        
-        // Verificar duplicados en otros nuevos atributos
-        const nuevosAtributos = document.querySelectorAll('input[name^="nuevo_atributo_nombre_"]');
-        nuevosAtributos.forEach(function(nuevoInput) {
-            if (nuevoInput !== input && nuevoInput.value.trim().toLowerCase() === nombre.toLowerCase()) {
-                duplicadoEncontrado = true;
-            }
-        });
-        
-        if (duplicadoEncontrado) {
-            errorDiv.textContent = 'Ya existe un atributo con este nombre';
-            errorDiv.style.display = 'block';
-            input.classList.add('is-invalid');
-        } else {
-            errorDiv.style.display = 'none';
-            input.classList.remove('is-invalid');
-        }
-    }
-    
-    // Función para validar antes del envío del formulario
-    function validarFormularioCompleto() {
-        let hayErrores = false;
-        
-        // Validar todos los nombres de nuevos atributos
-        const nuevosAtributos = document.querySelectorAll('input[name^="nuevo_atributo_nombre_"]');
-        nuevosAtributos.forEach(function(input) {
-            const id = input.name.split('_').pop();
-            validarNombreAtributo(input, id);
-            
-            const errorDiv = document.getElementById(`error-nombre-${id}`);
-            if (errorDiv && errorDiv.style.display !== 'none') {
-                hayErrores = true;
-            }
-        });
-        
-        return !hayErrores;
-    }
-    </script>
+  <!-- El JavaScript específico para este template fue movido a
+     static/categoria_producto/js/main.js -->
 
   </body>
 </html>

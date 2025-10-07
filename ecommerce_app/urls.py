@@ -48,6 +48,7 @@ urlpatterns = [
     path('api/filtrar_productos/', views.api_filtrar_productos, name='api_filtrar_productos'),
     path('api/obtener_imagenes_producto/', views.api_obtener_imagenes_producto, name='api_obtener_imagenes_producto'),
     path('api/obtener_imagenes_servicio/', views.api_obtener_imagenes_servicio, name='api_obtener_imagenes_servicio'),
+    path('api/avatars/list/', views.list_avatars, name='list_avatars'),
     path('api/eliminar_imagen_producto/', views.api_eliminar_imagen_producto, name='api_eliminar_imagen_producto'),
     path('api/eliminar_imagen_servicio/', views.api_eliminar_imagen_servicio, name='api_eliminar_imagen_servicio'),
     path('api/obtener_filtros_busqueda/', views.api_obtener_filtros_busqueda, name='api_obtener_filtros_busqueda'),
@@ -119,4 +120,8 @@ urlpatterns = [
     path('api/obtener_datos_reporte/', views.api_obtener_datos_reporte, name='api_obtener_datos_reporte'),
     path('reporte_productos/', views.reporte_productos, name='reporte_productos'),
     path('api/obtener_datos_reporte_productos/', views.api_obtener_datos_reporte_productos, name='api_obtener_datos_reporte_productos'),
+
+    # Rutas para editar perfiles
+    path('perfil/usuario/editar/<int:usuario_id>/', views.editar_perfil_usuario, name='editar_perfil_usuario'),
+    path('perfil/empresa/editar/<int:empresa_id>/', views.editar_perfil_empresa, name='editar_perfil_empresa'),
 ]

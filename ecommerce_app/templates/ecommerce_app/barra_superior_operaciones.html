@@ -80,6 +80,60 @@
           </button>
         </div>
         <ul class="d-flex align-items-center list-unstyled m-0 py-0 my-0">
+          <!-- Mis Sucursales -->
+          <li class="dropdown">
+            <a href="#" class="p-2 mx-1 dropdown-toggle" id="sucursalesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <svg width="24" height="24" style="color:#28a745;"><use xlink:href="#location"></use></svg>
+              <span class="d-none d-md-inline">Mis Sucursales</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="sucursalesDropdown">
+              <li><a class="dropdown-item" href="{% url 'sucursalfuncion' %}">Gestionar Sucursales</a></li>
+              <li><a class="dropdown-item" href="{% url 'productos_sucursal' %}">Productos Sucursal</a></li>
+              <li><a class="dropdown-item" href="{% url 'servicios_sucursal' %}">Servicios Sucursal</a></li>
+            </ul>
+          </li>
+          
+          <!-- Mis Categorías -->
+          <li class="dropdown">
+            <a href="#" class="p-2 mx-1 dropdown-toggle" id="categoriasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <svg width="24" height="24" style="color:#6610f2;"><use xlink:href="#category"></use></svg>
+              <span class="d-none d-md-inline">Mis Categorías</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="categoriasDropdown">
+              <li><a class="dropdown-item" href="{% url 'categoria_producto_funcion' %}">Agregar Categoría Producto</a></li>
+              <li><a class="dropdown-item" href="{% url 'categ_producto_config_funcion' %}">Gestionar Categoría Producto</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'categoria_servicio' %}">Agregar Categoría Servicio</a></li>
+              <li><a class="dropdown-item" href="{% url 'categ_servicio_config_funcion' %}">Gestionar Categoría Servicio</a></li>
+            </ul>
+          </li>
+          
+          <!-- Mis Productos -->
+          <li class="dropdown">
+            <a href="#" class="p-2 mx-1 dropdown-toggle" id="productosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <svg width="24" height="24" style="color:#fd7e14;"><use xlink:href="#box"></use></svg>
+              <span class="d-none d-md-inline">Mis Productos</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="productosDropdown">
+              <li><a class="dropdown-item" href="{% url 'producto_funcion' %}">Agregar Producto</a></li>
+              <li><a class="dropdown-item" href="{% url 'producto_config_funcion' %}">Gestionar Productos</a></li>
+              <!-- Si en el futuro existen urls para inventario/precios, añadirlas aquí -->
+            </ul>
+          </li>
+          
+          <!-- Mis Servicios -->
+          <li class="dropdown">
+            <a href="#" class="p-2 mx-1 dropdown-toggle" id="serviciosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <svg width="24" height="24" style="color:#20c997;"><use xlink:href="#service"></use></svg>
+              <span class="d-none d-md-inline">Mis Servicios</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="serviciosDropdown">
+              <li><a class="dropdown-item" href="{% url 'servicio_funcion' %}">Agregar Servicio</a></li>
+              <li><a class="dropdown-item" href="{% url 'servicio_config_funcion' %}">Gestionar Servicios</a></li>
+              <!-- Si hay páginas para horarios o tarifas, pueden añadirse aquí -->
+            </ul>
+          </li>
+          
           <li>
             <a href="#" class="p-2 mx-1" data-bs-toggle="modal" data-bs-target="#sesionModal">
               <svg width="24" height="24" style="color:#0d6efd;"><use xlink:href="#user"></use></svg>

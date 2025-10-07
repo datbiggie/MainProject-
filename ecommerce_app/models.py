@@ -44,6 +44,16 @@ class empresa(models.Model):
         ('empresa', 'Empresa'),
     ]
 
+    OPCIONES_SECTOR = [
+        ('tecnologia', 'Tecnología'),
+        ('alimentos_bebidas', 'Alimentos y Bebidas'),
+        ('moda_ropa', 'Moda y Ropa'),
+        ('hogar', 'Hogar'),
+        ('salud_belleza', 'Salud y Belleza'),
+        ('deportes_ocio', 'Deportes y Ocio'),
+        ('servicios', 'Servicios'),
+    ]
+
     id_empresa = models.AutoField(primary_key=True)
     nombre_empresa = models.CharField(max_length=150)
     correo_empresa = models.EmailField(unique=True)
@@ -53,7 +63,9 @@ class empresa(models.Model):
     pais_empresa = models.CharField(max_length=100)
     estado_empresa = models.CharField(max_length=100)
     tipo_empresa = models.CharField(max_length=10, choices=OPCIONES_TIPO_EMPRESA)
+    sector_empresa = models.CharField(max_length=50, choices=OPCIONES_SECTOR, blank=True, null=True)
     direccion_empresa = models.CharField(max_length=255)
+    avatar_chatbot_empresa = models.CharField(max_length=255, default='avatars/Cartoon Style Robot.jpg', help_text='Avatar para el chatbot de la empresa')
     rol_empresa = models.CharField(max_length=10, choices=OPCIONES_ROL, default='empresa')
     fecha_registro_empresa = models.DateTimeField(auto_now_add=True)
 
@@ -82,6 +94,7 @@ class categoria_producto_empresa(models.Model):
     id_categoria_prod_empresa = models.AutoField(primary_key=True)
     nombre_categoria_prod_empresa = models.CharField(max_length=100)
     descripcion_categoria_prod_empresa = models.TextField(blank=True, null=True)
+    generico = models.CharField(max_length=1, choices=[('s', 'Sí'), ('n', 'No')], default='n')
     estatus_categoria_prod_empresa = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     fecha_creacion_prod_empresa = models.DateTimeField(auto_now_add=True)
     id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='categorias_producto', null=True, blank=True)
@@ -98,6 +111,7 @@ class categoria_servicio_empresa(models.Model):
     id_categoria_serv_empresa = models.AutoField(primary_key=True)
     nombre_categoria_serv_empresa = models.CharField(max_length=100, unique=True)
     descripcion_categoria_serv_empresa = models.TextField(blank=True, null=True)
+    generico = models.CharField(max_length=1, choices=[('s', 'Sí'), ('n', 'No')], default='n')
     estatus_categoria_serv_empresa = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     fecha_creacion_categ_serv_empresa = models.DateField(auto_now_add=True)
     id_empresa_fk = models.ForeignKey('empresa', on_delete=models.CASCADE, related_name='categorias_servicio', null=True, blank=True)
@@ -219,6 +233,7 @@ class categoria_producto_usuario(models.Model):
     id_categoria_prod_usuario = models.AutoField(primary_key=True)
     nombre_categoria_prod_usuario = models.CharField(max_length=100)
     descripcion_categoria_prod_usuario = models.TextField(blank=True, null=True)
+    generico = models.CharField(max_length=1, choices=[('s', 'Sí'), ('n', 'No')], default='n')
     estatus_categoria_prod_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     fecha_creacion_prod_usuario = models.DateTimeField(auto_now_add=True)
     id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='categorias_producto', null=True, blank=True)
@@ -236,6 +251,7 @@ class categoria_servicio_usuario(models.Model):
     id_categoria_serv_usuario = models.AutoField(primary_key=True)
     nombre_categoria_serv_usuario = models.CharField(max_length=100, unique=True)
     descripcion_categoria_serv_usuario = models.TextField(blank=True, null=True)
+    generico = models.CharField(max_length=1, choices=[('s', 'Sí'), ('n', 'No')], default='n')
     estatus_categoria_serv_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     fecha_creacion_categ_serv_usuario = models.DateField(auto_now_add=True)
     id_usuario_fk = models.ForeignKey('usuario', on_delete=models.CASCADE, related_name='categorias_servicio', null=True, blank=True)

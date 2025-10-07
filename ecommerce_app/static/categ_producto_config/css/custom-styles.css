@@ -1,0 +1,174 @@
+/* Estilos movidos desde la plantilla categ_producto_config.html */
+
+/* Fondo genérico igual al de la página de login (gradiente animado) */
+body {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #3498db 50%, #2980b9 75%, #1e3c72 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    position: relative;
+    /* Permitir scroll vertical; ocultar solo el scroll horizontal si existe */
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Make decorative pseudo-elements fixed so they don't affect document height
+   (absolute elements can expand page height causing infinite scroll). */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0; /* cover the viewport */
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(52, 152, 219, 0.06) 50%, transparent 70%);
+    animation: rotate 20s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(30, 60, 114, 0.18) 0%, transparent 60%);
+    animation: rotate 25s linear infinite reverse;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Mantener los contenedores principales con fondo blanco para legibilidad */
+.glass-card, .floating-header, .stats-container, .category-card {
+    background-color: #ffffff !important;
+}
+
+/* ===== Estilos para la sección de estadísticas ===== */
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    justify-content: center;
+    align-items: stretch;
+    margin: 1.25rem auto 1.75rem auto;
+    padding: 0.75rem;
+    max-width: 1100px;
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.6);
+    border-radius: 14px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.55);
+}
+
+.stats-card {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 16px 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(12, 35, 64, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.04);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .2s;
+}
+
+.stats-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 30px rgba(12, 35, 64, 0.12);
+}
+
+.stats-icon {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: white;
+}
+
+.stats-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stats-number {
+    font-size: 1.95rem;
+    font-weight: 700;
+    color: #0b57d0; /* color principal */
+    letter-spacing: -0.5px;
+    margin: 0;
+    line-height: 1;
+}
+
+.stats-label {
+    font-size: 0.9rem;
+    color: #556168;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+/* colores por tipo */
+.stats-card.total .stats-icon { background: linear-gradient(135deg,#6f7dff,#3aa0ff); }
+.stats-card.active .stats-icon { background: linear-gradient(135deg,#28a745,#6be58b); }
+.stats-card.inactive .stats-icon { background: linear-gradient(135deg,#ff6b6b,#ff9b6b); }
+
+/* Ajustes para móviles */
+@media (max-width: 992px) {
+    .stats-container { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 576px) {
+    .stats-container { grid-template-columns: 1fr; }
+    .stats-card { padding: 12px; }
+    .stats-icon { width: 48px; height: 48px; flex: 0 0 48px; font-size: 18px; }
+    .stats-number { font-size: 1.6rem; }
+}
+
+/* Badges dentro de cards si se usan */
+.stats-card .badge {
+    margin-top: 8px;
+}
+
+/* Ajustes para móviles */
+@media (max-width: 768px) {
+    .stats-container {
+        flex-direction: column;
+        gap: 0.9rem;
+        padding: 0;
+    }
+
+    .stats-card {
+        padding: 14px 16px;
+        min-width: auto;
+    }
+
+    .stats-number {
+        font-size: 1.8rem;
+    }
+}
+
+/* Reducir margen superior si la barra superior es fija */
+.container-fluid { padding-top: 1rem; }

@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Registro Empresa</title>
-    <link rel="stylesheet" href="{% static 'registrar_empresa/css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'registrar_empresa/css/main.css' %}?v=2025">
     <link rel="stylesheet" href="{% static 'registrar_empresa/css/steps.css' %}">
     <link rel="stylesheet" href="{% static 'barra_superior/css/main.css' %}">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -20,7 +20,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places" async defer></script>
+    
   {% include 'ecommerce_app/barra_superior_bienvenido.html'%}
 
 </head>
@@ -30,6 +30,12 @@
         <symbol xmlns="http://www.w3.org/2000/svg" id="home" viewBox="0 0 24 24"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8z"/></symbol>
         <symbol xmlns="http://www.w3.org/2000/svg" id="user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="3"/><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M17.97 20c-.16-2.892-1.045-5-5.97-5s-5.81 2.108-5.97 5"/></g></symbol>
         <symbol xmlns="http://www.w3.org/2000/svg" id="faq" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41c0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="info" viewBox="0 0 24 24"><path fill="currentColor" d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="key" viewBox="0 0 24 24"><path fill="currentColor" d="M7 14c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0-4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm12.93-2.93l-5.31-5.31a.996.996 0 0 0-1.41 0l-9.19 9.19c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L9 13.47V19h3c1.1 0 2-.9 2-2v-4.31l1.29-1.29c.39-.39.39-1.02 0-1.41l-.05-.05L19 6.17c.39-.39.39-1.02 0-1.41l-1.07-1.07a.996.996 0 0 0-1.41 0z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="image-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="chevron-down" viewBox="0 0 24 24"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6l-6-6l1.41-1.41z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="chatbot" viewBox="0 0 24 24"><path fill="currentColor" d="M17.753 14a2.25 2.25 0 0 1 2.25 2.25v.904A3.75 3.75 0 0 1 18.696 20C17.124 21 14.907 22 12.004 22h-.008c-2.903 0-5.12-1-6.692-2a3.75 3.75 0 0 1-1.307-2.846v-.904A2.25 2.25 0 0 1 6.247 14h11.506ZM11.898 2.008L12 2a.75.75 0 0 1 .743.648l.007.102l.001 1.248a5.25 5.25 0 0 1 3.238 9.502H17a.75.75 0 0 1 .102 1.493L17 15H7a.75.75 0 0 1-.102-1.493L7 13.5h1.011a5.25 5.25 0 0 1 3.387-9.744l.001-1.248a.75.75 0 0 1 .499-.644ZM10 7a1 1 0 1 0 0 2a1 1 0 0 0 0-2Zm4 0a1 1 0 1 0 0 2a1 1 0 0 0 0-2Z"/></symbol>
+        <symbol xmlns="http://www.w3.org/2000/svg" id="chatbot" viewBox="0 0 24 24"><path fill="currentColor" d="M17.753 14a2.25 2.25 0 0 1 2.25 2.25v.904A3.75 3.75 0 0 1 18.696 20C17.124 21 14.907 22 12.004 22h-.008c-2.903 0-5.12-1-6.692-2a3.75 3.75 0 0 1-1.307-2.846v-.904A2.25 2.25 0 0 1 6.247 14h11.506ZM11.898 2.008L12 2a.75.75 0 0 1 .743.648l.007.102l.001 1.248a5.25 5.25 0 0 1 3.238 9.502H17a.75.75 0 0 1 .102 1.493L17 15H7a.75.75 0 0 1-.102-1.493L7 13.5h1.011a5.25 5.25 0 0 1 3.387-9.744l.001-1.248a.75.75 0 0 1 .499-.644ZM10 7a1 1 0 1 0 0 2a1 1 0 0 0 0-2Zm4 0a1 1 0 1 0 0 2a1 1 0 0 0 0-2Z"/></symbol>
     </defs>
 </svg>
 <body>
@@ -124,6 +130,23 @@
         <h2 class="" style="text-align: center;">Registrarse Empresa</h2>
         <p style="text-align: center; color: #666; margin-top: 10px;">Completa la información de tu empresa</p>
       </div>
+      <!-- SECCIÓN 1: INFORMACIÓN BÁSICA -->
+      <div class="accordion-section active">
+        <div class="accordion-header">
+          <div class="accordion-title">
+            <div class="accordion-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <use xlink:href="#info"></use>
+              </svg>
+            </div>
+            <span>Información Básica</span>
+          </div>
+          <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <use xlink:href="#chevron-down"></use>
+          </svg>
+        </div>
+        <div class="accordion-content">
+          <div class="accordion-body">
 
       <div class="formbold-input-flex">
         <div>
@@ -138,50 +161,22 @@
           />
         </div>
         <div>
-          <label for="correo_empresa" class="formbold-form-label"> Email Empresa </label>
-          <input
-            type="email"
-            name="correo_empresa"
-            id="correo_empresa"
-            class="formbold-form-input"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="formbold-input-flex">
-        <div>
-          <label for="password_empresa" class="formbold-form-label"> Contraseña Empresa </label>
-          <input
-            type="password"
-            name="password_empresa"
-            id="password_empresa"
-            class="formbold-form-input"
-            required
-          />
-        </div>
-        <div>
-          <label for="confirm_password" class="formbold-form-label"> Confirmar Contraseña </label>
-          <input
-            type="password"
-            name="confirm_password"
-            id="confirm_password"
-            class="formbold-form-input"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="formbold-input-flex">
-        <div>
           <label for="phone" class="formbold-form-label"> Número Teléfono </label>
           <input
             type="text"
             name="phone"
             id="phone"
             class="formbold-form-input"
+            pattern="[0-9]{11}" 
+            maxlength="11" 
+            minlength="11"
+            placeholder="xxxx xxxxxxx"
+            title="Ingresa exactamente 11 dígitos numéricos"
           />
         </div>
+      </div>
+
+      <div class="formbold-input-flex">
         <div>
           <label for="direccion_empresa" class="formbold-form-label">
             Dirección Empresa
@@ -194,13 +189,13 @@
             placeholder="Dirección de la empresa..."
           />
         </div>
-      </div>
-
-      <div class="formbold-input-flex">
         <div>
           <label for="pais_empresa" class="formbold-form-label"> País </label>
           <input type="text" name="pais_empresa" id="country" class="formbold-form-input" value="Venezuela" readonly />
         </div>
+      </div>
+
+      <div class="formbold-input-flex">
         <div>
           <label for="estado_empresa" class="formbold-form-label"> Estado </label>
           <select
@@ -238,7 +233,64 @@
             <option value="Zulia">Zulia</option>
           </select>
         </div>
+        <div>
+          <label for="tipo_empresa" class="formbold-form-label"> Tipo de Empresa (Tamaño) </label>
+          <select
+            name="tipo_empresa"
+            id="tipo_empresa"
+            class="formbold-form-input select2"
+            data-placeholder="Selecciona el tipo de empresa"
+          >
+            <option value=""></option>
+            <option value="pequena">Pequeña Empresa</option>
+            <option value="mediana">Mediana Empresa</option>
+            <option value="grande">Grande Empresa</option>
+          </select>
+        </div>
+      
+
       </div>
+
+
+
+
+      <div class="formbold-input-flex">
+        <div>
+          <div>
+            <label for="sector_empresa" class="formbold-form-label"> Sector de Empresa </label>
+            <select
+              name="sector_empresa"
+              id="sector_empresa"
+              class="formbold-form-input select2"
+              data-placeholder="Selecciona el sector de la empresa"
+            >
+              <option value=""></option>
+              <option value="tecnologia">Tecnología</option>
+              <option value="alimentos_bebidas">Alimentos y Bebidas</option>
+              <option value="moda_ropa">Moda y Ropa</option>
+              <option value="hogar">Hogar</option>
+              <option value="salud_belleza">Salud y Belleza</option>
+              <option value="deportes_ocio">Deportes y Ocio</option>
+              <option value="servicios">Servicios</option>
+            </select>
+          </div>
+        </div>
+       
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       <div class="formbold-mb-3">
         <label for="descripcion_empresa" class="formbold-form-label"> Descripción Empresa </label>
@@ -250,21 +302,89 @@
           placeholder="Describe a tu empresa y sus valores..."
         ></textarea>
       </div>
+      
 
-      <div class="formbold-mb-3">
-        <label for="tipo_empresa" class="formbold-form-label"> Tipo de Empresa </label>
-        <select
-          name="tipo_empresa"
-          id="tipo_empresa"
-          class="formbold-form-input select2"
-          data-placeholder="Selecciona el tipo de empresa"
-        >
-          <option value=""></option>
-          <option value="pequena">Pequeña Empresa</option>
-          <option value="mediana">Mediana Empresa</option>
-          <option value="grande">Grande Empresa</option>
-        </select>
+
+
+          </div>
+        </div>
       </div>
+
+      <!-- SECCIÓN 2: CREDENCIALES -->
+      <div class="accordion-section">
+        <div class="accordion-header">
+          <div class="accordion-title">
+            <div class="accordion-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <use xlink:href="#key"></use>
+              </svg>
+            </div>
+            <span>Credenciales de Acceso</span>
+          </div>
+          <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <use xlink:href="#chevron-down"></use>
+          </svg>
+        </div>
+        <div class="accordion-content">
+          <div class="accordion-body">
+
+      <div class="formbold-input-flex">
+        <div>
+          <label for="correo_empresa" class="formbold-form-label"> Correo Electrónico </label>
+          <input
+            type="email"
+            name="correo_empresa"
+            id="correo_empresa"
+            class="formbold-form-input"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="formbold-input-flex">
+        <div>
+          <label for="password_empresa" class="formbold-form-label"> Contraseña </label>
+          <input
+            type="password"
+            name="password_empresa"
+            id="password_empresa"
+            class="formbold-form-input"
+            required
+          />
+        </div>
+        <div>
+          <label for="confirm_password" class="formbold-form-label"> Confirmar Contraseña </label>
+          <input
+            type="password"
+            name="confirm_password"
+            id="confirm_password"
+            class="formbold-form-input"
+            required
+          />
+        </div>
+      </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: LOGO DE EMPRESA -->
+      <div class="accordion-section">
+        <div class="accordion-header">
+          <div class="accordion-title">
+            <div class="accordion-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <use xlink:href="#image-icon"></use>
+              </svg>
+            </div>
+            <span>Logo de Empresa</span>
+          </div>
+          <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <use xlink:href="#chevron-down"></use>
+          </svg>
+        </div>
+        <div class="accordion-content">
+          <div class="accordion-body">
 
       <div class="formbold-mb-3">
         <label for="logo_empresa" class="formbold-form-label">
@@ -293,7 +413,129 @@
         </div>
       </div>
 
-      <div class="formbold-checkbox-wrapper">
+          </div>
+        </div>
+      </div>
+
+
+      <!-- SECCIÓN 4: PERSONALIZACIÓN DE CHATBOT -->
+      <div class="accordion-section">
+        <div class="accordion-header">
+          <div class="accordion-title">
+            <div class="accordion-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <use xlink:href="#chatbot"></use>
+              </svg>
+            </div>
+            <span>Personaliza tu Chatbot</span>
+          </div>
+          <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <use xlink:href="#chevron-down"></use>
+          </svg>
+        </div>
+        <div class="accordion-content">
+          <div class="accordion-body">
+
+      <div class="formbold-input-flex">
+        <div class="col-12" style="width: 100% !important;">
+          <div class="chatbot-customization-section">
+            
+            
+            <div class="avatar-selection-container">
+              <h4 class="avatar-section-title">Avatar del Chatbot</h4>
+              
+              <!-- Preview del avatar seleccionado -->
+              <div class="selected-avatar-preview">
+                <div class="preview-container">
+                  <div class="avatar-preview-image">
+                    <img id="selected_avatar_preview" src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="Avatar seleccionado">
+                  </div>
+                  <div class="preview-info">
+                    <span id="selected_avatar_name">Robot Cartoon</span>
+                    <p>Avatar actual del chatbot</p>
+                  </div>
+                </div>
+                <button type="button" class="change-avatar-btn" onclick="openAvatarModal()">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V7H9V9H3V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V9H21ZM7 15V17H17V15H7Z" fill="currentColor"/>
+                  </svg>
+                  Cambiar Avatar
+                </button>
+              </div>
+              
+              <!-- Input oculto para el valor seleccionado -->
+              <input type="hidden" name="avatar_option" id="selected_avatar_input" value="avatars/Cartoon Style Robot.jpg">
+              
+              <div class="custom-upload-section">
+                <div class="upload-divider">
+                  <span>o</span>
+                </div>
+                
+                <div class="custom-avatar-card">
+                  <input type="radio" name="avatar_option" id="avatar_custom" value="custom">
+                  <label for="avatar_custom" class="custom-avatar-label">
+                    <div class="upload-icon">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z" fill="currentColor"/>
+                        <path d="M8 15.01L9.41 13.6L11 15.19L14.59 11.6L16 13.01L11 18.01L8 15.01Z" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <h5>Subir mi propia imagen</h5>
+                    <p>Personaliza completamente tu chatbot</p>
+                  </label>
+                  
+                  <div id="custom_upload_section" class="file-upload-area" style="display: none;">
+                    <input type="file" id="avatar_chatbot" name="avatar_chatbot" accept="image/*" class="file-input">
+                    <div class="upload-placeholder">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M17 8L12 3L7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <span>Arrastra tu imagen aquí o haz clic para seleccionar</span>
+                      <small>JPG, PNG, SVG (máximo 2MB)</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Modal de Selección de Avatares -->
+      <div id="avatarModal" class="avatar-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Selecciona tu Avatar</h3>
+            <button type="button" class="close-modal" onclick="closeAvatarModal()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="modal-body">
+            <div id="avatars-loading" class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+              Cargando avatares...
+            </div>
+            <div id="avatars-modal-grid" class="avatars-modal-grid">
+              <!-- Los avatares se cargarán dinámicamente aquí -->
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeAvatarModal()">Cancelar</button>
+            <button type="button" class="btn-confirm" onclick="confirmAvatarSelection()">Confirmar Selección</button>
+          </div>
+        </div>
+      </div>
+
+          </div>
+        </div>
+      </div>
+
+<div class="formbold-checkbox-wrapper">
         <label for="supportCheckbox" class="formbold-checkbox-label">
           <div class="formbold-relative">
             <input
@@ -412,27 +654,8 @@
       }
     });
     
-    // Inicializar el mapa al cargar la página
+    // Initialize app when the page loads
     initializeApp();
-    
-    // Función para cargar Google Maps de forma más robusta - COMENTADA PARA EVITAR CONFLICTO
-    /*
-    function loadGoogleMaps() {
-        console.log('Cargando Google Maps...');
-        const script = document.createElement('script');
-        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initMap';
-        script.async = true;
-        script.defer = true;
-        script.onerror = function() {
-            console.error('Error al cargar Google Maps');
-            initMapFallback();
-        };
-        script.onload = function() {
-            console.log('Google Maps cargado exitosamente');
-        };
-        document.head.appendChild(script);
-    }
-    */
     
     // Verificar que todos los scripts necesarios estén cargados
     function checkDependencies() {

@@ -386,11 +386,11 @@ header .col-sm-8 .list-unstyled li:last-child a:hover svg {
     margin: 20px 0;
 }
 .table-wrapper {
-	background: #fff;
-	padding: 20px 25px;
-	border-radius: 3px;
-	min-width: 1000px;
-	box-shadow: 0 1px 1px rgba(0,0,0,.05);
+  background: #fff;
+  padding: 20px 25px;
+  border-radius: 3px;
+  /* removed fixed min-width to allow responsive layouts */
+  box-shadow: 0 1px 1px rgba(0,0,0,.05);
 }
 .table-title {        
 	padding-bottom: 15px;
@@ -438,6 +438,39 @@ table.table tr th, table.table tr td {
 table.table tbody tr td {
 	font-size: 14px;
 	padding: 6px 8px;
+}
+
+/* Responsive table: stacked rows on small screens */
+@media (max-width: 768px) {
+  .table-responsive { overflow: hidden; }
+  .table { border: 0; }
+  .table thead { display: none; }
+  .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tbody tr { margin-bottom: 1rem; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.04); padding: 10px; }
+  .table td { 
+    /* add label before each cell using data-label */
+    padding: 8px 10px;
+    text-align: left;
+    white-space: normal;
+    border: none;
+    position: relative;
+  }
+  .table td:before {
+    content: attr(data-label) ": ";
+    display: inline-block;
+    font-weight: 600;
+    width: 110px;
+    color: #333;
+  }
+  /* actions row: keep buttons inline and allow horizontal scroll */
+  .table td[style*="white-space: nowrap"] { overflow-x: auto; }
+}
+
+/* On very small screens allow horizontal scroll instead of squashing */
+@media (max-width: 480px) {
+  .table-responsive { overflow-x: auto; }
+  .table-wrapper { padding: 12px; }
+  .table td:before { width: 95px; font-size: 13px; }
 }
 table.table tr th:first-child {
 	width: 60px;

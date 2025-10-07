@@ -90,7 +90,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         const estatus = isEmpresa ? categoria.estatus_categoria_prod_empresa : categoria.estatus_categoria_prod_usuario;
                         
                         // Verificar permisos para mostrar botones
-                        const canEdit = canUserEditCategory(categoria, window.USER_INFO);
+                        // Primero, preferimos un flag 'editable' enviado por el servidor.
+                        let canEdit = false;
+                        if (typeof categoria.editable !== 'undefined') {
+                            canEdit = !!categoria.editable;
+                        } else {
+                            // Fallback: mantener la comprobación por tipo/keys
+                            canEdit = canUserEditCategory(categoria, window.USER_INFO);
+                        }
                         const actionButtons = canEdit ? `
                                 <button class="action-btn btn-edit" onclick="abrirModalEditar('${id}', '${(nombre || '').replace(/'/g, "\\'")}', '${(descripcion || '').replace(/'/g, "\\'")}', '${(estatus || '').replace(/'/g, "\\'")}')" data-tooltip="Editar categoría">
                                     <i class="lni lni-pencil"></i>

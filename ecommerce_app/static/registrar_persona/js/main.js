@@ -68,16 +68,10 @@ $(document).ready(function() {
         }
     });
 
-    // Aplicar validación en tiempo real para teléfono
+    // Aplicar validación en tiempo real para teléfono - solo números
     $('#telefono').on('input', function() {
-        const value = $(this).val();
-        if (value && !validatePhone(value)) {
-            $(this).addClass('error-input');
-            $(this).attr('title', 'Solo se permiten números');
-        } else {
-            $(this).removeClass('error-input');
-            $(this).removeAttr('title');
-        }
+        // Eliminar cualquier carácter que no sea número
+        this.value = this.value.replace(/[^0-9]/g, '');
     });
 
     // Validación en tiempo real para campos obligatorios

@@ -66,8 +66,15 @@
           {% endif %}
         </div>
         <div class="col-md-10">
-    <h1 class="fw-bold mb-2" style="font-size:2rem;">{{ empresa.nombre_empresa|default:'Nombre de la Empresa' }}</h1>
-    <p class="lead mb-0" style="color:#444;">{{ empresa.descripcion_empresa|default:'Aquí va una breve descripción de la empresa, su misión, visión o cualquier información relevante que quieras mostrar a los usuarios.' }}</p>
+          <div class="d-flex align-items-center mb-2">
+            <h1 class="fw-bold mb-0" style="font-size:2rem;">{{ empresa.nombre_empresa|default:'Nombre de la Empresa' }}</h1>
+            {% if user_info.is_authenticated and not user_info.is_public_profile %}
+              <a href="{% url 'editar_perfil_empresa' empresa_id=empresa.id_empresa %}" class="btn btn-outline-secondary btn-sm ms-3">
+                <i class="fas fa-pencil-alt me-1"></i> Editar Perfil
+              </a>
+            {% endif %}
+          </div>
+          <p class="lead mb-0" style="color:#444;">{{ empresa.descripcion_empresa|default:'Aquí va una breve descripción de la empresa, su misión, visión o cualquier información relevante que quieras mostrar a los usuarios.' }}</p>
         </div>
       </div>
     </div>

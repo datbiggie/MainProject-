@@ -1,3 +1,10 @@
+/* Centrado de contenido principal */
+.row.align-items-stretch.no-gutters.contact-wrap {
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
 /* Botón Ver Categorías color personalizado */
 .btn-ver-categorias {
   background-color: #3ecf8e !important;
@@ -184,3 +191,353 @@ label.error {
   font-weight: bold;
   font-size: 12px;
   color: #000; }
+
+/* ----- Estilos movidos desde el template categoria_producto.html ----- */
+/* Estilos personalizados para Select2 y componentes de atributos */
+.select2-container--bootstrap-5 .select2-selection--multiple {
+  min-height: 50px;
+  border: 1px solid #e1f5fe;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f4f8 100%);
+  box-shadow: 0 1px 4px rgba(33, 150, 243, 0.08);
+  transition: all 0.3s ease;
+  padding: 5px 10px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple:hover {
+  border-color: #81d4fa;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.12);
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection--multiple {
+  border-color: #81d4fa;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.08);
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+  display: none !important;
+}
+
+.atributo-seleccionado {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 1px solid #90caf9;
+  color: #1565c0;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.15);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.atributo-seleccionado:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.25);
+  border-color: #64b5f6;
+}
+
+.atributo-seleccionado .remove-btn {
+  background: rgba(21, 101, 192, 0.1);
+  border: none;
+  color: #1565c0;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.atributo-seleccionado .remove-btn:hover {
+  background: rgba(21, 101, 192, 0.2);
+  color: #0d47a1;
+  transform: scale(1.1);
+}
+
+.select2-dropdown {
+  border: 1px solid #e1f5fe;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.1);
+  overflow: hidden;
+}
+
+.select2-search--dropdown {
+  padding: 15px;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f4f8 100%);
+  border-bottom: 1px solid #e1f5fe;
+}
+
+.select2-search--dropdown .select2-search__field {
+  border: 1px solid #e1f5fe;
+  border-radius: 25px;
+  padding: 12px 20px;
+  font-size: 0.95em;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f4f8 100%);
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.select2-search--dropdown .select2-search__field:focus {
+  border-color: #81d4fa;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.08);
+  outline: none;
+}
+
+.select2-result-atributo {
+  padding: 15px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.select2-result-atributo:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  transform: translateX(5px);
+}
+
+.select2-result-atributo:last-child {
+  border-bottom: none;
+}
+
+.select2-result-atributo__title {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+}
+
+.select2-result-atributo__title:before {
+  content: "🏷️";
+  margin-right: 10px;
+  font-size: 1.1em;
+}
+
+.select2-results__option--highlighted .select2-result-atributo {
+  background: linear-gradient(135deg, #81d4fa 0%, #64b5f6 100%) !important;
+  color: #1565c0 !important;
+  transform: translateX(8px);
+}
+
+.select2-results__option--highlighted .select2-result-atributo__title {
+  color: #1565c0 !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__placeholder {
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.select2-results__option[aria-disabled=true] {
+  display: none;
+}
+
+.select2-results__option[role=group] {
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.btn-agregar-atributo {
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-weight: 500;
+  border: 2px solid #007bff;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.btn-agregar-atributo:hover {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-agregar-atributo:active {
+  transform: translateY(0);
+}
+
+.info-text {
+  color: #6c757d;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.info-text i {
+  color: #007bff;
+}
+
+/* Fin de estilos movidos */
+
+/* Ajuste: hacer .contact-wrap más estrecho y centrarlo */
+.contact-wrap {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 900px; /* ancho máximo para pantallas grandes */
+}
+
+@media (min-width: 992px) {
+  /* En pantallas grandes reducimos un poco más si se desea */
+  .contact-wrap {
+    max-width: 800px;
+  }
+}
+
+/* -------------------- Reglas responsive adicionales -------------------- */
+/* Asegurar que los inputs no tengan anchos fijos y se adapten al contenedor */
+.form-control.input-nombre {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ajustes para el textarea y select para que ocupen el 100% en móviles */
+.form-group .form-control, textarea.form-control, select.form-control {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Botones en línea que se apilan en pantallas pequeñas */
+.col-md-12 .btn {
+  min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+  /* Espaciado más compacto en móviles */
+  .content {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .contact-wrap .form, .contact-wrap .contact-info {
+    padding: 20px;
+  }
+
+  /* Hacer que los botones de acciones ocupen 100% o se apilen */
+  .col-md-12 .btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  /* Lista de atributos seleccionados adaptativa */
+  #lista-atributos {
+    flex-direction: row;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  /* Select2: desplegable ocupa pantalla completa horizontal en móviles */
+  .select2-container--bootstrap-5 .select2-selection--multiple {
+    padding: 8px 10px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  /* Tablets: permitir botones en línea pero adaptativos */
+  .col-md-12 .btn {
+    display: inline-block;
+    width: auto;
+    margin-bottom: 0;
+  }
+}
+
+/* Atributos seleccionados: permitir que se rompan en varias líneas manteniendo estilo */
+.atributo-seleccionado {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Hacer la card de atributos fluida */
+.card {
+  width: 100%;
+}
+
+/* Mejoras visuales para inputs deshabilitados (fecha) */
+input[disabled], textarea[disabled] {
+  background-color: #f8f9fa;
+  opacity: 1;
+}
+
+/* Asegurar que el formulario se centre y no exceda el ancho en pantallas grandes */
+.form.h-100 {
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Pequeños ajustes para que los iconos y textos en encabezados no se desborden */
+.card-header h6, .mb-3 {
+  word-break: break-word;
+}
+
+/* Fin de reglas responsive */
+
+/* ----- Estilos para acordeón (secciones expandibles) ----- */
+.accordion-section {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #ffffff, #f7fbff);
+  cursor: pointer;
+}
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+.accordion-icon {
+  font-size: 1.2em;
+}
+.accordion-content {
+  max-height: 0;
+  transition: max-height 0.32s ease, padding 0.2s ease;
+  padding: 0 16px;
+}
+.accordion-section.active .accordion-content {
+  padding: 16px;
+  max-height: 2000px; /* lo suficientemente grande para el contenido */
+}
+.accordion-toggle {
+  transform: rotate(0deg);
+  transition: transform 0.25s ease;
+}
+.accordion-section.active .accordion-toggle {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 767.98px) {
+  .accordion-header { padding: 10px 12px; }
+  .accordion-content { padding: 10px 12px; }
+}
+
+/* Fin estilos acordeón */

@@ -465,8 +465,32 @@ function cargarDatosEdicion(sucursal) {
     // Cargar datos básicos
     document.getElementById('edit_id_sucursal').value = sucursal.id_sucursal;
     document.getElementById('edit_nombre_sucursal').value = sucursal.nombre_sucursal;
-    document.getElementById('edit_telefono_sucursal').value = sucursal.telefono_sucursal;
-    document.getElementById('edit_estado_sucursal').value = sucursal.estado_sucursal;
+    // Normalizar teléfono: dejar solo números y máximo 11 dígitos
+    const normalizedTel = (sucursal.telefono_sucursal || '').toString().replace(/[^0-9]/g, '').slice(0,11);
+    document.getElementById('edit_telefono_sucursal').value = normalizedTel;
+
+    // Mapear estado: intentar por value (código), si no existe buscar por texto (nombre)
+    const estadoRaw = (sucursal.estado_sucursal || '').toString().trim();
+    const $editEstado = $('#edit_estado_sucursal');
+    // Si existe una opción con ese value, usarla
+    if ($editEstado.find('option[value="' + estadoRaw + '"]').length) {
+        $editEstado.val(estadoRaw).trigger('change');
+    } else {
+        // Buscar por texto (caso en que row contiene el nombre completo)
+        let matchedValue = null;
+        $editEstado.find('option').each(function() {
+            if ($(this).text().trim().toLowerCase() === estadoRaw.toLowerCase()) {
+                matchedValue = $(this).attr('value');
+                return false; // break
+            }
+        });
+        if (matchedValue) {
+            $editEstado.val(matchedValue).trigger('change');
+        } else {
+            // Si no hay match, limpiar el select
+            $editEstado.val('').trigger('change');
+        }
+    }
     document.getElementById('edit_direccion_sucursal').value = sucursal.direccion_sucursal;
     
     // Cargar coordenadas
@@ -548,10 +572,69 @@ function mostrarMensajeError(mensaje) {
     });
 }
 
-// Manejar el envío del formulario de agregar sucursal
+
+// ===== VALIDACIÓN TELÉFONO SUCURSAL (solo números, 11 dígitos) =====
+function validatePhoneSucursal(input) {
+    return /^[0-9]{11}$/.test(input);
+}
+
+// En tiempo real: solo números y máximo 11 dígitos
+$('#telefono_sucursal, #edit_telefono_sucursal').on('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+});
+
+// Inicializar Select2 para estado (agregar y editar)
+$(document).ready(function() {
+    // Inicializar todos los selects con la clase .select2
+    $('.select2').each(function() {
+        const $el = $(this);
+        const $modalParent = $el.closest('.modal');
+        const opts = {
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: $el.data('placeholder') || 'Selecciona un estado',
+            allowClear: true,
+            language: {
+                noResults: function() { return "No se encontraron resultados"; },
+                searching: function() { return "Buscando..."; }
+            }
+        };
+
+        // Si el select está dentro de un modal, anclar el dropdown al modal para evitar problemas de z-index
+        if ($modalParent.length) {
+            opts.dropdownParent = $modalParent;
+        }
+
+        $el.select2(opts);
+
+        // Enfocar búsqueda al abrir este select
+        $el.on('select2:open', function() {
+            setTimeout(function() {
+                const field = document.querySelector('.select2-container--bootstrap-5 .select2-search__field');
+                if (field) field.focus();
+            }, 0);
+        });
+    });
+});
+
+// Validación y envío del formulario de agregar sucursal
 $('#sucursalForm').on('submit', function(e) {
+    var tel = $('#telefono_sucursal').val();
+    if (!validatePhoneSucursal(tel)) {
+        mostrarMensajeError('El teléfono debe tener exactamente 11 dígitos numéricos.');
+        $('#telefono_sucursal').focus();
+        e.preventDefault();
+        return false;
+    }
+    // Validar estado obligatorio
+    if (!$('#estado_sucursal').val()) {
+        mostrarMensajeError('Debe seleccionar un estado.');
+        $('#estado_sucursal').focus();
+        e.preventDefault();
+        return false;
+    }
+    // ...existing code...
     e.preventDefault();
-    
     $.ajax({
         url: $(this).attr('action'),
         method: 'POST',
@@ -561,10 +644,7 @@ $('#sucursalForm').on('submit', function(e) {
                 mostrarMensajeExito(response.message);
                 // Limpiar el formulario
                 $('#sucursalForm')[0].reset();
-                // Recargar la página para mostrar la nueva sucursal
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                setTimeout(function() { location.reload(); }, 1500);
             } else {
                 mostrarMensajeError(response.message);
             }
@@ -575,10 +655,24 @@ $('#sucursalForm').on('submit', function(e) {
     });
 });
 
-// Manejar el envío del formulario de editar sucursal
+// Validación y envío del formulario de editar sucursal
 $('#editSucursalForm').on('submit', function(e) {
+    var tel = $('#edit_telefono_sucursal').val();
+    if (!validatePhoneSucursal(tel)) {
+        mostrarMensajeError('El teléfono debe tener exactamente 11 dígitos numéricos.');
+        $('#edit_telefono_sucursal').focus();
+        e.preventDefault();
+        return false;
+    }
+    // Validar estado obligatorio
+    if (!$('#edit_estado_sucursal').val()) {
+        mostrarMensajeError('Debe seleccionar un estado.');
+        $('#edit_estado_sucursal').focus();
+        e.preventDefault();
+        return false;
+    }
+    // ...existing code...
     e.preventDefault();
-    
     $.ajax({
         url: $(this).attr('action'),
         method: 'POST',
@@ -587,12 +681,8 @@ $('#editSucursalForm').on('submit', function(e) {
         success: function(response) {
             if (response.success) {
                 mostrarMensajeExito(response.message);
-                // Cerrar el modal
                 $('#editEmployeeModal').modal('hide');
-                // Recargar la página para mostrar los cambios
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                setTimeout(function() { location.reload(); }, 1500);
             } else {
                 mostrarMensajeError(response.message);
             }

@@ -1,4 +1,5 @@
 {% load static %}
+    {% include 'ecommerce_app/barra_superior_operaciones.html' %}
 
 <!DOCTYPE html>
 <html class="no-js" lang="zxx">
@@ -15,31 +16,37 @@
     <link href="https://cdn.lineicons.com/4.0/lineicons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'categ_producto_config/css/modern-design.css' %}" />
+    <link rel="stylesheet" href="{% static 'categ_producto_config/css/custom-styles.css' %}">
     </head>
 <body>
-    {% include 'ecommerce_app/barra_superior_operaciones.html' %}
     
     <!-- Encabezado Principal -->
     <div class="container-fluid">
-        <div class="floating-header">
-            <h1 class="page-title">Gestión de Categorías Productos</h1>
-            <p class="page-subtitle">Administra y organiza las categorías de productos de manera eficiente</p>
-        </div>
+        <!-- Encabezado principal eliminado según solicitud del usuario -->
         
         <!-- Estadísticas -->
         <div class="container">
             <div class="stats-container">
-                <div class="stats-card">
-                    <div class="stats-number" data-stat="total">{{ total_categorias }}</div>
-                    <div class="stats-label">Total Categorías</div>
+                <div class="stats-card total">
+                    <div class="stats-icon"><i class="lni lni-list"></i></div>
+                    <div class="stats-body">
+                        <div class="stats-number" data-stat="total">{{ total_categorias }}</div>
+                        <div class="stats-label">Total Categorías</div>
+                    </div>
                 </div>
-                <div class="stats-card">
-                    <div class="stats-number" data-stat="active">{{ categorias_activas }}</div>
-                    <div class="stats-label">Categorías Activas</div>
+                <div class="stats-card active">
+                    <div class="stats-icon"><i class="lni lni-checkmark-circle"></i></div>
+                    <div class="stats-body">
+                        <div class="stats-number" data-stat="active">{{ categorias_activas }}</div>
+                        <div class="stats-label">Categorías Activas</div>
+                    </div>
                 </div>
-                <div class="stats-card">
-                    <div class="stats-number" data-stat="inactive">{{ categorias_inactivas }}</div>
-                    <div class="stats-label">Categorías Inactivas</div>
+                <div class="stats-card inactive">
+                    <div class="stats-icon"><i class="lni lni-close"></i></div>
+                    <div class="stats-body">
+                        <div class="stats-number" data-stat="inactive">{{ categorias_inactivas }}</div>
+                        <div class="stats-label">Categorías Inactivas</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -252,16 +259,13 @@
     </div>
 
     <!-- ========================= JS here ========================= -->
-    <script>
-        // Variables globales para el manejo de sesión
-        window.USER_INFO = {
-            account_type: '{{ request.session.account_type|default:"usuario" }}',
-            user_id: '{{ user_info.id|default:"" }}',
-            is_authenticated: "{% if user_info.is_authenticated %}true{% else %}false{% endif %}"
-        };
-        window.CSRF_TOKEN = '{{ csrf_token }}';
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Datos de la página (usados por JS estático) -->
+    <div id="page-data" 
+         data-account-type="{{ request.session.account_type|default:'usuario' }}" 
+         data-user-id="{{ user_info.id|default:'' }}" 
+         data-authenticated="{% if request.session.is_authenticated %}1{% else %}0{% endif %}"
+         style="display:none"></div>
+    <script src="{% static 'categ_producto_config/js/page-data.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{% static 'categ_producto_config/js/main.js' %}?v=9"></script>
     <script src="{% static 'categ_producto_config/js/modal.js' %}?v=2"></script>

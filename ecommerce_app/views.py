@@ -1,5 +1,6 @@
 import json
 import os
+from django.db.models import Q
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
@@ -568,7 +569,7 @@ def api_categorias_producto(request):
     account_type = request.session.get('account_type', 'usuario')
     
     if account_type == 'empresa':
-        categorias = list(categoria_producto_empresa.objects.filter(id_empresa_fk=current_user).values_list('nombre_categoria_prod_empresa', flat=True))
+        categorias = list(categoria_producto_empresa.objects.filter(Q(id_empresa_fk=current_user) | Q(generico='s')).values_list('nombre_categoria_prod_empresa', flat=True))
     else:
         categorias = list(categoria_producto_usuario.objects.filter(id_usuario_fk=current_user).values_list('nombre_categoria_prod_usuario', flat=True))
     
@@ -586,7 +587,7 @@ def api_categorias_servicio(request):
     account_type = request.session.get('account_type', 'usuario')
     
     if account_type == 'empresa':
-        categorias = list(categoria_servicio_empresa.objects.filter(id_empresa_fk=current_user).values_list('nombre_categoria_serv_empresa', flat=True))
+        categorias = list(categoria_servicio_empresa.objects.filter(Q(id_empresa_fk=current_user) | Q(generico='s')).values_list('nombre_categoria_serv_empresa', flat=True))
     else:
         categorias = list(categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user).values_list('nombre_categoria_serv_usuario', flat=True))
     
@@ -596,6 +597,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.paginator import Paginator
+import os
+from django.conf import settings
+from django.views.decorators.http import require_GET
 from django.db import transaction, IntegrityError
 from .models import *
 import logging
@@ -1090,7 +1094,19 @@ def registrar_empresa(request):
             pais_empresa = request.POST.get('pais_empresa')
             estado_empresa = request.POST.get('estado_empresa')
             tipo_empresa = request.POST.get('tipo_empresa')
+            sector_empresa = request.POST.get('sector_empresa')
             direccion_empresa = request.POST.get('direccion_empresa')
+            
+            # Avatar del chatbot
+            avatar_option = request.POST.get('avatar_option', 'avatars/Cartoon Style Robot.jpg')
+            avatar_chatbot_file = request.FILES.get('avatar_chatbot')
+            
+            # Si se sube un archivo personalizado, usarlo
+            if avatar_chatbot_file and avatar_option == 'custom':
+                avatar_chatbot_empresa = avatar_chatbot_file
+            else:
+                # Usar la opción seleccionada (ruta del avatar predefinido)
+                avatar_chatbot_empresa = avatar_option
 
             # Validar que todos los campos estén completos
             if not nombre_empresa or not correo_empresa or not password_empresa or not confirm_password or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa:
@@ -1144,22 +1160,6 @@ def registrar_empresa(request):
                         'error_message': 'Este correo ya está registrado como empresa.'
                     })
 
-            # Validar que las coordenadas sean números válidos
-            try:
-                lat = float(latitud)
-                lng = float(longitud)
-            except ValueError:
-                logger.warning("Coordenadas inválidas")
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Las coordenadas deben ser números válidos.'
-                    })
-                else:
-                    return render(request, 'ecommerce_app/registrar_empresa.html', {
-                        'error_message': 'Las coordenadas deben ser números válidos.'
-                    })
-
             # Validar longitud mínima de descripción
             if len(descripcion_empresa) < 10:
                 logger.warning("Descripción demasiado corta")
@@ -1188,8 +1188,10 @@ def registrar_empresa(request):
                 logo_empresa=logo_empresa,
                 pais_empresa=pais_empresa,
                 estado_empresa=estado_empresa,
-                tipo_empresa=tipo_empresa,  
-                direccion_empresa=direccion_empresa
+                tipo_empresa=tipo_empresa,
+                sector_empresa=sector_empresa,
+                direccion_empresa=direccion_empresa,
+                avatar_chatbot_empresa=avatar_chatbot_empresa
             )
             nueva_empresa.save()
             logger.info(f"Empresa guardada exitosamente: {nueva_empresa.nombre_empresa}")
@@ -1527,7 +1529,7 @@ def producto_funcion(request):
             'tipo': current_user.rol_empresa,
             'is_authenticated': True
         }
-        categoria_producto_all = categoria_producto_empresa.objects.filter(id_empresa_fk=empresa_obj)
+        categoria_producto_all = categoria_producto_empresa.objects.filter(Q(id_empresa_fk=empresa_obj) | Q(generico='s'))
     else:
         # Para usuarios, usar categorías de usuario
         user_info = {
@@ -1682,7 +1684,7 @@ def servicio_funcion(request):
             'tipo': current_user.rol_empresa,
             'is_authenticated': True
         }
-        categoria_servicio_all = categoria_servicio_empresa.objects.filter(id_empresa_fk=empresa_obj)
+        categoria_servicio_all = categoria_servicio_empresa.objects.filter(Q(id_empresa_fk=empresa_obj) | Q(generico='s'))
     else:
         # Para usuarios, usar categorías de usuario directamente
         user_info = {
@@ -2108,9 +2110,9 @@ def categ_producto_config_funcion(request):
             'tipo': current_user.rol_empresa,
             'is_authenticated': True
         }
-        categ_producto_all = categoria_producto_empresa.objects.filter(id_empresa_fk=empresa_obj).order_by('-fecha_creacion_prod_empresa')
+        categ_producto_all = categoria_producto_empresa.objects.filter(Q(id_empresa_fk=empresa_obj) | Q(generico='s')).order_by('-fecha_creacion_prod_empresa')
     else:
-        # Para usuarios, usar categorías de usuario
+        # Para usuarios, incluir tanto categorías de usuario como categorías genéricas de empresa
         user_info = {
             'id': current_user.id_usuario,
             'nombre': current_user.nombre_usuario,
@@ -2118,17 +2120,22 @@ def categ_producto_config_funcion(request):
             'tipo': current_user.rol_usuario,
             'is_authenticated': True
         }
-        categ_producto_all = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user).order_by('-fecha_creacion_prod_usuario')
+        # Categorías genéricas creadas a nivel empresa
+        empresa_genericas_qs = categoria_producto_empresa.objects.filter(generico='s')
+        usuario_qs = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
+        # Combinar resultados para pasarlos a la plantilla (lista de objetos)
+        categ_producto_all = list(empresa_genericas_qs) + list(usuario_qs)
     
     # Calcular estadísticas
-    total_categorias = categ_producto_all.count()
-    
     if account_type == 'empresa':
+        total_categorias = categ_producto_all.count()
         categorias_activas = categ_producto_all.filter(estatus_categoria_prod_empresa='Activo').count()
         categorias_inactivas = categ_producto_all.filter(estatus_categoria_prod_empresa='Inactivo').count()
     else:
-        categorias_activas = categ_producto_all.filter(estatus_categoria_prod_usuario='Activo').count()
-        categorias_inactivas = categ_producto_all.filter(estatus_categoria_prod_usuario='Inactivo').count()
+        # En el caso de usuario combinamos querysets en una lista: calcular contadores desde los querysets originales
+        total_categorias = empresa_genericas_qs.count() + usuario_qs.count()
+        categorias_activas = empresa_genericas_qs.filter(estatus_categoria_prod_empresa='Activo').count() + usuario_qs.filter(estatus_categoria_prod_usuario='Activo').count()
+        categorias_inactivas = empresa_genericas_qs.filter(estatus_categoria_prod_empresa='Inactivo').count() + usuario_qs.filter(estatus_categoria_prod_usuario='Inactivo').count()
     
     # Logging básico
     logger.info(f"Total de categorías encontradas: {total_categorias}")
@@ -2155,43 +2162,107 @@ def api_filtrar_categorias_producto(request):
             return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
         
         account_type = request.session.get('account_type', 'usuario')
+        logger.info(f"api_filtrar_categorias_producto called - nombre='{nombre}' estatus='{estatus}' account_type='{account_type}' user='{getattr(current_user, 'id_empresa', getattr(current_user, 'id_usuario', None))}'")
         
         if account_type == 'empresa':
-            categorias_query = categoria_producto_empresa.objects.filter(id_empresa_fk=current_user)
-            
+            categorias_query = categoria_producto_empresa.objects.filter(Q(id_empresa_fk=current_user) | Q(generico='s'))
+
             # Filtrar por nombre si se proporciona
             if nombre:
                 categorias_query = categorias_query.filter(nombre_categoria_prod_empresa__icontains=nombre)
-            
+
             # Filtrar por estatus si se proporciona y no es 'todos'
             if estatus and estatus.lower() != 'todos':
                 categorias_query = categorias_query.filter(estatus_categoria_prod_empresa=estatus)
-            
-            # Convertir a lista de diccionarios para la respuesta JSON
-            categorias_list = list(categorias_query.values(
+
+            # Convertir a lista de diccionarios para la respuesta JSON incluyendo campos auxiliares
+            raw_list = list(categorias_query.values(
+                'id_categoria_prod_empresa', 
+                'nombre_categoria_prod_empresa', 
+                'descripcion_categoria_prod_empresa', 
+                'estatus_categoria_prod_empresa',
+                'generico',
+                'id_empresa_fk'
+            ))
+
+            categorias_list = []
+            for c in raw_list:
+                # editable sólo si la categoría pertenece a la empresa (id_empresa_fk igual) y no es genérica
+                editable = False
+                try:
+                    editable = (c.get('generico') != 's') and (c.get('id_empresa_fk') == getattr(current_user, 'id_empresa', None))
+                except Exception:
+                    editable = False
+
+                item = {
+                    'id_categoria_prod_empresa': c.get('id_categoria_prod_empresa'),
+                    'nombre_categoria_prod_empresa': c.get('nombre_categoria_prod_empresa'),
+                    'descripcion_categoria_prod_empresa': c.get('descripcion_categoria_prod_empresa'),
+                    'estatus_categoria_prod_empresa': c.get('estatus_categoria_prod_empresa'),
+                    'editable': editable
+                }
+                categorias_list.append(item)
+
+            logger.info(f"api_filtrar_categorias_producto -> empresa found {len(categorias_list)} categorias. sample: {[c.get('nombre_categoria_prod_empresa') for c in categorias_list[:5]]}")
+        else:
+            # Para usuarios: incluir categorías genéricas de empresa (generico='s') y las propias del usuario
+            empresa_qs = categoria_producto_empresa.objects.filter(generico='s')
+            usuario_qs = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
+
+            # Loguear conteos iniciales
+            logger.info(f"api_filtrar_categorias_producto -> usuario initial counts - empresa:{empresa_qs.count()} usuario:{usuario_qs.count()}")
+
+            # Aplicar filtro por nombre a ambas consultas si se proporciona
+            if nombre:
+                empresa_qs = empresa_qs.filter(nombre_categoria_prod_empresa__icontains=nombre)
+                usuario_qs = usuario_qs.filter(nombre_categoria_prod_usuario__icontains=nombre)
+
+            # Filtrar por estatus si se proporciona y no es 'todos'
+            if estatus and estatus.lower() != 'todos':
+                empresa_qs = empresa_qs.filter(estatus_categoria_prod_empresa=estatus)
+                usuario_qs = usuario_qs.filter(estatus_categoria_prod_usuario=estatus)
+
+            # Loguear conteos después de aplicar filtros
+            logger.info(f"api_filtrar_categorias_producto -> usuario after-filter counts - empresa:{empresa_qs.count()} usuario:{usuario_qs.count()}")
+
+            # Convertir a lista de diccionarios para la respuesta JSON combinada
+            raw_empresa = list(empresa_qs.values(
                 'id_categoria_prod_empresa', 
                 'nombre_categoria_prod_empresa', 
                 'descripcion_categoria_prod_empresa', 
                 'estatus_categoria_prod_empresa'
             ))
-        else:
-            categorias_query = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
-            
-            # Filtrar por nombre si se proporciona
-            if nombre:
-                categorias_query = categorias_query.filter(nombre_categoria_prod_usuario__icontains=nombre)
-            
-            # Filtrar por estatus si se proporciona y no es 'todos'
-            if estatus and estatus.lower() != 'todos':
-                categorias_query = categorias_query.filter(estatus_categoria_prod_usuario=estatus)
-            
-            # Convertir a lista de diccionarios para la respuesta JSON
-            categorias_list = list(categorias_query.values(
+            raw_usuario = list(usuario_qs.values(
                 'id_categoria_prod_usuario', 
                 'nombre_categoria_prod_usuario', 
                 'descripcion_categoria_prod_usuario', 
                 'estatus_categoria_prod_usuario'
             ))
+
+            categorias_list = []
+            # Las categorías de empresa (genéricas) no son editables por usuarios
+            for c in raw_empresa:
+                item = {
+                    'id_categoria_prod_empresa': c.get('id_categoria_prod_empresa'),
+                    'nombre_categoria_prod_empresa': c.get('nombre_categoria_prod_empresa'),
+                    'descripcion_categoria_prod_empresa': c.get('descripcion_categoria_prod_empresa'),
+                    'estatus_categoria_prod_empresa': c.get('estatus_categoria_prod_empresa'),
+                    'editable': False
+                }
+                categorias_list.append(item)
+
+            # Las categorías de usuario sí son editables por el usuario
+            for c in raw_usuario:
+                item = {
+                    'id_categoria_prod_usuario': c.get('id_categoria_prod_usuario'),
+                    'nombre_categoria_prod_usuario': c.get('nombre_categoria_prod_usuario'),
+                    'descripcion_categoria_prod_usuario': c.get('descripcion_categoria_prod_usuario'),
+                    'estatus_categoria_prod_usuario': c.get('estatus_categoria_prod_usuario'),
+                    'editable': True
+                }
+                categorias_list.append(item)
+
+            logger.info(f"api_filtrar_categorias_producto -> usuario found {len(categorias_list)} categorias. sample: {[c.get('nombre_categoria_prod_empresa') or c.get('nombre_categoria_prod_usuario') for c in categorias_list[:5]]}")
         
         return JsonResponse({
             'success': True,
@@ -2385,42 +2456,59 @@ def api_filtrar_categorias_servicio(request):
         account_type = request.session.get('account_type', 'usuario')
         
         if account_type == 'empresa':
-            categorias_query = categoria_servicio_empresa.objects.filter(id_empresa_fk=current_user)
-            
+            # Para empresas, incluir las categorías propias y las genéricas (generico='s')
+            categorias_query = categoria_servicio_empresa.objects.filter(
+                Q(id_empresa_fk=current_user) | Q(generico='s')
+            )
+
             # Filtrar por nombre si se proporciona
             if nombre:
                 categorias_query = categorias_query.filter(nombre_categoria_serv_empresa__icontains=nombre)
-            
+
             # Filtrar por estatus si se proporciona y no es 'todos'
             if estatus and estatus.lower() != 'todos':
                 categorias_query = categorias_query.filter(estatus_categoria_serv_empresa=estatus)
-            
+
             # Convertir a lista de diccionarios para la respuesta JSON
             categorias_list = list(categorias_query.values(
-                'id_categoria_serv_empresa', 
-                'nombre_categoria_serv_empresa', 
-                'descripcion_categoria_serv_empresa', 
-                'estatus_categoria_serv_empresa'
+                'id_categoria_serv_empresa',
+                'nombre_categoria_serv_empresa',
+                'descripcion_categoria_serv_empresa',
+                'estatus_categoria_serv_empresa',
+                'generico'
             ))
         else:
-            categorias_query = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
-            
-            # Filtrar por nombre si se proporciona
+            # Para usuarios, incluir tanto categorías de servicio de usuario como categorías genéricas de empresa
+            empresa_qs = categoria_servicio_empresa.objects.filter(generico='s')
+            usuario_qs = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
+
+            # Aplicar filtro por nombre a ambas consultas si se proporciona
             if nombre:
-                categorias_query = categorias_query.filter(nombre_categoria_serv_usuario__icontains=nombre)
-            
+                empresa_qs = empresa_qs.filter(nombre_categoria_serv_empresa__icontains=nombre)
+                usuario_qs = usuario_qs.filter(nombre_categoria_serv_usuario__icontains=nombre)
+
             # Filtrar por estatus si se proporciona y no es 'todos'
             if estatus and estatus.lower() != 'todos':
-                categorias_query = categorias_query.filter(estatus_categoria_serv_usuario=estatus)
-            
-            # Convertir a lista de diccionarios para la respuesta JSON
-            categorias_list = list(categorias_query.values(
-                'id_categoria_serv_usuario', 
-                'nombre_categoria_serv_usuario', 
-                'descripcion_categoria_serv_usuario', 
+                empresa_qs = empresa_qs.filter(estatus_categoria_serv_empresa=estatus)
+                usuario_qs = usuario_qs.filter(estatus_categoria_serv_usuario=estatus)
+
+            # Convertir a lista de diccionarios para la respuesta JSON combinada
+            categorias_empresa = list(empresa_qs.values(
+                'id_categoria_serv_empresa',
+                'nombre_categoria_serv_empresa',
+                'descripcion_categoria_serv_empresa',
+                'estatus_categoria_serv_empresa',
+                'generico'
+            ))
+            categorias_usuario = list(usuario_qs.values(
+                'id_categoria_serv_usuario',
+                'nombre_categoria_serv_usuario',
+                'descripcion_categoria_serv_usuario',
                 'estatus_categoria_serv_usuario'
             ))
-        
+
+            categorias_list = categorias_empresa + categorias_usuario
+            logger.info(f"api_filtrar_categorias_servicio -> usuario found {len(categorias_list)} categorias.")
         return JsonResponse({
             'success': True,
             'categorias': categorias_list
@@ -2815,7 +2903,7 @@ def categ_servicio_config_funcion(request):
             'tipo': current_user.rol_empresa,
             'is_authenticated': True
         }
-        categ_servicio_all = categoria_servicio_empresa.objects.filter(id_empresa_fk=empresa_obj).order_by('-fecha_creacion_categ_serv_empresa')
+        categ_servicio_all = categoria_servicio_empresa.objects.filter(Q(id_empresa_fk=empresa_obj) | Q(generico='s')).order_by('-fecha_creacion_categ_serv_empresa')
     else:
         # Para usuarios, usar categorías de usuario
         user_info = {
@@ -3517,38 +3605,35 @@ def perfil_empresa(request):
     if empresa_id:
         try:
             empresa_obj = empresa.objects.get(id_empresa=empresa_id)
-            
+
             # Verificar si hay usuario autenticado para mantener la información de sesión
             current_user = None
             if is_user_authenticated(request):
                 current_user = get_current_user(request)
-            
+
             account_type = request.session.get('account_type', 'usuario')
-            
-            if current_user and account_type == 'empresa':
-                # Para empresas autenticadas viendo otro perfil
-                user_info = {
-                    'id': current_user.id_empresa,
-                    'nombre': current_user.nombre_empresa,
-                    'email': current_user.correo_empresa,
-                    'tipo': account_type,
-                    'is_authenticated': True,
-                    'empresa_nombre': current_user.nombre_empresa
-                }
-            elif current_user and account_type == 'usuario':
-                # Para usuarios autenticados viendo perfil de empresa
-                user_info = {
-                    'id': current_user.id_usuario,
-                    'nombre': current_user.nombre_usuario,
-                    'email': current_user.correo_usuario,
-                    'tipo': account_type,
-                    'is_authenticated': True
-                }
+
+            # Determinar si el visitante es el propietario de este perfil
+            is_owner = False
+            if current_user and account_type == 'empresa' and getattr(current_user, 'id_empresa', None) == empresa_obj.id_empresa:
+                is_owner = True
+
+            if is_owner:
+                # Propietario viendo su propio perfil
+                user_info = get_user_info_with_avatar(current_user, account_type, current_user.nombre_empresa)
+                user_info['is_public_profile'] = False
+            elif current_user:
+                # Un usuario/empresa autenticada viendo el perfil de otra empresa -> perfil público
+                user_info = get_user_info_with_avatar(current_user, account_type)
+                user_info['is_public_profile'] = True
+                # Guardar el avatar del perfil que se está viendo
+                user_info['avatar_chatbot'] = empresa_obj.avatar_chatbot if getattr(empresa_obj, 'avatar_chatbot', None) else None
             else:
                 # Para perfiles públicos sin autenticación
                 user_info = {
                     'is_authenticated': False,
-                    'is_public_profile': True
+                    'is_public_profile': True,
+                    'avatar_chatbot': empresa_obj.avatar_chatbot if getattr(empresa_obj, 'avatar_chatbot', None) else None
                 }
         except empresa.DoesNotExist:
             # Si no existe la empresa, redirigir o mostrar error
@@ -3579,6 +3664,11 @@ def perfil_empresa(request):
             # Para usuarios autenticados, buscar empresa asociada
             empresa_nombre = None
             try:
+                # Si el usuario tiene una empresa asociada, redirigir al perfil de empresa
+                if empresa.objects.filter(correo_empresa=current_user.correo_usuario).exists():
+                    empresa_obj = empresa.objects.get(correo_empresa=current_user.correo_usuario)
+                    return redirect(f"/ecommerce/perfil_empresa/?id={empresa_obj.id_empresa}")
+
                 empresa_obj = empresa.objects.filter(correo_empresa=current_user.correo_usuario).first()
                 if empresa_obj:
                     empresa_nombre = empresa_obj.nombre_empresa
@@ -3586,6 +3676,7 @@ def perfil_empresa(request):
                 empresa_obj = None
                 empresa_nombre = None
             
+            usuario_obj = current_user # Asegurarse de que usuario_obj esté definido
             user_info = {
                 'id': current_user.id_usuario,
                 'nombre': current_user.nombre_usuario,
@@ -5115,17 +5206,28 @@ def perfil_usuario(request):
     if usuario_id:
         try:
             usuario_obj = usuario.objects.get(id_usuario=usuario_id)
-            # Para perfiles públicos, verificar si hay usuario autenticado
-            if current_user:
+            # Si el id solicitado es el del usuario autenticado, mostrar su perfil privado
+            is_owner = False
+            if current_user and hasattr(current_user, 'id_usuario') and str(current_user.id_usuario) == str(usuario_id):
+                is_owner = True
+
+            if is_owner:
+                usuario_obj = current_user
                 user_info = get_user_info_with_avatar(current_user, account_type)
-                user_info['is_public_profile'] = True
-                user_info['avatar_chatbot'] = usuario_obj.avatar_chatbot if usuario_obj.avatar_chatbot else None
+                user_info['is_public_profile'] = False
             else:
-                user_info = {
-                    'is_authenticated': False,
-                    'is_public_profile': True,
-                    'avatar_chatbot': usuario_obj.avatar_chatbot if usuario_obj.avatar_chatbot else None
-                }
+                # Para perfiles públicos, verificar si hay usuario autenticado
+                if current_user:
+                    user_info = get_user_info_with_avatar(current_user, account_type)
+                    user_info['is_public_profile'] = True
+                    # Mostrar avatar del perfil que se está viendo
+                    user_info['avatar_chatbot'] = usuario_obj.avatar_chatbot if getattr(usuario_obj, 'avatar_chatbot', None) else None
+                else:
+                    user_info = {
+                        'is_authenticated': False,
+                        'is_public_profile': True,
+                        'avatar_chatbot': usuario_obj.avatar_chatbot if getattr(usuario_obj, 'avatar_chatbot', None) else None
+                    }
         except usuario.DoesNotExist:
             # Si no existe el usuario, redirigir o mostrar error
             user_info = get_user_info_with_avatar(current_user, account_type) if current_user else {'is_authenticated': False}
@@ -5148,6 +5250,7 @@ def perfil_usuario(request):
             }
             # Obtener el primer usuario disponible para mostrar como ejemplo
             usuario_obj = usuario.objects.first()
+            
     
     return render(request, 'ecommerce_app/perfil_usuario.html', {
         'user_info': user_info,
@@ -5249,6 +5352,29 @@ def perfil_sucursales_asociadas(request):
         'sucursales_empresa': sucursales_empresa,
         'usuario': current_user if current_user and account_type == 'usuario' else None
     })
+
+@require_GET
+def list_avatars(request):
+    """
+    Vista para listar los avatares disponibles en la carpeta estática
+    """
+    avatars_dir = os.path.join(settings.STATIC_ROOT, 'avatars')
+    
+    try:
+        # Obtener lista de archivos en el directorio de avatares
+        files = [f for f in os.listdir(avatars_dir) 
+                if os.path.isfile(os.path.join(avatars_dir, f)) 
+                and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg'))]
+        
+        return JsonResponse({
+            'success': True,
+            'files': files
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 def prueba(request):
     return render(request, 'ecommerce_app/prueba.html')
@@ -11730,6 +11856,132 @@ def politicas_privacidad(request):
     
     return render(request, 'ecommerce_app/politicas_privacidad.html', {'user_info': user_info})
 
+
+def editar_perfil_usuario(request, usuario_id):
+    '''Vista para editar el perfil de un usuario'''
+    try:
+        usuario_obj = usuario.objects.get(id_usuario=usuario_id)
+    except usuario.DoesNotExist:
+        return redirect('index')
+
+    # Comprobar autenticación y obtener current_user de forma segura
+    current_user = get_current_user(request)
+    if not current_user:
+        logger.info(f"editar_perfil_usuario: usuario no autenticado (session keys: {list(request.session.keys())})")
+        return redirect('/ecommerce/iniciar_sesion/')
+
+    # Obtener user_info para la barra de navegación (ahora current_user está garantizado)
+    account_type = request.session.get('account_type', 'usuario')
+    user_info = get_user_info_with_avatar(current_user, account_type)
+
+    # Verificar que el usuario autenticado corresponde al perfil que se intenta editar
+    if not hasattr(current_user, 'id_usuario') or current_user.id_usuario != usuario_obj.id_usuario:
+        logger.info(f"editar_perfil_usuario: intento de editar perfil ajeno. current_user.id: {getattr(current_user, 'id_usuario', None)}, target: {usuario_obj.id_usuario}")
+        return redirect('perfil_usuario', usuario_id=usuario_id)
+
+    if request.method == 'POST':
+        try:
+            # Procesar formulario
+            nombre_usuario = request.POST.get('nombre_usuario')
+            telefono_usuario = request.POST.get('telefono_usuario')
+            fecha_nacimiento = request.POST.get('fecha_nacimiento')
+            pais = request.POST.get('pais')
+            estado = request.POST.get('estado')
+            avatar_chatbot = request.POST.get('avatar_chatbot')
+            
+            # Actualizar campos
+            if nombre_usuario:
+                usuario_obj.nombre_usuario = nombre_usuario
+            if telefono_usuario is not None:
+                usuario_obj.telefono_usuario = telefono_usuario
+            if fecha_nacimiento:
+                usuario_obj.fecha_nacimiento = fecha_nacimiento
+            if pais:
+                usuario_obj.pais = pais
+            if estado:
+                usuario_obj.estado = estado
+            if avatar_chatbot:
+                usuario_obj.avatar_chatbot = avatar_chatbot
+            
+            # Procesar foto si se subió
+            if 'foto_usuario' in request.FILES:
+                usuario_obj.foto_usuario = request.FILES['foto_usuario']
+            
+            usuario_obj.save()
+            
+            return redirect('perfil_usuario')
+            
+        except Exception as e:
+            return render(request, 'ecommerce_app/editar_perfil_usuario.html',
+                         {'usuario': usuario_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
+            
+    else:
+        # GET request - mostrar formulario
+        return render(request, 'ecommerce_app/editar_perfil_usuario.html', {'usuario': usuario_obj, 'user_info': user_info})
+
+
+
+def editar_perfil_empresa(request, empresa_id):
+    '''Vista para editar el perfil de una empresa'''
+    try:
+        empresa_obj = empresa.objects.get(id_empresa=empresa_id)
+    except empresa.DoesNotExist:
+        return redirect('index')
+
+    # Obtener user_info para la barra de navegación
+    account_type = request.session.get('account_type', 'empresa')
+    user_info = get_user_info_with_avatar(get_current_user(request), account_type)
+
+    current_user = get_current_user(request)
+    if not current_user or not hasattr(current_user, 'id_empresa') or current_user.id_empresa != empresa_obj.id_empresa:
+        return redirect('perfil_empresa', empresa_id=empresa_id)
+
+    if request.method == 'POST':
+        try:
+            # Procesar formulario
+            nombre_empresa = request.POST.get('nombre_empresa')
+            descripcion_empresa = request.POST.get('descripcion_empresa')
+            tipo_empresa = request.POST.get('tipo_empresa')
+            sector_empresa = request.POST.get('sector_empresa')
+            pais_empresa = request.POST.get('pais_empresa')
+            estado_empresa = request.POST.get('estado_empresa')
+            direccion_empresa = request.POST.get('direccion_empresa')
+            avatar_chatbot_empresa = request.POST.get('avatar_chatbot_empresa')
+            
+            # Actualizar campos
+            if nombre_empresa:
+                empresa_obj.nombre_empresa = nombre_empresa
+            if descripcion_empresa is not None:
+                empresa_obj.descripcion_empresa = descripcion_empresa
+            if tipo_empresa:
+                empresa_obj.tipo_empresa = tipo_empresa
+            if sector_empresa is not None:
+                empresa_obj.sector_empresa = sector_empresa
+            if pais_empresa:
+                empresa_obj.pais_empresa = pais_empresa
+            if estado_empresa:
+                empresa_obj.estado_empresa = estado_empresa
+            if direccion_empresa:
+                empresa_obj.direccion_empresa = direccion_empresa
+            if avatar_chatbot_empresa:
+                empresa_obj.avatar_chatbot_empresa = avatar_chatbot_empresa
+            
+            # Procesar logo si se subió
+            if 'logo_empresa' in request.FILES:
+                empresa_obj.logo_empresa = request.FILES['logo_empresa']
+            
+            empresa_obj.save()
+            
+            return redirect('perfil_empresa')
+            
+        except Exception as e:
+            return render(request, 'ecommerce_app/editar_perfil_empresa.html',
+                         {'empresa': empresa_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
+            
+    else:
+        # GET request - mostrar formulario
+        return render(request, 'ecommerce_app/editar_perfil_empresa.html', {'empresa': empresa_obj, 'user_info': user_info})
+
 # =====================================================
 # VISTAS PARA MIS VENTAS (SERVICIOS)
 # =====================================================
@@ -13382,3 +13634,121 @@ def api_obtener_datos_reporte_productos(request):
         logger.error(f"Error en api_obtener_datos_reporte_productos: {str(e)}")
         logger.error(traceback.format_exc())
         return JsonResponse({'success': False, 'error': f'Error al obtener datos del reporte: {str(e)}'})
+
+
+
+def editar_perfil_usuario(request, usuario_id):
+    """Vista para editar el perfil de un usuario usando la sesión personalizada"""
+    try:
+        usuario_obj = usuario.objects.get(id_usuario=usuario_id)
+    except usuario.DoesNotExist:
+        return redirect('index')
+
+    # Obtener current_user desde la sesión personalizada
+    current_user = get_current_user(request)
+    if not current_user:
+        logger.info(f"editar_perfil_usuario (lower): usuario no autenticado. session keys: {list(request.session.keys())}")
+        return redirect('/ecommerce/iniciar_sesion/')
+
+    # Verificar que el usuario autenticado corresponda al perfil
+    if not hasattr(current_user, 'id_usuario') or current_user.id_usuario != usuario_obj.id_usuario:
+        logger.info(f"editar_perfil_usuario (lower): intento de editar perfil ajeno. current_user.id: {getattr(current_user, 'id_usuario', None)}, target: {usuario_obj.id_usuario}")
+        return redirect('perfil_usuario', usuario_id=usuario_id)
+
+    # Construir user_info para la barra
+    account_type = request.session.get('account_type', 'usuario')
+    user_info = get_user_info_with_avatar(current_user, account_type)
+
+    if request.method == 'POST':
+        try:
+            nombre_usuario = request.POST.get('nombre_usuario')
+            telefono_usuario = request.POST.get('telefono_usuario')
+            fecha_nacimiento = request.POST.get('fecha_nacimiento')
+            pais = request.POST.get('pais')
+            estado = request.POST.get('estado')
+            avatar_chatbot = request.POST.get('avatar_chatbot')
+
+            if nombre_usuario:
+                usuario_obj.nombre_usuario = nombre_usuario
+            if telefono_usuario is not None:
+                usuario_obj.telefono_usuario = telefono_usuario
+            if fecha_nacimiento:
+                usuario_obj.fecha_nacimiento = fecha_nacimiento
+            if pais:
+                usuario_obj.pais = pais
+            if estado:
+                usuario_obj.estado = estado
+            if avatar_chatbot:
+                usuario_obj.avatar_chatbot = avatar_chatbot
+
+            if 'foto_usuario' in request.FILES:
+                usuario_obj.foto_usuario = request.FILES['foto_usuario']
+
+            usuario_obj.save()
+            return redirect('perfil_usuario', usuario_id=usuario_id)
+        except Exception as e:
+            return render(request, 'ecommerce_app/editar_perfil_usuario.html',
+                          {'usuario': usuario_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
+    else:
+        return render(request, 'ecommerce_app/editar_perfil_usuario.html', {'usuario': usuario_obj, 'user_info': user_info})
+
+
+
+def editar_perfil_empresa(request, empresa_id):
+    """Vista para editar el perfil de una empresa usando la sesión personalizada"""
+    try:
+        empresa_obj = empresa.objects.get(id_empresa=empresa_id)
+    except empresa.DoesNotExist:
+        return redirect('index')
+
+    current_user = get_current_user(request)
+    if not current_user:
+        logger.info(f"editar_perfil_empresa (lower): usuario no autenticado. session keys: {list(request.session.keys())}")
+        return redirect('/ecommerce/iniciar_sesion/')
+
+    # Verificar que la empresa autenticada corresponde al perfil
+    if not hasattr(current_user, 'id_empresa') or current_user.id_empresa != empresa_obj.id_empresa:
+        logger.info(f"editar_perfil_empresa (lower): intento de editar perfil ajeno. current_user.id: {getattr(current_user, 'id_empresa', None)}, target: {empresa_obj.id_empresa}")
+        return redirect('perfil_empresa', empresa_id=empresa_id)
+
+    account_type = request.session.get('account_type', 'empresa')
+    user_info = get_user_info_with_avatar(current_user, account_type)
+
+    if request.method == 'POST':
+        try:
+            nombre_empresa = request.POST.get('nombre_empresa')
+            descripcion_empresa = request.POST.get('descripcion_empresa')
+            tipo_empresa = request.POST.get('tipo_empresa')
+            sector_empresa = request.POST.get('sector_empresa')
+            pais_empresa = request.POST.get('pais_empresa')
+            estado_empresa = request.POST.get('estado_empresa')
+            direccion_empresa = request.POST.get('direccion_empresa')
+            avatar_chatbot_empresa = request.POST.get('avatar_chatbot_empresa')
+
+            if nombre_empresa:
+                empresa_obj.nombre_empresa = nombre_empresa
+            if descripcion_empresa is not None:
+                empresa_obj.descripcion_empresa = descripcion_empresa
+            if tipo_empresa:
+                empresa_obj.tipo_empresa = tipo_empresa
+            if sector_empresa is not None:
+                empresa_obj.sector_empresa = sector_empresa
+            if pais_empresa:
+                empresa_obj.pais_empresa = pais_empresa
+            if estado_empresa:
+                empresa_obj.estado_empresa = estado_empresa
+            if direccion_empresa:
+                empresa_obj.direccion_empresa = direccion_empresa
+            if avatar_chatbot_empresa:
+                empresa_obj.avatar_chatbot_empresa = avatar_chatbot_empresa
+
+            if 'logo_empresa' in request.FILES:
+                empresa_obj.logo_empresa = request.FILES['logo_empresa']
+
+            empresa_obj.save()
+            return redirect('perfil_empresa', empresa_id=empresa_id)
+        except Exception as e:
+            return render(request, 'ecommerce_app/editar_perfil_empresa.html',
+                          {'empresa': empresa_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
+    else:
+        return render(request, 'ecommerce_app/editar_perfil_empresa.html', {'empresa': empresa_obj, 'user_info': user_info})

@@ -13,6 +13,10 @@ function canUserEditCategory(categoria, userInfo) {
     
     // Si es empresa, puede editar categorías de empresa
     if (accountType === 'empresa') {
+        // Si la categoría es genérica (propiedad 'generico' === 's') no permitir editar
+        if (categoria.generico && categoria.generico === 's') {
+            return false;
+        }
         return categoria.hasOwnProperty('id_categoria_serv_empresa');
     }
     

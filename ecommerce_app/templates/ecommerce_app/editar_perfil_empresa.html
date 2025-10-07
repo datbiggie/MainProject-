@@ -1,0 +1,882 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Perfil de Empresa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <style>
+        /* Mejoras de diseño específicas para el modal de avatares (no cambian funcionalidad) */
+        /* Target solo el modal de avatares para no afectar otros modales */
+        #avatarModal .modal-content {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 880px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(16,24,40,0.12);
+            border: 1px solid rgba(15,23,42,0.04);
+        }
+
+        #avatarModal .modal-header {
+            padding: 18px 22px;
+            border-bottom: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(59,130,246,0.06), rgba(29,78,216,0.03));
+        }
+
+        #avatarModal .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        /* Close button style (elegante y sutil) */
+        #avatarModal .close-modal {
+            background: #fff;
+            border: 1px solid rgba(15,23,42,0.06);
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(2,6,23,0.06);
+            cursor: pointer;
+            color: #334155;
+        }
+
+        #avatarModal .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1 1 auto;
+            background: transparent;
+        }
+
+        #avatarModal .modal-footer {
+            padding: 14px 20px;
+            border-top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9));
+        }
+
+        /* Grid de avatares: miniaturas dentro del modal */
+        #avatarModal #avatars-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            align-items: start;
+        }
+
+        #avatarModal .avatar-card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+            border: 1px solid rgba(15,23,42,0.04);
+            box-shadow: 0 3px 6px rgba(2,6,23,0.04);
+            position: relative;
+            min-height: 100px;
+        }
+
+        #avatarModal .avatar-card img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            object-position: center center;
+            display: block;
+            border-radius: 50%;
+            padding: 3px;
+            background: linear-gradient(180deg,#ffffff,#f8fafc);
+            border: 1.5px solid rgba(229,231,235,1);
+            margin-bottom: 6px;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+            box-shadow: 0 4px 10px rgba(2,6,23,0.05);
+            filter: contrast(1.02) saturate(1.02);
+        }
+
+        /* ===== Override para las imágenes creadas por avatar-selector.js ===== */
+        /* El script inyecta <img style="width:100%; height:100px; ..."> - lo sobreescribimos */
+        #avatarModal .avatar-option img,
+        #avatarModal .avatar-option .img-fluid,
+        #avatarModal .avatar-option img.img-fluid {
+            width: 80px !important;
+            height: 80px !important;
+            object-fit: contain !important;
+            object-position: center center !important;
+            padding: 3px !important;
+            border-radius: 50% !important;
+            border: 1.5px solid rgba(229,231,235,1) !important;
+            box-shadow: 0 4px 10px rgba(2,6,23,0.05) !important;
+            display: inline-block !important;
+        }
+
+        /* Compactar los bloques generados por JS */
+        #avatarModal .avatar-option {
+            padding: 6px !important;
+            margin: 0 auto !important;
+            max-width: 200px !important;
+        }
+
+        #avatarModal .avatar-option p.small {
+            font-size: 0.72rem !important;
+            margin: 0 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .avatar-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(2,6,23,0.06);
+            border-color: rgba(59,130,246,0.10);
+        }
+
+        .avatar-card:hover img {
+            transform: scale(1.04);
+            filter: contrast(1.05) saturate(1.05);
+            box-shadow: 0 6px 18px rgba(2,6,23,0.07);
+        }
+
+        .avatar-card.selected {
+            outline: 3px solid rgba(59,130,246,0.12);
+            background: linear-gradient(180deg, rgba(239,246,255,0.5), #ffffff);
+        }
+
+        .avatar-card .avatar-name {
+            font-size: 0.72rem;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .avatar-card .avatar-badge {
+            margin-top: 4px;
+            font-size: 0.62rem;
+            color: #334155;
+            opacity: 0.85;
+        }
+
+        /* Forzar miniatura en la vista previa principal */
+        .avatar-preview-large {
+            width: 72px !important;
+            height: 72px !important;
+            padding: 3px !important;
+            border-radius: 50% !important;
+            object-fit: contain !important;
+            object-position: center center !important;
+            box-shadow: 0 6px 14px rgba(2,6,23,0.06) !important;
+            border: 1.5px solid rgba(229,231,235,1) !important;
+            background: linear-gradient(180deg,#ffffff,#f8fafc) !important;
+        }
+
+        /* Selector de mayor especificidad para garantizar sobreescritura */
+        #avatarPreviewLarge.avatar-preview-large {
+            width: 72px !important;
+            height: 72px !important;
+        }
+
+        /* Overlay check icon */
+        .avatar-card .check-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(16,185,129,0.98);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 12px rgba(2,6,23,0.12);
+            font-size: 0.85rem;
+        }
+
+        /* Loading state */
+        #avatars-loading {
+            text-align: center;
+            padding: 42px 16px;
+            color: #64748b;
+            font-size: 0.98rem;
+        }
+
+        /* Botones del modal (estilo moderno) */
+        #avatarModal .btn-cancel {
+            background: transparent;
+            border: 1px solid rgba(15,23,42,0.06);
+            color: #0f172a;
+            padding: 10px 16px;
+            border-radius: 10px;
+        }
+
+        #avatarModal .btn-confirm {
+            background: linear-gradient(90deg,#3b82f6,#1d4ed8);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(29,78,216,0.12);
+        }
+
+        #avatarModal .btn-confirm:disabled {
+            opacity: 0.6;
+            box-shadow: none;
+            background: #9aa8d6;
+            cursor: not-allowed;
+        }
+
+        /* Estilos para los acordeones */
+        .accordion-button {
+            transition: all 0.3s ease;
+        }
+        
+        .accordion-button:not(.collapsed) {
+            background-color: #f8f9fa;
+            box-shadow: none;
+        }
+        
+        /* Ocultar la flecha de Bootstrap */
+        .accordion-button::after {
+            display: none !important;
+        }
+        
+        /* Estilo para la flecha de Font Awesome */
+        .accordion-button .fa-chevron-down {
+            transition: transform 0.3s ease;
+            margin-left: auto;
+        }
+        
+        .accordion-button:not(.collapsed) .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+        
+        .accordion-button:focus {
+            box-shadow: none;
+        }
+        
+        .accordion-button:not(.collapsed) {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        
+        .accordion-button:focus {
+            box-shadow: none;
+            border-color: rgba(0,0,0,.125);
+        }
+        
+        .accordion-body {
+            padding: 1.5rem 1.25rem;
+            background-color: #fff;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+        :root {
+            --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --secondary-color: #6c757d;
+            --success-color: #48bb78;
+            --warning-color: #ed8936;
+            --danger-color: #f56565;
+            --light-bg: #f7fafc;
+            --border-radius: 12px;
+            --box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --box-shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            background: #ffffff;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            border: 1px solid #e9ecef;
+            border-radius: 0.5rem;
+            box-shadow: none;
+            overflow: hidden;
+            background: #ffffff;
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            background: #0d6efd;
+            color: #ffffff;
+            padding: 1.5rem 2rem;
+            border-bottom: none;
+            position: relative;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        }
+
+        .card-header h4 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.5rem;
+            position: relative;
+            z-index: 1;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .card-body {
+            padding: 2rem;
+            background: #ffffff;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #dee2e6;
+            background-color: #fff;
+            font-size: 0.95rem;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #dee2e6;
+            box-shadow: none;
+            background-color: #fff;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn {
+            border-radius: 6px;
+            padding: 0.65rem 1.5rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            border: none;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        /* Efecto hover removido */
+
+        .btn-primary {
+            background: #0d6efd;
+            box-shadow: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0b5ed7;
+            color: white;
+        }
+
+        .btn-outline-secondary {
+            border: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            color: #2d3748;
+            font-weight: 600;
+            margin: 0.5rem 0 1rem 0;
+            padding-bottom: 0.75rem;
+            position: relative;
+        }
+
+        .section-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -3px;
+            width: 60px;
+            height: 3px;
+            background: var(--primary-gradient);
+        }
+
+        /* Estilos para el selector de avatares */
+        .avatar-selection-container {
+            margin-top: 1rem;
+        }
+        
+        .selected-avatar-preview {
+            background-color: #f8f9fa;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .selected-avatar-preview:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+        
+        .avatar-option {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .avatar-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            border-color: #0d6efd;
+        }
+        
+        .avatar-option.selected {
+            border-color: #0d6efd;
+            background-color: #f0f7ff;
+        }
+        
+        .avatar-option img {
+            transition: transform 0.3s ease;
+        }
+        
+        .avatar-option:hover img {
+            transform: scale(1.05);
+        }
+        
+        .logo-preview {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            padding: 8px;
+            margin-top: 15px;
+            display: block;
+            transition: all 0.3s ease;
+            box-shadow: var(--box-shadow-sm);
+        }
+
+        
+
+        .form-text {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .input-group-text {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            color: #6c757d;
+        }
+
+        .form-floating {
+            margin-bottom: 1.5rem;
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: var(--box-shadow-sm);
+        }
+
+        hr {
+            margin: 2.5rem 0;
+            opacity: 0.15;
+            border: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, #cbd5e0 50%, transparent 100%);
+        }
+
+        .file-upload-area {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-area:hover {
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 2rem 1.5rem;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 0.75rem;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+{% include 'ecommerce_app/barra_superior_index.html' %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-building me-2"></i>Editar Perfil de Empresa</h4>
+                </div>
+                <div class="card-body">
+                    {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="accordion mb-4" id="empresaAccordion">
+                            <!-- Sección 1: Información Básica -->
+                            <div class="accordion-item border-0 mb-3">
+                                <h2 class="accordion-header" id="headingOne">
+                                    <button class="accordion-button bg-light rounded-3 p-3 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-3">
+                                                <i class="fas fa-info-circle text-primary"></i>
+                                            </div>
+                                            <div class="text-start">
+                                                <h6 class="mb-0 fw-bold text-dark">Información Básica</h6>
+                                                <small class="text-muted">Datos principales de tu empresa</small>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#empresaAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-12 mb-4">
+                                                <label for="nombre_empresa" class="form-label">Nombre de la Empresa <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-building"></i></span>
+                                                    <input type="text" class="form-control" id="nombre_empresa" name="nombre_empresa" value="{{ empresa.nombre_empresa }}" required>
+                                                </div>
+                                                <div class="invalid-feedback">
+                                                    Por favor ingrese el nombre de la empresa.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label for="descripcion_empresa" class="form-label">Descripción de la Empresa</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                                                <textarea class="form-control" id="descripcion_empresa" name="descripcion_empresa" rows="4" style="min-height: 120px;">{{ empresa.descripcion_empresa|default:'' }}</textarea>
+                                            </div>
+                                            <div class="form-text">Describe los productos o servicios que ofrece tu empresa.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección 2: Detalles del Negocio -->
+                            <div class="accordion-item border-0 mb-3">
+                                <h2 class="accordion-header" id="headingTwo">
+                                    <button class="accordion-button bg-light rounded-3 p-3 shadow-sm collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-3">
+                                                <i class="fas fa-chart-pie text-warning"></i>
+                                            </div>
+                                            <div class="text-start">
+                                                <h6 class="mb-0 fw-bold text-dark">Detalles del Negocio</h6>
+                                                <small class="text-muted">Características de tu empresa</small>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#empresaAccordion">
+                                    <div class="accordion-body">
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label for="tipo_empresa" class="form-label">Tamaño de la Empresa <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
+                                    <select class="form-select" id="tipo_empresa" name="tipo_empresa" required>
+                                        <option value="" disabled selected>Seleccione una opción</option>
+                                        <option value="pequeña" {% if empresa.tipo_empresa == 'pequeña' %}selected{% endif %}>Pequeña Empresa</option>
+                                        <option value="mediana" {% if empresa.tipo_empresa == 'mediana' %}selected{% endif %}>Mediana Empresa</option>
+                                        <option value="grande" {% if empresa.tipo_empresa == 'grande' %}selected{% endif %}>Gran Empresa</option>
+                                    </select>
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor seleccione el tamaño de la empresa.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label for="sector_empresa" class="form-label">Sector Industrial <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-industry"></i></span>
+                                    <select class="form-select" id="sector_empresa" name="sector_empresa" required>
+                                        <option value="" disabled selected>Seleccione un sector</option>
+                                        <option value="tecnologia" {% if empresa.sector_empresa == 'tecnologia' %}selected{% endif %}>Tecnología</option>
+                                        <option value="alimentos_bebidas" {% if empresa.sector_empresa == 'alimentos_bebidas' %}selected{% endif %}>Alimentos y Bebidas</option>
+                                        <option value="moda_ropa" {% if empresa.sector_empresa == 'moda_ropa' %}selected{% endif %}>Moda y Ropa</option>
+                                        <option value="hogar" {% if empresa.sector_empresa == 'hogar' %}selected{% endif %}>Hogar</option>
+                                        <option value="salud_belleza" {% if empresa.sector_empresa == 'salud_belleza' %}selected{% endif %}>Salud y Belleza</option>
+                                        <option value="deportes_ocio" {% if empresa.sector_empresa == 'deportes_ocio' %}selected{% endif %}>Deportes y Ocio</option>
+                                        <option value="servicios" {% if empresa.sector_empresa == 'servicios' %}selected{% endif %}>Servicios</option>
+                                    </select>
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor seleccione el sector industrial.
+                                </div>
+                            </div>
+                        </div>
+
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección 3: Ubicación -->
+                            <div class="accordion-item border-0 mb-3">
+                                <h2 class="accordion-header" id="headingThree">
+                                    <button class="accordion-button bg-light rounded-3 p-3 shadow-sm collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
+                                                <i class="fas fa-map-marker-alt text-info"></i>
+                                            </div>
+                                            <div class="text-start">
+                                                <h6 class="mb-0 fw-bold text-dark">Ubicación</h6>
+                                                <small class="text-muted">Dónde se encuentra tu empresa</small>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#empresaAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="pais_empresa" class="form-label">País <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                                                    <input type="text" class="form-control" id="pais_empresa" name="pais_empresa" value="{{ empresa.pais_empresa }}" required>
+                                                </div>
+                                                <div class="invalid-feedback">
+                                                    Por favor ingrese el país.
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <label for="estado_empresa" class="form-label">Estado/Provincia <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="fas fa-map-marked-alt"></i></span>
+                                                    <input type="text" class="form-control" id="estado_empresa" name="estado_empresa" value="{{ empresa.estado_empresa }}" required>
+                                                </div>
+                                                <div class="invalid-feedback">
+                                                    Por favor ingrese el estado o provincia.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label for="direccion_empresa" class="form-label">Dirección Completa <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-home"></i></span>
+                                                <input type="text" class="form-control" id="direccion_empresa" name="direccion_empresa" value="{{ empresa.direccion_empresa }}" required>
+                                            </div>
+                                            <div class="invalid-feedback">
+                                                Por favor ingrese la dirección completa.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección 4: Logo y Multimedia -->
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header" id="headingFour">
+                                    <button class="accordion-button bg-light rounded-3 p-3 shadow-sm collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3">
+                                                <i class="fas fa-image text-success"></i>
+                                            </div>
+                                            <div class="text-start">
+                                                <h6 class="mb-0 fw-bold text-dark">Logo y Multimedia</h6>
+                                                <small class="text-muted">Imágenes de tu empresa</small>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </h2>
+                                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#empresaAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-4">
+                                                <label for="logo_empresa" class="form-label">Logo de la Empresa</label>
+                                                <input type="file" class="form-control" id="logo_empresa" name="logo_empresa" accept="image/*" onchange="previewLogo(this)">
+                                                {% if empresa.logo_empresa %}
+                                                    <div class="mt-3">
+                                                        <p class="mb-2">Logo actual:</p>
+                                                        <a href="{{ empresa.logo_empresa.url }}" target="_blank">
+                                                            <img src="{{ empresa.logo_empresa.url }}" alt="Logo actual" class="logo-preview" id="logo-preview">
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="mt-3">
+                                                        <p class="mb-2">Vista previa:</p>
+                                                        <img src="#" alt="Vista previa del logo" class="logo-preview d-none" id="logo-preview">
+                                                    </div>
+                                                {% endif %}
+                                                <div class="form-text">Sube una imagen cuadrada (máx. 2MB). Formatos: JPG, PNG, GIF.</div>
+                                            </div>
+
+                                            <div class="col-md-6 mb-4">
+                                                <label class="form-label">Avatar del Chatbot</label>
+                                                <div class="avatar-selection-container">
+                                                    <!-- Vista previa del avatar seleccionado -->
+                                                    <div class="selected-avatar-preview mb-3 p-3 border rounded">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="me-3">
+                                                    <img id="avatarPreviewLarge" 
+                                                        src="{% static empresa.avatar_chatbot_empresa|default:'img/default-avatar.png' %}" 
+                                                        class="img-thumbnail rounded-circle avatar-preview-large" 
+                                                        onerror="this.onerror=null;this.style.display='none';">
+                                                            </div>
+                                                            <div>
+                                                                <div class="d-flex align-items-center">
+                                                                    <h6 class="mb-0" id="selected_avatar_name">
+                                                                        {{ empresa.avatar_chatbot_empresa|default:'Avatar predeterminado'|cut:'avatars/'|cut:'.jpg'|title }}
+                                                                    </h6>
+                                                                    <span id="selectedBadge" class="badge bg-success ms-2">
+                                                                        <i class="fas fa-check"></i> Actual
+                                                                    </span>
+                                                                </div>
+                                                                <p class="text-muted small mb-0">Vista previa del avatar</p>
+                                                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="openAvatarModalBtn">
+                                                                    <i class="fas fa-robot me-1"></i> Cambiar Avatar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Input oculto para el valor seleccionado -->
+{{ ... }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between border-top pt-4 mt-4">
+                            <a href="{% url 'perfil_empresa' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver al Perfil
+                            </a>
+                            <div>
+                                <button type="reset" class="btn btn-outline-secondary me-2">
+                                    <i class="fas fa-undo me-2"></i>Restablecer
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Selección de Avatares -->
+<div id="avatarModal" class="modal fade" tabindex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="avatarModalLabel">
+            <div class="modal-header">
+                <div>
+                    <h3 id="avatarModalLabel">Selecciona el Avatar del Chatbot</h3>
+                    <p class="text-muted small mb-0">Elige un avatar para que tu asistente tenga una identidad visual coherente.</p>
+                </div>
+                <button type="button" class="close-modal" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div id="avatars-loading" class="loading-message" aria-live="polite">
+                    Cargando avatares...
+                </div>
+
+                <div class="container-fluid px-0">
+                    <div id="avatars-modal-grid" class="row g-3" style="display: none;" data-static-url="{% static '' %}">
+                        <!-- Los avatares se cargarán dinámicamente aquí -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="d-flex align-items-center">
+                    <small class="text-muted me-3">Selecciona un avatar y confirma para aplicar</small>
+                </div>
+                <div>
+                    <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn-confirm" id="confirmAvatarBtn" disabled>Confirmar Selección</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Avatar Selector JS -->
+<script src="{% static 'js/avatar-selector.js' %}" data-static-url="{% static '' %}"></script>
+
+</body>
+</html>

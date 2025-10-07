@@ -48,6 +48,208 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+/* ----- Funciones movidas desde el template categoria_producto.html ----- */
+let contadorAtributos = 0;
+
+$(document).ready(function() {
+    var $select = $('#atributos_existentes');
+    var $listaContainer = $('#atributos-seleccionados-lista');
+    var $lista = $('#lista-atributos');
+
+    if ($select.length) {
+        // Inicializar Select2 para atributos existentes
+        $select.select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Buscar y seleccionar atributos...',
+            allowClear: true,
+            closeOnSelect: true,
+            language: {
+                noResults: function() { return "No se encontraron atributos"; },
+                searching: function() { return "Buscando atributos..."; },
+                inputTooShort: function() { return "Escribe para buscar atributos"; },
+                maximumSelected: function(e) { return "Solo puedes seleccionar " + e.maximum + " atributos"; }
+            },
+            templateResult: function(option) {
+                if (!option.id) return option.text;
+                var $option = $(
+                    '<div class="select2-result-atributo">' +
+                        '<div class="select2-result-atributo__title">' + option.text + '</div>' +
+                    '</div>'
+                );
+                return $option;
+            },
+            templateSelection: function(option) { return option && option.id ? option.text : option.text; }
+        });
+
+        // Función para actualizar la lista de atributos seleccionados
+        function actualizarListaAtributos() {
+            var valoresSeleccionados = $select.val() || [];
+            $lista.empty();
+
+            if (valoresSeleccionados.length === 0) {
+                $listaContainer.hide();
+                return;
+            }
+
+            $listaContainer.show();
+
+            valoresSeleccionados.forEach(function(valor) {
+                var $option = $select.find('option[value="' + valor + '"]');
+                var nombreAtributo = $option.text();
+
+                var $atributoTag = $('<div class="atributo-seleccionado">' +
+                    '<span>' + nombreAtributo + '</span>' +
+                    '<button type="button" class="remove-btn" data-value="' + valor + '">×</button>' +
+                    '</div>');
+
+                $lista.append($atributoTag);
+            });
+        }
+
+        // Eventos
+        $select.on('change', actualizarListaAtributos);
+
+        $lista.on('click', '.remove-btn', function(e) {
+            e.preventDefault();
+            var valorARemover = $(this).data('value');
+            var valoresActuales = $select.val() || [];
+            var nuevosValores = valoresActuales.filter(function(valor) { return valor !== valorARemover.toString(); });
+            $select.val(nuevosValores).trigger('change');
+        });
+
+        $select.on('select2:open', function() {
+            setTimeout(function() { document.querySelector('.select2-search__field')?.focus(); }, 0);
+        });
+
+        actualizarListaAtributos();
+    }
+});
+
+function agregarNuevoAtributo() {
+    contadorAtributos++;
+    const container = document.getElementById('nuevos-atributos');
+    if (!container) return;
+
+    const atributoDiv = document.createElement('div');
+    atributoDiv.className = 'border p-3 mb-3';
+    atributoDiv.id = `nuevo-atributo-${contadorAtributos}`;
+
+    atributoDiv.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Nombre del Atributo *</label>
+                <input type="text" class="form-control" name="nuevo_atributo_nombre_${contadorAtributos}" placeholder="Ej: Color, Tamaño, Marca" required onblur="validarNombreAtributo(this, ${contadorAtributos})">
+                <div id="error-nombre-${contadorAtributos}" class="text-danger small" style="display: none;"></div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tipo de Dato *</label>
+                <select class="form-control" name="nuevo_atributo_tipo_${contadorAtributos}" onchange="manejarTipoAtributo(${contadorAtributos}, this.value)" required>
+                    <option value="">Seleccionar</option>
+                    <option value="texto">Texto</option>
+                    <option value="numero">Número</option>
+                    <option value="decimal">Decimal</option>
+                    <option value="fecha">Fecha</option>
+                    <option value="booleano">Booleano</option>
+                    <option value="lista">Lista de opciones</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Obligatorio</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="nuevo_atributo_obligatorio_${contadorAtributos}" value="1">
+                    <label class="form-check-label">Sí</label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="button" class="btn btn-danger btn-sm d-block" onclick="eliminarAtributo(${contadorAtributos})">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-8">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-control" name="nuevo_atributo_descripcion_${contadorAtributos}" rows="2" placeholder="Descripción opcional del atributo"></textarea>
+            </div>
+            <div class="col-md-4" id="opciones-container-${contadorAtributos}" style="display: none;">
+                <label class="form-label">Opciones (separadas por coma)</label>
+                <textarea class="form-control" name="nuevo_atributo_opciones_${contadorAtributos}" rows="2" placeholder="Opción1, Opción2, Opción3"></textarea>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(atributoDiv);
+}
+
+function manejarTipoAtributo(id, tipo) {
+    const opcionesContainer = document.getElementById(`opciones-container-${id}`);
+    if (!opcionesContainer) return;
+    opcionesContainer.style.display = tipo === 'lista' ? 'block' : 'none';
+}
+
+function eliminarAtributo(id) {
+    const elemento = document.getElementById(`nuevo-atributo-${id}`);
+    if (elemento) elemento.remove();
+}
+
+function validarNombreAtributo(input, id) {
+    const nombre = input.value.trim();
+    const errorDiv = document.getElementById(`error-nombre-${id}`);
+    if (!errorDiv) return;
+
+    if (!nombre) {
+        errorDiv.style.display = 'none';
+        return;
+    }
+
+    // Verificar duplicados en atributos existentes
+    const atributosExistentes = document.querySelectorAll('input[name^="atributo_"]');
+    let duplicadoEncontrado = false;
+
+    atributosExistentes.forEach(function(atributoInput) {
+        if (atributoInput.checked) {
+            const labelElement = document.querySelector(`label[for="${atributoInput.id}"]`);
+            if (labelElement && labelElement.textContent.trim().toLowerCase() === nombre.toLowerCase()) {
+                duplicadoEncontrado = true;
+            }
+        }
+    });
+
+    // Verificar duplicados en otros nuevos atributos
+    const nuevosAtributos = document.querySelectorAll('input[name^="nuevo_atributo_nombre_"]');
+    nuevosAtributos.forEach(function(nuevoInput) {
+        if (nuevoInput !== input && nuevoInput.value.trim().toLowerCase() === nombre.toLowerCase()) {
+            duplicadoEncontrado = true;
+        }
+    });
+
+    if (duplicadoEncontrado) {
+        errorDiv.textContent = 'Ya existe un atributo con este nombre';
+        errorDiv.style.display = 'block';
+        input.classList.add('is-invalid');
+    } else {
+        errorDiv.style.display = 'none';
+        input.classList.remove('is-invalid');
+    }
+}
+
+function validarFormularioCompleto() {
+    let hayErrores = false;
+    const nuevosAtributos = document.querySelectorAll('input[name^="nuevo_atributo_nombre_"]');
+    nuevosAtributos.forEach(function(input) {
+        const parts = input.name.split('_');
+        const id = parts[parts.length - 1];
+        validarNombreAtributo(input, id);
+        const errorDiv = document.getElementById(`error-nombre-${id}`);
+        if (errorDiv && errorDiv.style.display !== 'none') hayErrores = true;
+    });
+    return !hayErrores;
+}
+
+/* Fin de funciones movidas */
+
 
 document.addEventListener('DOMContentLoaded', function () {
     const fechaInput = document.getElementById('fecha_creacion');
@@ -188,14 +390,24 @@ $(document).ready(function() {
                         icon: 'error',
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
-                    }).then(() => {
-                        // Foco automático según el mensaje de error
-                        if (response.message && response.message.toLowerCase().includes('nombre')) {
-                            $('#nombre_categoria').focus();
-                        } else if (response.message && response.message.toLowerCase().includes('estatus')) {
-                            $('#estatus_categoria').focus();
-                        } else if (response.message && response.message.toLowerCase().includes('descrip')) {
-                            $('#descripcion_categoria').focus();
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let fieldToFocus = null;
+                            if (response.message && response.message.toLowerCase().includes('nombre')) {
+                                fieldToFocus = $('#nombre_categoria');
+                            } else if (response.message && response.message.toLowerCase().includes('estatus')) {
+                                fieldToFocus = $('#estatus_categoria');
+                            } else if (response.message && response.message.toLowerCase().includes('descrip')) {
+                                fieldToFocus = $('#descripcion_categoria');
+                            }
+
+                            if (fieldToFocus && fieldToFocus.length) {
+                                const section = fieldToFocus.closest('.accordion-section');
+                                if (section.length && !section.hasClass('active')) {
+                                    section.find('.accordion-header').click();
+                                }
+                                setTimeout(() => fieldToFocus.focus(), 300); // Pequeño delay para asegurar que la sección se abra
+                            }
                         }
                     });
                 }
@@ -219,3 +431,30 @@ $(document).ready(function() {
         return false;
     });
 });
+
+    // ----- Comportamiento del acordeón para categoria_producto -----
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cuando se hace clic en el header de una sección, alternar su estado
+        document.querySelectorAll('.accordion-header').forEach(function(header) {
+            header.addEventListener('click', function() {
+                var section = header.closest('.accordion-section');
+                var isActive = section.classList.contains('active');
+
+                // Cerrar todas
+                document.querySelectorAll('.accordion-section').forEach(function(s) {
+                    s.classList.remove('active');
+                });
+
+                // Si no estaba activa, abrirla
+                if (!isActive) section.classList.add('active');
+            });
+        });
+
+        /*
+        // Abrir la primera sección por defecto si no hay ninguna activa
+        if (!document.querySelector('.accordion-section.active')) {
+            var first = document.querySelector('.accordion-section');
+            if (first) first.classList.add('active');
+        }
+        */
+    });
