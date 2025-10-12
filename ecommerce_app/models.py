@@ -176,6 +176,29 @@ class producto_sucursal(models.Model):
     id_producto_sucursal = models.AutoField(primary_key=True)
     stock_producto_sucursal = models.PositiveIntegerField(default=0)
     precio_producto_sucursal = models.DecimalField(max_digits=10, decimal_places=2)
+    # Presentación del producto en la sucursal (unidad/paquete/bulto/...)
+    UNIDAD_PRESENTACION_CHOICES = [
+        ('unidad', 'Unidad'),
+        ('paquete', 'Paquete'),
+        ('bulto', 'Bulto'),
+        ('caja', 'Caja'),
+        ('kg', 'Kilogramo'),
+        ('l', 'Litro'),
+        ('otro', 'Otro'),
+    ]
+
+    unidad_presentacion_producto_sucursal = models.CharField(
+        max_length=20,
+        choices=UNIDAD_PRESENTACION_CHOICES,
+        default='unidad',
+        help_text='Formato de presentación del producto en la sucursal'
+    )
+
+    cantidad_por_presentacion_producto_sucursal = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Si aplica, cantidad de unidades por presentación (ej.: 6 por paquete)'
+    )
     condicion_producto_sucursal = models.CharField(max_length=10, choices=CONDICION_CHOICES, default='Nuevo')
     estatus_producto_sucursal = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     id_sucursal_fk = models.ForeignKey('sucursal', on_delete=models.CASCADE, related_name='productos_sucursal')
@@ -277,6 +300,29 @@ class producto_usuario(models.Model):
     caracteristicas_generales_usuario = models.TextField(blank=True, null=True)
     stock_producto_usuario = models.PositiveIntegerField(default=0)
     precio_producto_usuario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Presentación del producto para usuarios (unidad/paquete/bulto/...)
+    UNIDAD_PRESENTACION_CHOICES = [
+        ('unidad', 'Unidad'),
+        ('paquete', 'Paquete'),
+        ('bulto', 'Bulto'),
+        ('caja', 'Caja'),
+        ('kg', 'Kilogramo'),
+        ('l', 'Litro'),
+        ('otro', 'Otro'),
+    ]
+
+    unidad_presentacion_producto_usuario = models.CharField(
+        max_length=20,
+        choices=UNIDAD_PRESENTACION_CHOICES,
+        default='unidad',
+        help_text='Formato de presentación del producto (unidades, paquetes, bultos, etc.)'
+    )
+
+    cantidad_por_presentacion_producto_usuario = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Si aplica, cantidad de unidades por cada presentación (ej.: 6 por paquete).'
+    )
     condicion_producto_usuario = models.CharField(max_length=10, choices=CONDICION_CHOICES, default='Nuevo')
     estatus_producto_usuario = models.CharField(max_length=10, choices=ESTATUS_CHOICES, default='Activo')
     latitud_entrega_producto = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)

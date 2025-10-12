@@ -367,11 +367,17 @@
               <li>
                 {% if user_info.is_authenticated %}
                   <a href="{% url 'carrito' %}" class="p-2 mx-1">
-                    <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
+                    <span class="position-relative d-inline-block">
+                      <svg id="cart-icon" width="24" height="24"><use xlink:href="#cart"></use></svg>
+                      <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem; display:none; min-width:18px;">0</span>
+                    </span>
                   </a>
                 {% else %}
                   <a href="#" class="p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-                    <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
+                    <span class="position-relative d-inline-block">
+                      <svg id="cart-icon" width="24" height="24"><use xlink:href="#cart"></use></svg>
+                      <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem; display:none; min-width:18px;">0</span>
+                    </span>
                   </a>
                 {% endif %}
               </li>
@@ -682,6 +688,48 @@ a[title="Mis Notificaciones"]:hover svg {
 
 <!-- Script del sistema de notificaciones -->
 {% if user_info.is_authenticated %}
+<style>
+/* Pequeña animación para el badge cuando cambia */
+.cart-bump {
+  transform: scale(1.2);
+  transition: transform 0.15s ease;
+}
+</style>
+<script>
+// Funciones para actualizar el badge del carrito desde JS
+function updateCartBadge(count) {
+  try {
+    const badge = document.getElementById('cart-badge');
+    if (!badge) return;
+    if (!count || Number(count) <= 0) {
+      badge.style.display = 'none';
+      badge.textContent = '0';
+      return;
+    }
+    badge.textContent = String(count);
+    badge.style.display = 'inline-block';
+
+    // Animación pequeña (bump)
+    badge.classList.remove('cart-bump');
+    void badge.offsetWidth;
+    badge.classList.add('cart-bump');
+    setTimeout(() => badge.classList.remove('cart-bump'), 250);
+  } catch (e) {
+    console.error('updateCartBadge error', e);
+  }
+}
+
+// Intento de inicializar desde un meta tag si existe
+(function(){
+  try{
+    const meta = document.querySelector('meta[name="cart-count"]');
+    if (meta) {
+      const v = parseInt(meta.content || '0');
+      if (v > 0) updateCartBadge(v);
+    }
+  }catch(e){}
+})();
+</script>
 <script>
 // Variables globales para el JavaScript de notificaciones
 const marcarNotificacionUrl = '{% url "marcar_notificacion_leida_vista" %}';

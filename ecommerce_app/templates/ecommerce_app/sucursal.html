@@ -526,6 +526,24 @@ document.getElementById('btnContinuar')?.addEventListener('click', function(e) {
 								</div>
 								<div class="row mb-3">
 									<div class="col-md-6">
+										<label for="selectUnidadPresentacionSucursal" class="form-label">Presentación</label>
+										<select class="form-select" id="selectUnidadPresentacionSucursal" name="unidad_presentacion_producto_sucursal">
+											<option value="unidad">Unidad</option>
+											<option value="paquete">Paquete</option>
+											<option value="bulto">Bulto</option>
+											<option value="caja">Caja</option>
+											<option value="kg">Kilogramo</option>
+											<option value="l">Litro</option>
+											<option value="otro">Otro</option>
+										</select>
+									</div>
+									<div class="col-md-6">
+										<label for="inputCantidadPresentacionSucursal" class="form-label">Cantidad por presentación</label>
+										<input type="number" class="form-control" id="inputCantidadPresentacionSucursal" name="cantidad_por_presentacion_producto_sucursal" min="1" placeholder="Ej.: 6 si paquete tiene 6 unidades">
+									</div>
+								</div>
+								<div class="row mb-3">
+									<div class="col-md-6">
 										<label for="selectEstatusProducto" class="form-label">Estatus del Producto</label>
 										<select class="form-select" id="selectEstatusProducto" name="estatus_producto_sucursal">
 											<option value="Activo" selected>Activo</option>

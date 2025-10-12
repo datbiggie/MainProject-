@@ -84,7 +84,7 @@
                                      data-id="{{ notificacion.id_notificacion }}"
                                      data-tipo="{{ notificacion.tipo_notificacion }}"
                                      data-solicitud-id="{% if notificacion.id_solicitud_servicio_usuario_fk %}{{ notificacion.id_solicitud_servicio_usuario_fk.id_solicitud_servicio_usuario }}{% elif notificacion.id_solicitud_servicio_empresa_fk %}{{ notificacion.id_solicitud_servicio_empresa_fk.id_solicitud_servicio_empresa }}{% endif %}"
-                                     data-pedido-id="{% if notificacion.id_pedido_usuario_fk %}{{ notificacion.id_pedido_usuario_fk.id_pedido_usuario }}{% elif notificacion.id_pedido_empresa_fk %}{{ notificacion.id_pedido_empresa_fk.id_pedido_empresa }}{% endif %}"
+                                     data-pedido-id="{% if notificacion.id_pedido_usuario_fk %}{% if notificacion.id_pedido_usuario_fk.id_pedido_usuario %}{{ notificacion.id_pedido_usuario_fk.id_pedido_usuario }}{% else %}{{ notificacion.id_pedido_usuario_fk }}{% endif %}{% elif notificacion.id_pedido_empresa_fk %}{% if notificacion.id_pedido_empresa_fk.id_pedido_empresa %}{{ notificacion.id_pedido_empresa_fk.id_pedido_empresa }}{% else %}{{ notificacion.id_pedido_empresa_fk }}{% endif %}{% endif %}"
                                      style="cursor: pointer;">
                                     <div class="card-body">
                                         <div class="d-flex align-items-start">

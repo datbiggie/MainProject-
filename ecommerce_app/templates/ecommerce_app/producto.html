@@ -9,12 +9,67 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,900&display=swap" rel="stylesheet">
 
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{% static 'producto/css/bootstrap.min.css' %}">
-    
-    <!-- Style -->
-    <link rel="stylesheet" href="{% static 'producto/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'producto/css/main.css' %}">
+    <!-- Use categoria_producto bootstrap + style so apariencia es idéntica -->
+    <link rel="stylesheet" href="{% static 'categoria_producto/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'categoria_producto/css/style.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+  <!-- Small overrides to ensure producto inputs exactly match categoria styles -->
+  <style>
+    /* Match .form-control from categoria */
+    .form-control {
+      border: none !important;
+      border-bottom: 1px solid #ccc !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      border-radius: 0 !important;
+      background: none !important;
+      color: #000 !important;
+      box-sizing: border-box;
+    }
+    .form-control:focus, .form-control:active {
+      outline: none !important;
+      box-shadow: none !important;
+      border-color: #2563eb !important;
+      border-bottom-width: 3px !important;
+    }
+
+    /* Ensure placeholders and label styles match */
+    .form-control::placeholder { color: #6c757d !important; }
+    .col-form-label { color: #000000 !important; font-weight: 500; }
+
+    /* Make file inputs visually consistent (browser default varies) */
+    input[type="file"].form-control {
+      border: none !important;
+      border-bottom: 1px solid #ccc !important;
+      padding: 6px 8px !important;
+      height: auto !important;
+      background: none !important;
+    }
+    .image-inputs-container .form-control { height: auto !important; }
+
+    /* Keep selects/full-width behavior */
+    .form-group .form-control, textarea.form-control, select.form-control {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    /* Ensure input-nombre uses same sizing rules */
+    .form-control.input-nombre { max-width: 100% !important; width: 100% !important; }
+
+    /* Buttons sizing parity */
+    .btn, .form-control, .custom-select { height: 45px !important; }
+    .btn-ver-categorias { height: 44px !important; }
+  </style>
+  <!-- Ensure form padding/width matches categoria page -->
+  <style>
+    .contact-wrap .form, .contact-wrap .contact-info { padding: 40px !important; }
+    .form.h-100 { max-width: 920px !important; margin-left: auto !important; margin-right: auto !important; }
+    /* make sure the container column uses full width like categoria template */
+    .contact-wrap > .col-md-8 { flex: 0 0 100% !important; max-width: 100% !important; }
+  </style>
     <title>Productos</title>
 
   </head>
@@ -27,169 +82,233 @@
             <h3 class="text-center mb-4" style=" font-weight: 700; letter-spacing: 1px;">PRODUCTOS</h3>
             <form class="mb-5" method="post" id="productoForm" name="productoForm" enctype="multipart/form-data" action="{% url 'producto_funcion' %}">
               {% csrf_token %}
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="nombre" class="col-form-label">Nombre del Producto *</label>
-                  <input type="text" class="form-control" name="nombre_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="nombre" placeholder="Ingrese el nombre del producto" style="max-width: 300px;">
-                </div>
-              </div>
-
-
-
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="descripcion" class="col-form-label">Descripción </label>
-                  <textarea class="form-control" name="descripcion_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="descripcion" cols="30" rows="3" placeholder="Ingrese la descripción del producto" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="caracteristicas" class="col-form-label">Características Generales *</label>
-                  <textarea class="form-control" name="caracteristicas_generales" id="caracteristicas" cols="30" rows="3" placeholder="Ingrese las características generales del producto" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="categoria" class="col-form-label">Categoría *</label>
-                  <select class="form-control" name="categoria_producto" id="categoria">
-                    <option value="">Seleccione una categoría</option>
-                    {% for categoria in categoria_producto_all %}
-                      {% if user_info.tipo == 'empresa' %}
-                        <option value="{{ categoria.id_categoria_prod_empresa }}">{{ categoria.nombre_categoria_prod_empresa }}</option>
-                      {% else %}
-                        <option value="{{ categoria.id_categoria_prod_usuario }}">{{ categoria.nombre_categoria_prod_usuario }}</option>
-                      {% endif %}
-                    {% endfor %}
-                    
-                  </select>
-                </div>
-              </div>
-
-              <!-- Contenedor para campos dinámicos de atributos -->
-              <div id="atributos-container" style="display: none;">
-                <div class="row">
-                  <div class="col-md-12">
-                    <h5 class="mb-4" style="color: #495057; font-weight: 600;">Atributos Específicos de la Categoría</h5>
+              <!-- Nombre moved into Información General accordion -->
+              <!-- Acordeón: Información General -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                  <div class="accordion-title">
+                    <div class="accordion-icon">📦</div>
+                    <span>Información General</span>
                   </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
                 </div>
-                <div id="atributos-fields"></div>
-              </div>
-
-              <!-- Campos adicionales solo para usuarios con rol 'persona' -->
-              {% if user_info.tipo == 'persona' %}
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="stock" class="col-form-label">Stock *</label>
-                  <input type="number" class="form-control" name="stock_producto_usuario" id="stock" placeholder="Cantidad disponible" min="0" value="0">
-                </div>
-                <div class="col-md-6 form-group mb-5">
-                  <label for="precio" class="col-form-label">Precio *</label>
-                  <input type="number" class="form-control" name="precio_producto_usuario" id="precio" placeholder="0.00" step="0.01" min="0" value="0">
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="condicion" class="col-form-label">Condición *</label>
-                  <select class="form-control" name="condicion_producto_usuario" id="condicion">
-                    <option value="Nuevo">Nuevo</option>
-                    <option value="Usado">Usado</option>
-                  </select>
-                </div>
-                <div class="col-md-6 form-group mb-5">
-                  <label for="estatus" class="col-form-label">Estatus *</label>
-                  <select class="form-control" name="estatus_producto_usuario" id="estatus">
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Sección de ubicación para punto de encuentro -->
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label class="col-form-label">Posible Punto de Encuentro del Producto</label>
-                  <p class="text-muted small mb-3">Selecciona la ubicación donde podrías entregar este producto</p>
-                  
-                  <div class="map-container">
-                    <div class="search-container" style="margin-bottom: 10px;">
-                      <div style="margin-left: 10px;">
-                        <div id="locationStatus" style="color: #2196F3; font-size: 14px; font-weight: 500;">
-                          <span id="locationIcon">⏳</span> Inicializando mapa...
-                        </div>
-                        <button type="button" onclick="retryLocation()" style="margin-top: 5px; background-color: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: none;" id="retryButton">
-                          🔄 Reintentar ubicación
-                        </button>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-4">
+                        <label for="nombre" class="col-form-label">Nombre del Producto *</label>
+                        <input type="text" class="form-control input-nombre" name="nombre_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="nombre" placeholder="Ingrese el nombre del producto">
                       </div>
                     </div>
-                    <div id="producto_map" style="height: 300px; width: 100%; border-radius: 8px; border: 2px solid #ced4da;"></div>
-                    <!-- Campos ocultos para latitud y longitud -->
-                    <input type="hidden" id="latitud_entrega" name="latitud_entrega_producto">
-                    <input type="hidden" id="longitud_entrega" name="longitud_entrega_producto">
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-5">
+                        <label for="descripcion" class="col-form-label">Descripción </label>
+                        <textarea class="form-control" name="descripcion_producto_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="descripcion" cols="30" rows="3" placeholder="Ingrese la descripción del producto"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-5">
+                        <label for="caracteristicas" class="col-form-label">Características Generales *</label>
+                        <textarea class="form-control" name="caracteristicas_generales" id="caracteristicas" cols="30" rows="3" placeholder="Ingrese las características generales del producto"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-5">
+                        <label for="categoria" class="col-form-label">Categoría *</label>
+                        <select class="form-control" name="categoria_producto" id="categoria">
+                          <option value="">Seleccione una categoría</option>
+                          {% for categoria in categoria_producto_all %}
+                            {# Si el objeto tiene el campo de empresa lo tratamos como categoria de empresa/genérica #}
+                            {% if categoria.id_categoria_prod_empresa %}
+                              <option value="{{ categoria.id_categoria_prod_empresa }}" data-origen="empresa">{{ categoria.nombre_categoria_prod_empresa }}</option>
+                            {% else %}
+                              <option value="{{ categoria.id_categoria_prod_usuario }}" data-origen="usuario">{{ categoria.nombre_categoria_prod_usuario }}</option>
+                            {% endif %}
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <div class="col-md-12 form-group mb-4" id="atributos_container" style="display:none;">
+                        <label class="col-form-label">Atributos específicos</label>
+                        <div id="atributos_dynamic">
+                          <!-- Debug info for attribute loading -->
+                          <div id="atributos_debug" style="font-size:12px;color:#666;margin-top:8px;white-space:pre-wrap;display:none;"></div>
+                        </div>
+                      </div>
+                    </div>
+                    </div>
+                </div>
+              </div>
+              <!-- Atributos removed for producto page -->
+              <!-- Acordeón: Inventario y Precio (solo persona) -->
+              {% if user_info.tipo == 'persona' %}
+              <div class="accordion-section">
+                <div class="accordion-header">
+                  <div class="accordion-title">
+                    <div class="accordion-icon">📊</div>
+                    <span>Inventario y Precio</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="stock" class="col-form-label">Stock *</label>
+                        <input type="number" class="form-control" name="stock_producto_usuario" id="stock" placeholder="Cantidad disponible" min="0" value="0">
+                      </div>
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="precio" class="col-form-label">Precio *</label>
+                        <input type="number" class="form-control" name="precio_producto_usuario" id="precio" placeholder="0.00" step="0.01" min="0" value="0">
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="unidad_presentacion" class="col-form-label">Presentación *</label>
+                        <select class="form-control" name="unidad_presentacion_producto_usuario" id="unidad_presentacion">
+                          <option value="unidad">Unidad</option>
+                          <option value="paquete">Paquete</option>
+                          <option value="bulto">Bulto</option>
+                          <option value="caja">Caja</option>
+                          <option value="kg">Kilogramo</option>
+                          <option value="l">Litro</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="cantidad_presentacion" class="col-form-label">Cantidad por presentación</label>
+                        <input type="number" class="form-control" name="cantidad_por_presentacion_producto_usuario" id="cantidad_presentacion" placeholder="Ej.: 6 (si paquete tiene 6 unidades)" min="1">
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="condicion" class="col-form-label">Condición *</label>
+                        <select class="form-control" name="condicion_producto_usuario" id="condicion">
+                          <option value="Nuevo">Nuevo</option>
+                          <option value="Usado">Usado</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="estatus" class="col-form-label">Estatus *</label>
+                        <select class="form-control" name="estatus_producto_usuario" id="estatus">
+                          <option value="Activo">Activo</option>
+                          <option value="Inactivo">Inactivo</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Acordeón: Ubicación (solo persona) -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                  <div class="accordion-title">
+                    <div class="accordion-icon">📍</div>
+                    <span>Posible Punto de Encuentro</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-4">
+                        <label class="col-form-label">Posible Punto de Encuentro del Producto</label>
+                        <p class="text-muted small mb-3">Selecciona la ubicación donde podrías entregar este producto</p>
+                        <div class="map-container">
+                          <div class="search-container" style="margin-bottom: 10px;">
+                            <div style="margin-left: 10px;">
+                              <div id="locationStatus" style="color: #2196F3; font-size: 14px; font-weight: 500;">
+                                <span id="locationIcon">⏳</span> Inicializando mapa...
+                              </div>
+                              <button type="button" onclick="retryLocation()" style="margin-top: 5px; background-color: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: none;" id="retryButton">
+                                🔄 Reintentar ubicación
+                              </button>
+                            </div>
+                          </div>
+                          <div id="producto_map" style="height: 300px; width: 100%; border-radius: 8px; border: 2px solid #ced4da;"></div>
+                          <input type="hidden" id="latitud_entrega" name="latitud_entrega_producto">
+                          <input type="hidden" id="longitud_entrega" name="longitud_entrega_producto">
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
               {% endif %}
-
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label class="col-form-label">Imágenes del Producto (máximo 5) <span style="color:red">*</span></label>
-                  <p class="text-muted small mb-3">Selecciona al menos una imagen para tu producto</p>
-                  
-                  <!-- 5 inputs individuales para imágenes -->
-                  <div class="image-inputs-container">
+              <!-- Acordeón: Imágenes -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                    <div class="accordion-title">
+                    <div class="accordion-icon">🖼️</div>
+                    <span>Multimedia</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">
                     <div class="row">
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_1" class="form-label">Imagen 1</label>
-                        <input type="file" name="imagen_1" id="imagen_1" class="form-control" accept="image/*">
-                        <div id="preview_1" class="image-preview mt-2"></div>
-                      </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_2" class="form-label">Imagen 2</label>
-                        <input type="file" name="imagen_2" id="imagen_2" class="form-control" accept="image/*">
-                        <div id="preview_2" class="image-preview mt-2"></div>
-                      </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_3" class="form-label">Imagen 3</label>
-                        <input type="file" name="imagen_3" id="imagen_3" class="form-control" accept="image/*">
-                        <div id="preview_3" class="image-preview mt-2"></div>
-                      </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_4" class="form-label">Imagen 4</label>
-                        <input type="file" name="imagen_4" id="imagen_4" class="form-control" accept="image/*">
-                        <div id="preview_4" class="image-preview mt-2"></div>
-                      </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_5" class="form-label">Imagen 5</label>
-                        <input type="file" name="imagen_5" id="imagen_5" class="form-control" accept="image/*">
-                        <div id="preview_5" class="image-preview mt-2"></div>
+                      <div class="col-md-12 form-group mb-4">
+                        <label class="col-form-label">Imágenes del Producto (máximo 5) <span style="color:red">*</span></label>
+                        <p class="text-muted small mb-3">Selecciona al menos una imagen para tu producto</p>
+                        <div class="image-inputs-container">
+                          <div class="row">
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_1" class="form-label">Imagen 1</label>
+                              <input type="file" name="imagen_1" id="imagen_1" class="form-control" accept="image/*">
+                              <div id="preview_1" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_2" class="form-label">Imagen 2</label>
+                              <input type="file" name="imagen_2" id="imagen_2" class="form-control" accept="image/*">
+                              <div id="preview_2" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_3" class="form-label">Imagen 3</label>
+                              <input type="file" name="imagen_3" id="imagen_3" class="form-control" accept="image/*">
+                              <div id="preview_3" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_4" class="form-label">Imagen 4</label>
+                              <input type="file" name="imagen_4" id="imagen_4" class="form-control" accept="image/*">
+                              <div id="preview_4" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_5" class="form-label">Imagen 5</label>
+                              <input type="file" name="imagen_5" id="imagen_5" class="form-control" accept="image/*">
+                              <div id="preview_5" class="image-preview mt-2"></div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div class="row">
-                <div class="col-md-12 form-group d-flex align-items-center gap-2">
-                  <input type="submit" value="Guardar Producto" class="btn btn-primary rounded-0 py-2 px-4" >
-                  <a href="{% url 'producto_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500; white-space: nowrap;">Ver Productos</a>
+              <!-- Botones fuera del acordeón -->
+              <div class="row mt-4">
+                <div class="col-md-12 form-group">
+                  <button type="submit" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #0077b6, #0096c7) !important; color: #fff; margin-right: 15px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-2" viewBox="0 0 16 16" style="margin-right:8px;">
+                      <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                    </svg>
+                    Guardar Producto
+                  </button>
+                  <a href="{% url 'producto_config_funcion' %}" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #06d6a0, #018158) !important; color: #fff;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul me-2" viewBox="0 0 16 16" style="margin-right:8px;">
+                      <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                    </svg>
+                    Ver Productos
+                  </a>
                   <span class="submitting"></span>
                 </div>
               </div>
             </form>
-
             <div id="form-message-warning mt-4"></div> 
             <div id="form-message-success">
               ¡Producto guardado exitosamente!
             </div>
 
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa;">
-            <img src="{% static 'producto/images/producto.png' %}" alt="Producto" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(1.05) contrast(1.05);">
           </div>
         </div>
       </div>
@@ -204,132 +323,254 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="{% static 'producto/js/main.js' %}"></script>
   
-  <!-- Script para manejar atributos dinámicos -->
+  <!-- atributos dynamic script removed from producto.html -->
+  
+  <!-- Add select2 and flatpickr scripts to match categoria page (safe with existing jQuery) -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
-  $(document).ready(function() {
-      // Manejar cambio de categoría
-      $('#categoria').change(function() {
-          const categoriaId = $(this).val();
-          const atributosContainer = $('#atributos-container');
-          const atributosFields = $('#atributos-fields');
-          
-          if (categoriaId) {
-              // Hacer petición AJAX para obtener atributos
-              $.ajax({
-                  url: '{% url "api_obtener_atributos_categoria" %}',
-                  type: 'GET',
-                  data: {
-                      'categoria_id': categoriaId
-                  },
-                  success: function(response) {
-                      if (response.success && response.atributos.length > 0) {
-                          // Limpiar campos anteriores
-                          atributosFields.empty();
-                          
-                          // Generar campos dinámicos
-                          response.atributos.forEach(function(atributo) {
-                              const fieldHtml = generarCampoAtributo(atributo);
-                              atributosFields.append(fieldHtml);
-                          });
-                          
-                          // Mostrar el contenedor
-                          atributosContainer.show();
-                      } else {
-                          // Ocultar contenedor si no hay atributos
-                          atributosContainer.hide();
-                          atributosFields.empty();
-                      }
-                  },
-                  error: function(xhr, status, error) {
-                      console.error('Error al obtener atributos:', error);
-                      atributosContainer.hide();
-                      atributosFields.empty();
-                  }
+    (function(){
+      // Initialize Select2 on category and other selects to match categoria page
+      try {
+        $(document).ready(function(){
+          $('select.form-control').each(function(){
+            // Avoid initializing on selects that already may have plugins
+            if (!$(this).hasClass('select2-hidden-accessible')){
+              $(this).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: $(this).data('placeholder') || ''
               });
-          } else {
-              // Ocultar contenedor si no hay categoría seleccionada
-              atributosContainer.hide();
-              atributosFields.empty();
-          }
-      });
-      
-      // Función para generar HTML de campo de atributo
-      function generarCampoAtributo(atributo) {
-          const fieldId = 'atributo_' + atributo.id_atributo;
-          const fieldName = 'atributo_' + atributo.id_atributo;
-          const required = atributo.obligatorio ? 'required' : '';
-          const asterisco = atributo.obligatorio ? ' *' : '';
-          
-          let fieldHtml = `
-              <div class="row mb-3">
-                  <div class="col-md-6 form-group">
-                      <label for="${fieldId}" class="col-form-label">${atributo.nombre}${asterisco}</label>`;
-          
-          switch (atributo.tipo_dato) {
-              case 'texto':
-                  fieldHtml += `
-                      <input type="text" class="form-control" name="${fieldName}" id="${fieldId}" 
-                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
-                  break;
-                  
-              case 'numero':
-                  fieldHtml += `
-                      <input type="number" class="form-control" name="${fieldName}" id="${fieldId}" 
-                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
-                  break;
-                  
-              case 'decimal':
-                  fieldHtml += `
-                      <input type="number" step="0.01" class="form-control" name="${fieldName}" id="${fieldId}" 
-                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
-                  break;
-                  
-              case 'fecha':
-                  fieldHtml += `
-                      <input type="date" class="form-control" name="${fieldName}" id="${fieldId}" ${required}>`;
-                  break;
-                  
-              case 'booleano':
-                  fieldHtml += `
-                      <select class="form-control" name="${fieldName}" id="${fieldId}" ${required}>
-                          <option value="">Seleccione una opción</option>
-                          <option value="true">Sí</option>
-                          <option value="false">No</option>
-                      </select>`;
-                  break;
-                  
-              case 'lista':
-                  fieldHtml += `
-                      <select class="form-control" name="${fieldName}" id="${fieldId}" ${required}>
-                          <option value="">Seleccione una opción</option>`;
-                  if (atributo.opciones && Array.isArray(atributo.opciones)) {
-                      atributo.opciones.forEach(function(opcion) {
-                          fieldHtml += `<option value="${opcion}">${opcion}</option>`;
-                      });
-                  }
-                  fieldHtml += `</select>`;
-                  break;
-                  
-              default:
-                  fieldHtml += `
-                      <input type="text" class="form-control" name="${fieldName}" id="${fieldId}" 
-                             placeholder="Ingrese ${atributo.nombre.toLowerCase()}" ${required}>`;
-          }
-          
-
-          
-          fieldHtml += `
-                  </div>
-              </div>`;
-          
-          return fieldHtml;
+            }
+          });
+        });
+      } catch(e) {
+        console.warn('Select2 init failed:', e);
       }
-  });
+    })();
+    
+    // Dynamic attributes loader when category changes
+    (function(){
+      function renderAtributos(atributos){
+        const container = document.getElementById('atributos_dynamic');
+        const wrapper = document.getElementById('atributos_container');
+        container.innerHTML = '';
+        if(!atributos || atributos.length === 0){
+          wrapper.style.display = 'none';
+          return;
+        }
+        wrapper.style.display = 'block';
+        atributos.forEach(attr => {
+          const row = document.createElement('div');
+          row.className = 'mb-3';
+          const label = document.createElement('label');
+          label.className = 'form-label';
+          label.innerText = attr.nombre + (attr.obligatorio ? ' *' : '');
+          row.appendChild(label);
+
+          let input;
+          const name = `atributo_${attr.id_atributo}`;
+
+          switch((attr.tipo_dato || '').toLowerCase()){
+            case 'numero':
+            case 'decimal':
+              input = document.createElement('input');
+              input.type = 'number';
+              input.step = attr.tipo_dato === 'decimal' ? '0.01' : '1';
+              input.className = 'form-control';
+              input.name = name;
+              break;
+            case 'fecha':
+              input = document.createElement('input');
+              input.type = 'text';
+              input.className = 'form-control atributo-fecha';
+              input.name = name;
+              break;
+            case 'booleano':
+              input = document.createElement('select');
+              input.className = 'form-control';
+              input.name = name;
+              const optTrue = document.createElement('option'); optTrue.value='1'; optTrue.text='Sí';
+              const optFalse = document.createElement('option'); optFalse.value='0'; optFalse.text='No';
+              input.appendChild(optTrue); input.appendChild(optFalse);
+              break;
+            case 'lista':
+              input = document.createElement('select');
+              input.className = 'form-control';
+              input.name = name;
+              const opciones = attr.opciones || '[]';
+              let opts = [];
+              try{ opts = JSON.parse(opciones); }catch(e){ if(typeof opciones === 'string') opts = opciones.split(',').map(s=>s.trim()); }
+              opts.forEach(o=>{ const el = document.createElement('option'); el.value = o; el.text = o; input.appendChild(el); });
+              break;
+            default:
+              input = document.createElement('input');
+              input.type = 'text';
+              input.className = 'form-control';
+              input.name = name;
+          }
+
+          if(attr.descripcion){
+            const small = document.createElement('small');
+            small.className = 'form-text text-muted';
+            small.innerText = attr.descripcion;
+            row.appendChild(small);
+          }
+
+          row.appendChild(input);
+          container.appendChild(row);
+
+          // initialize flatpickr for fecha inputs
+          if(input && input.classList.contains('atributo-fecha')){
+            try{ flatpickr(input, { locale: 'es', dateFormat: 'Y-m-d' }); }catch(e){ console.warn('flatpickr init failed', e); }
+          }
+        });
+      }
+
+      function fetchAtributos(categoriaId){
+        const debugEl = document.getElementById('atributos_debug');
+        try{
+          const sel = document.getElementById('categoria');
+          if(!categoriaId){ renderAtributos([]); if(debugEl){ debugEl.style.display='none'; } return; }
+
+          // Prefer reading the selected option from the select element (works with Select2).
+          // Add jQuery fallback which is more reliable when Select2 is active.
+          let origen = null;
+          try{
+            // Try DOM API first
+            const selectedOption = sel.options[sel.selectedIndex];
+            origen = selectedOption && selectedOption.dataset ? selectedOption.dataset.origen : null;
+          }catch(err){ origen = null; }
+
+          // jQuery fallback (Select2 compatibility)
+          try{
+            if(typeof window.jQuery !== 'undefined'){
+              const $sel = window.jQuery('#categoria');
+              const jqVal = $sel.val();
+              if(jqVal && (!categoriaId || String(jqVal) === String(categoriaId))){
+                const jqOrigen = $sel.find('option:selected').data('origen');
+                if(jqOrigen) origen = jqOrigen;
+              }
+            }
+          }catch(e){ /* ignore */ }
+
+          if(!origen){
+            const fallback = sel.querySelector(`option[value="${categoriaId}"]`);
+            origen = fallback && fallback.dataset ? fallback.dataset.origen : null;
+          }
+
+          const url = `/ecommerce/obtener_atributos_categoria/?id_categoria=${encodeURIComponent(categoriaId)}` + (origen ? `&tipo=${encodeURIComponent(origen)}` : '');
+          if(debugEl){ debugEl.style.display='block'; debugEl.innerText = `Solicitando: ${url}\n...`;} 
+          console.log('Fetching atributos from', url, 'origen:', origen);
+
+          fetch(url, { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+            .then(response => {
+              console.log('Respuesta HTTP', response.status, response.statusText);
+              if(!response.ok){
+                if(debugEl) debugEl.innerText = `Error HTTP ${response.status} ${response.statusText}`;
+                renderAtributos([]);
+                throw new Error(`HTTP ${response.status}`);
+              }
+              return response.json().then(data => ({ status: response.status, data }));
+            })
+            .then(({status, data})=>{
+              console.log('Datos recibidos:', data);
+              if(debugEl) debugEl.innerText = `HTTP ${status}\n${JSON.stringify(data, null, 2)}`;
+              if(data && data.success){ renderAtributos(data.atributos); }
+              else { renderAtributos([]); }
+            }).catch(err=>{ console.error('Error cargando atributos:', err); if(debugEl) debugEl.innerText = `Error: ${err.message}`; renderAtributos([]); });
+        }catch(e){ console.error('fetchAtributos error', e); if(debugEl) debugEl.innerText = `Excepción: ${e.message}`; renderAtributos([]); }
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        const sel = document.getElementById('categoria');
+        sel.addEventListener('change', function(){
+          const val = this.value;
+          fetchAtributos(val);
+        });
+        // If a category is preselected, load atributos on page load (get current selectedIndex to obtain origen reliably)
+        const initialVal = sel.value;
+        if(initialVal){ fetchAtributos(initialVal); }
+      });
+
+      // jQuery fallback listener (Select2 compatibility): ensure we catch change events triggered by Select2
+      try{
+        if(typeof window.jQuery !== 'undefined'){
+          window.jQuery(document).ready(function($){
+            $('#categoria').on('change', function(){
+              const val = $(this).val();
+              try{ fetchAtributos(val); }catch(e){ console.error('fetchAtributos error (jq listener)', e); }
+            });
+          });
+        }
+      }catch(e){ console.warn('jQuery fallback listener setup failed', e); }
+    })();
   </script>
   {% if user_info.tipo == 'persona' %}
   <script src="{% static 'producto/js/producto_maps.js' %}"></script>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArSSR_2q1ZpCJCOKWNLtuCLc5Z2imrzZY&libraries=places&callback=initProductoMap" async defer></script>
   {% endif %}
+  <script>
+    // Mostrar/ocultar y limpiar el campo "cantidad por presentación" según la unidad seleccionada
+    (function(){
+      function findWrapper(el){
+        if(!el) return null;
+        // buscar hacia arriba un contenedor con clase form-group o col-md-6
+        var p = el.parentElement;
+        while(p){
+          if(p.classList && (p.classList.contains('form-group') || p.classList.contains('col-md-6'))){
+            return p;
+          }
+          p = p.parentElement;
+        }
+        return el.parentElement;
+      }
+
+      function toggleCantidad(){
+        try{
+          var sel = document.getElementById('unidad_presentacion');
+          var cantidadEl = document.getElementById('cantidad_presentacion');
+          if(!sel || !cantidadEl) return;
+          var wrapper = findWrapper(cantidadEl);
+          var val = sel.value;
+          if(val === 'unidad'){
+            if(wrapper) wrapper.style.display = 'none';
+            cantidadEl.value = '';
+            cantidadEl.disabled = true;
+          } else {
+            if(wrapper) wrapper.style.display = '';
+            cantidadEl.disabled = false;
+          }
+        }catch(e){ console.warn('toggleCantidad error', e); }
+      }
+
+      function attachListeners(){
+        var sel = document.getElementById('unidad_presentacion');
+        if(!sel) return;
+        // DOM listener
+        sel.addEventListener('change', toggleCantidad);
+        // jQuery listener (por si Select2 u otras librerías manejan eventos vía jQuery)
+        try{
+          if(typeof window.jQuery !== 'undefined'){
+            window.jQuery(document).ready(function($){
+              $('#unidad_presentacion').on('change', function(){ toggleCantidad(); });
+              // Select2 specific event
+              $('#unidad_presentacion').on('select2:select select2:unselect', function(){ toggleCantidad(); });
+            });
+          }
+        }catch(e){ /* ignore */ }
+        // estado inicial
+        toggleCantidad();
+      }
+
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', attachListeners);
+      } else {
+        attachListeners();
+      }
+    })();
+  </script>
 
   </body>
 </html>

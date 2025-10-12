@@ -1,4 +1,4 @@
-{% load static %}
+{% load static %}       
 {% include 'ecommerce_app/barra_superior_operaciones.html' %}
 <!doctype html>
 <html lang="es">
@@ -8,126 +8,287 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,900&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{% static 'servicio/css/bootstrap.min.css' %}">
-    
-    <!-- Style -->
-    <link rel="stylesheet" href="{% static 'servicio/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'servicio/css/main.css' %}">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Use categoria_producto bootstrap + style so apariencia es idéntica -->
+    <link rel="stylesheet" href="{% static 'categoria_producto/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'categoria_producto/css/style.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+  <!-- Small overrides to ensure servicio inputs exactly match categoria styles -->
+  <style>
+    /* Match .form-control from categoria */
+    .form-control {
+      border: none !important;
+      border-bottom: 1px solid #ccc !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      border-radius: 0 !important;
+      background: none !important;
+      color: #000 !important;
+      box-sizing: border-box;
+    }
+    .form-control:focus, .form-control:active {
+      outline: none !important;
+      box-shadow: none !important;
+      border-color: #2563eb !important;
+      border-bottom-width: 3px !important;
+    }
+
+    /* Ensure placeholders and label styles match */
+    .form-control::placeholder { color: #6c757d !important; }
+    .col-form-label { color: #000000 !important; font-weight: 500; }
+
+    /* Make file inputs visually consistent (browser default varies) */
+    input[type="file"].form-control {
+      border: none !important;
+      border-bottom: 1px solid #ccc !important;
+      padding: 6px 8px !important;
+      height: auto !important;
+      background: none !important;
+    }
+    .image-inputs-container .form-control { height: auto !important; }
+
+    /* Keep selects/full-width behavior */
+    .form-group .form-control, textarea.form-control, select.form-control {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    /* Ensure input-nombre uses same sizing rules */
+    .form-control.input-nombre { max-width: 100% !important; width: 100% !important; }
+
+    /* Buttons sizing parity */
+    .btn, .form-control, .custom-select { height: 45px !important; }
+    .btn-ver-categorias { height: 44px !important; }
+  </style>
+  <!-- Ensure form padding/width matches categoria page -->
+  <style>
+    .contact-wrap .form, .contact-wrap .contact-info { padding: 40px !important; }
+    .form.h-100 { max-width: 920px !important; margin-left: auto !important; margin-right: auto !important; }
+    /* make sure the container column uses full width like categoria template */
+    .contact-wrap > .col-md-8 { flex: 0 0 100% !important; max-width: 100% !important; }
+  </style>
     <title>Servicios</title>
+
   </head>
   <body>
-  
   <div class="content">
     <div class="container">
       <div class="row align-items-stretch no-gutters contact-wrap">
         <div class="col-md-8">
           <div class="form h-100">
-            <h3 class="text-center mb-4" style="color: #35477d; font-weight: 700; letter-spacing: 1px;">SERVICIOS</h3>
-            <form class="mb-5" method="post" id="servicioForm" name="servicioForm" action="{% url 'servicio_funcion' %}" enctype="multipart/form-data">
+            <h3 class="text-center mb-4" style=" font-weight: 700; letter-spacing: 1px;">SERVICIOS</h3>
+            <form class="mb-5" method="post" id="servicioForm" name="servicioForm" enctype="multipart/form-data" action="{% url 'servicio_funcion' %}">
               {% csrf_token %}
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="nombre" class="col-form-label">Nombre del Servicio *</label>
-                  <input type="text" class="form-control" name="nombre_servicio_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="nombre_servicio" placeholder="Ingrese el nombre del servicio" style="max-width: 300px;">
-                </div>
-              </div>
 
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="descripcion" class="col-form-label">Descripción del Servicio</label>
-                  <textarea class="form-control" name="descripcion_servicio_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="descripcion_servicio" cols="30" rows="3" placeholder="Ingrese la descripción del servicio" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
+              <!-- Acordeón: Información General -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                  <div class="accordion-title">
+                    <div class="accordion-icon">🛠️</div>
+                    <span>Información General</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
                 </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="categoria" class="col-form-label">Categoría del Servicio *</label>
-                  <select class="form-control" name="categoria_servicio" id="categoria_servicio">
-                    <option value="">Seleccione una categoría</option>
-                    {% for categoria in categoria_servicio_all %}
-                      {% if user_info.tipo == 'empresa' %}
-                        <option value="{{ categoria.id_categoria_serv_empresa }}">{{ categoria.nombre_categoria_serv_empresa }}</option>
-                      {% else %}
-                        <option value="{{ categoria.id_categoria_serv_usuario }}">{{ categoria.nombre_categoria_serv_usuario }}</option>
-                      {% endif %}
-                    {% endfor %}
-                  </select>
-                </div>
-                
-                <!-- Campos adicionales solo para usuarios con rol 'persona' -->
-                {% if user_info.tipo == 'persona' %}
-                <div class="col-md-6 form-group mb-5">
-                  <label for="precio_servicio" class="col-form-label">Precio del Servicio *</label>
-                  <input type="number" class="form-control" name="precio_servicio_usuario" id="precio_servicio" step="0.01" min="0" placeholder="0.00" style="max-width: 200px;">
-                </div>
-                {% endif %}
-              </div>
-              
-              {% if user_info.tipo == 'persona' %}
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="estatus_servicio" class="col-form-label">Estatus del Servicio *</label>
-                  <select class="form-control" name="estatus_servicio_usuario" id="estatus_servicio" style="max-width: 200px;">
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                  </select>
-                </div>
-              </div>
-              {% endif %}
-
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label class="col-form-label">Imágenes del Servicio (máximo 5) <span style="color:red">*</span></label>
-                  <p class="text-muted small mb-3">Selecciona al menos una imagen para tu servicio</p>
-                  
-                  <!-- 5 inputs individuales para imágenes -->
-                  <div class="image-inputs-container">
+                <div class="accordion-content">
+                  <div class="accordion-body">
                     <div class="row">
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_servicio_1" class="form-label">Imagen 1</label>
-                        <input type="file" name="imagen_servicio_1" id="imagen_servicio_1" class="form-control" accept="image/*">
-                        <div id="preview_servicio_1" class="image-preview mt-2"></div>
+                      <div class="col-md-12 form-group mb-4">
+                        <label for="nombre" class="col-form-label">Nombre del Servicio *</label>
+                        <input type="text" class="form-control input-nombre" name="nombre_servicio_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="nombre" placeholder="Ingrese el nombre del servicio">
                       </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_servicio_2" class="form-label">Imagen 2</label>
-                        <input type="file" name="imagen_servicio_2" id="imagen_servicio_2" class="form-control" accept="image/*">
-                        <div id="preview_servicio_2" class="image-preview mt-2"></div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-5">
+                        <label for="descripcion" class="col-form-label">Descripción </label>
+                        <textarea class="form-control" name="descripcion_servicio_{% if user_info.tipo == 'empresa' %}empresa{% else %}usuario{% endif %}" id="descripcion" cols="30" rows="3" placeholder="Describa el servicio ofrecido"></textarea>
                       </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_servicio_3" class="form-label">Imagen 3</label>
-                        <input type="file" name="imagen_servicio_3" id="imagen_servicio_3" class="form-control" accept="image/*">
-                        <div id="preview_servicio_3" class="image-preview mt-2"></div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-5">
+                        <label for="caracteristicas" class="col-form-label">Características / Detalles *</label>
+                        <textarea class="form-control" name="caracteristicas_generales" id="caracteristicas" cols="30" rows="3" placeholder="Indique detalles, condiciones o requisitos del servicio"></textarea>
                       </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_servicio_4" class="form-label">Imagen 4</label>
-                        <input type="file" name="imagen_servicio_4" id="imagen_servicio_4" class="form-control" accept="image/*">
-                        <div id="preview_servicio_4" class="image-preview mt-2"></div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-5">
+                        <label for="categoria" class="col-form-label">Categoría *</label>
+                        <select class="form-control" name="categoria_servicio" id="categoria">
+                          <option value="">Seleccione una categoría</option>
+                          {% for categoria in categoria_servicio_all %}
+                            {# Si el objeto tiene el campo de empresa lo tratamos como categoria de empresa/genérica #}
+                            {% if categoria.id_categoria_serv_empresa %}
+                              <option value="{{ categoria.id_categoria_serv_empresa }}" data-origen="empresa">{{ categoria.nombre_categoria_serv_empresa }}</option>
+                            {% else %}
+                              <option value="{{ categoria.id_categoria_serv_usuario }}" data-origen="usuario">{{ categoria.nombre_categoria_serv_usuario }}</option>
+                            {% endif %}
+                          {% endfor %}
+                        </select>
                       </div>
-                      <div class="col-md-6 col-lg-4 mb-3">
-                        <label for="imagen_servicio_5" class="form-label">Imagen 5</label>
-                        <input type="file" name="imagen_servicio_5" id="imagen_servicio_5" class="form-control" accept="image/*">
-                        <div id="preview_servicio_5" class="image-preview mt-2"></div>
+                      <div class="col-md-12 form-group mb-4" id="atributos_container" style="display:none;">
+                        <label class="col-form-label">Atributos específicos</label>
+                        <div id="atributos_dynamic">
+                          <!-- Debug info for attribute loading -->
+                          <div id="atributos_debug" style="font-size:12px;color:#666;margin-top:8px;white-space:pre-wrap;display:none;"></div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="row">
+              <!-- Acordeón: Tarifas y Disponibilidad -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                  <div class="accordion-title">
+                    <div class="accordion-icon">📊</div>
+                    <span>Tarifas y Disponibilidad</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="precio" class="col-form-label">Tarifa (Soles) *</label>
+                        <input type="number" class="form-control" name="precio_servicio_usuario" id="precio" placeholder="0.00" step="0.01" min="0" value="0">
+                      </div>
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="duracion" class="col-form-label">Duración estimada (min)</label>
+                        <input type="number" class="form-control" name="duracion_servicio" id="duracion" placeholder="Duración en minutos" min="0" value="60">
+                      </div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="modalidad" class="col-form-label">Modalidad *</label>
+                        <select class="form-control" name="modalidad_servicio" id="modalidad">
+                          <option value="presencial">Presencial</option>
+                          <option value="online">En línea</option>
+                          <option value="hibrido">Híbrido</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="capacidad" class="col-form-label">Capacidad / Cupos (opcional)</label>
+                        <input type="number" class="form-control" name="capacidad_servicio" id="capacidad" placeholder="Número de personas o cupos" min="0" value="1">
+                      </div>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-6 form-group mb-4">
+                        <label for="estatus" class="col-form-label">Estatus *</label>
+                        <select class="form-control" name="estatus_servicio" id="estatus">
+                          <option value="Activo">Activo</option>
+                          <option value="Inactivo">Inactivo</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Acordeón: Lugar / Ubicación -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                  <div class="accordion-title">
+                    <div class="accordion-icon">📍</div>
+                    <span>Lugar / Modalidad</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-4">
+                        <label class="col-form-label">Lugar (si aplica)</label>
+                        <p class="text-muted small mb-3">Indica la dirección o condiciones del lugar donde se presta el servicio (si es presencial).</p>
+                        <input type="text" class="form-control" name="lugar_servicio" id="lugar_servicio" placeholder="Dirección, zona o descripción del lugar">
+                        <input type="hidden" id="latitud_servicio" name="latitud_servicio">
+                        <input type="hidden" id="longitud_servicio" name="longitud_servicio">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Acordeón: Multimedia -->
+              <div class="accordion-section">
+                <div class="accordion-header">
+                    <div class="accordion-title">
+                    <div class="accordion-icon">🖼️</div>
+                    <span>Multimedia</span>
+                  </div>
+                  <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="row">
+                      <div class="col-md-12 form-group mb-4">
+                        <label class="col-form-label">Imágenes del Servicio (máximo 5)</label>
+                        <p class="text-muted small mb-3">Puedes subir imágenes o material visual que describa tu servicio</p>
+                        <div class="image-inputs-container">
+                          <div class="row">
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_1" class="form-label">Imagen 1</label>
+                              <input type="file" name="imagen_1" id="imagen_1" class="form-control" accept="image/*">
+                              <div id="preview_1" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_2" class="form-label">Imagen 2</label>
+                              <input type="file" name="imagen_2" id="imagen_2" class="form-control" accept="image/*">
+                              <div id="preview_2" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_3" class="form-label">Imagen 3</label>
+                              <input type="file" name="imagen_3" id="imagen_3" class="form-control" accept="image/*">
+                              <div id="preview_3" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_4" class="form-label">Imagen 4</label>
+                              <input type="file" name="imagen_4" id="imagen_4" class="form-control" accept="image/*">
+                              <div id="preview_4" class="image-preview mt-2"></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                              <label for="imagen_5" class="form-label">Imagen 5</label>
+                              <input type="file" name="imagen_5" id="imagen_5" class="form-control" accept="image/*">
+                              <div id="preview_5" class="image-preview mt-2"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- Hidden combined input expected by backend -->
+                        <input type="file" name="imagenes_servicio" id="imagenes_servicio" multiple style="display:none;" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones fuera del acordeón -->
+              <div class="row mt-4">
                 <div class="col-md-12 form-group">
-                  <input type="submit" value="Guardar Servicio" class="btn btn-primary rounded-0 py-2 px-4">
-                  <a href="{% url 'servicio_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500;">
+                  <button type="submit" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #0077b6, #0096c7) !important; color: #fff; margin-right: 15px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-2" viewBox="0 0 16 16" style="margin-right:8px;">
+                      <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                    </svg>
+                    Guardar Servicio
+                  </button>
+                  <a href="{% url 'servicio_config_funcion' %}" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #06d6a0, #018158) !important; color: #fff;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul me-2" viewBox="0 0 16 16" style="margin-right:8px;">
+                      <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                    </svg>
                     Ver Servicios
                   </a>
                   <span class="submitting"></span>
                 </div>
               </div>
-              <!-- Validación de imagen obligatoria -->
             </form>
-
             <div id="form-message-warning mt-4"></div> 
             <div id="form-message-success">
               ¡Servicio guardado exitosamente!
@@ -135,24 +296,176 @@
 
           </div>
         </div>
-        <div class="col-md-4">
-          <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa;">
-            <img src="{% static 'servicio/images/servicios.jpg' %}" alt="Servicios" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(1.05) contrast(1.05);">
-          </div>
-        </div>
       </div>
     </div>
   </div>
 
-  <script src="{% static 'servicio/js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'servicio/js/popper.min.js' %}"></script>
-  <script src="{% static 'servicio/js/bootstrap.min.js' %}"></script>
-  <script src="{% static 'servicio/js/jquery.validate.min.js' %}"></script>
-  <script src="{% static 'servicio/js/main.js' %}"></script>
-  <script src="{% static 'servicio/js/validacion_servicio.js' %}"></script>
+  <!-- Scripts -->
+  <script src="{% static 'producto/js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% static 'producto/js/popper.min.js' %}"></script>
+  <script src="{% static 'producto/js/bootstrap.min.js' %}"></script>
+  <script src="{% static 'producto/js/jquery.validate.min.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="{% static 'producto/js/main.js' %}"></script>
+  
+  <!-- Add select2 and flatpickr scripts to match categoria page (safe with existing jQuery) -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
+    (function(){
+      // Initialize Select2 on category and other selects to match categoria page
+      try {
+        $(document).ready(function(){
+          $('select.form-control').each(function(){
+            // Avoid initializing on selects that already may have plugins
+            if (!$(this).hasClass('select2-hidden-accessible')){
+              $(this).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: $(this).data('placeholder') || ''
+              });
+            }
+          });
+        });
+      } catch(e) {
+        console.warn('Select2 init failed:', e);
+      }
+    })();
+    
+    // Dynamic attributes loader when category changes
+    (function(){
+      function renderAtributos(atributos){
+        const container = document.getElementById('atributos_dynamic');
+        const wrapper = document.getElementById('atributos_container');
+        if(!container || !wrapper) return;
+        container.innerHTML = '';
+        if(!atributos || atributos.length === 0){
+          wrapper.style.display = 'none';
+          return;
+        }
+        wrapper.style.display = 'block';
+        atributos.forEach(attr => {
+          const row = document.createElement('div');
+          row.className = 'mb-3';
+          const label = document.createElement('label');
+          label.className = 'form-label';
+          label.innerText = attr.nombre + (attr.obligatorio ? ' *' : '');
+          row.appendChild(label);
+
+          let input;
+          const name = `atributo_${attr.id_atributo}`;
+
+          switch((attr.tipo_dato || '').toLowerCase()){
+            case 'numero':
+            case 'decimal':
+              input = document.createElement('input');
+              input.type = 'number';
+              input.step = attr.tipo_dato === 'decimal' ? '0.01' : '1';
+              input.className = 'form-control';
+              input.name = name;
+              break;
+            case 'fecha':
+              input = document.createElement('input');
+              input.type = 'text';
+              input.className = 'form-control atributo-fecha';
+              input.name = name;
+              break;
+            case 'booleano':
+              input = document.createElement('select');
+              input.className = 'form-control';
+              input.name = name;
+              const optTrue = document.createElement('option'); optTrue.value='1'; optTrue.text='Sí';
+              const optFalse = document.createElement('option'); optFalse.value='0'; optFalse.text='No';
+              input.appendChild(optTrue); input.appendChild(optFalse);
+              break;
+            case 'lista':
+              input = document.createElement('select');
+              input.className = 'form-control';
+              input.name = name;
+              const opciones = attr.opciones || '[]';
+              let opts = [];
+              try{ opts = JSON.parse(opciones); }catch(e){ if(typeof opciones === 'string') opts = opciones.split(',').map(s=>s.trim()); }
+              opts.forEach(o=>{ const el = document.createElement('option'); el.value = o; el.text = o; input.appendChild(el); });
+              break;
+            default:
+              input = document.createElement('input');
+              input.type = 'text';
+              input.className = 'form-control';
+              input.name = name;
+          }
+
+          if(attr.descripcion){
+            const small = document.createElement('small');
+            small.className = 'form-text text-muted';
+            small.innerText = attr.descripcion;
+            row.appendChild(small);
+          }
+
+          row.appendChild(input);
+          container.appendChild(row);
+
+          // initialize flatpickr for fecha inputs
+          if(input && input.classList.contains('atributo-fecha')){
+            try{ flatpickr(input, { locale: 'es', dateFormat: 'Y-m-d' }); }catch(e){ console.warn('flatpickr init failed', e); }
+          }
+        });
+      }
+
+      function fetchAtributos(categoriaId){
+        const debugEl = document.getElementById('atributos_debug');
+        try{
+          const sel = document.getElementById('categoria');
+          if(!sel){ return; }
+          if(!categoriaId){ renderAtributos([]); if(debugEl){ debugEl.style.display='none'; } return; }
+
+          // Determine origen (empresa/usuario) from option dataset
+          let origen = null;
+          try{ const selectedOption = sel.options[sel.selectedIndex]; origen = selectedOption && selectedOption.dataset ? selectedOption.dataset.origen : null; }catch(err){ origen = null; }
+          try{
+            if(typeof window.jQuery !== 'undefined'){
+              const $sel = window.jQuery('#categoria');
+              const jqOrigin = $sel.find('option:selected').data('origen'); if(jqOrigin) origen = jqOrigin;
+            }
+          }catch(e){}
+
+          const url = `/ecommerce/obtener_atributos_categoria/?id_categoria=${encodeURIComponent(categoriaId)}` + (origen ? `&tipo=${encodeURIComponent(origen)}` : '');
+          if(debugEl){ debugEl.style.display='block'; debugEl.innerText = `Solicitando: ${url}\n...`; }
+
+          fetch(url, { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+            .then(response => {
+              if(!response.ok){ if(debugEl) debugEl.innerText = `Error HTTP ${response.status} ${response.statusText}`; renderAtributos([]); throw new Error(`HTTP ${response.status}`); }
+              return response.json().then(data => ({ status: response.status, data }));
+            })
+            .then(({status, data})=>{
+              if(debugEl) debugEl.innerText = `HTTP ${status}\n${JSON.stringify(data, null, 2)}`;
+              if(data && data.success){ renderAtributos(data.atributos); }
+              else { renderAtributos([]); }
+            }).catch(err=>{ console.error('Error cargando atributos:', err); if(debugEl) debugEl.innerText = `Error: ${err.message}`; renderAtributos([]); });
+        }catch(e){ console.error('fetchAtributos error', e); if(debugEl) debugEl.innerText = `Excepción: ${e.message}`; renderAtributos([]); }
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        const sel = document.getElementById('categoria');
+        if(sel){
+          sel.addEventListener('change', function(){ const val = this.value; fetchAtributos(val); });
+          const initialVal = sel.value; if(initialVal){ fetchAtributos(initialVal); }
+        }
+      });
+
+      try{
+        if(typeof window.jQuery !== 'undefined'){
+          window.jQuery(document).ready(function($){
+            $('#categoria').on('change', function(){ const val = $(this).val(); try{ fetchAtributos(val); }catch(e){ console.error(e); } });
+          });
+        }
+      }catch(e){ console.warn('jQuery fallback listener setup failed', e); }
+    })();
+  </script>
+
+  <script>
+    // Image previews and simple client validation (mirrors producto behavior)
     document.addEventListener('DOMContentLoaded', function() {
-      // Función para crear previsualización de imagen
       function createImagePreview(file, previewContainer) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -170,114 +483,87 @@
         };
         reader.readAsDataURL(file);
       }
-      
-      // Configurar event listeners para cada input de imagen
+
       for (let i = 1; i <= 5; i++) {
-        const input = document.getElementById(`imagen_servicio_${i}`);
-        const preview = document.getElementById(`preview_servicio_${i}`);
-        
+        const input = document.getElementById(`imagen_${i}`);
+        const preview = document.getElementById(`preview_${i}`);
         if (input && preview) {
           input.addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (file) {
-              createImagePreview(file, preview);
-            } else {
-              preview.innerHTML = '';
-            }
+            if (file) createImagePreview(file, preview);
+            else preview.innerHTML = '';
+            // Sync to hidden combined input whenever an individual input changes
+            syncImagesToHiddenInput();
           });
         }
       }
-      
-      // Función para verificar si al menos una imagen está seleccionada
-      function hasAtLeastOneImage() {
-        for (let i = 1; i <= 5; i++) {
-          const input = document.getElementById(`imagen_servicio_${i}`);
-          if (input && input.files.length > 0) {
-            return true;
+
+      // simple submit check: ensure name and category present and at least one image
+      const form = document.getElementById('servicioForm');
+      if(!form) return;
+      form.addEventListener('submit', function(e){
+        e.preventDefault(); // always handle via AJAX so we can show sweetalert
+        // Ensure hidden combined input is synced before submit
+        syncImagesToHiddenInput();
+
+        const nombre = document.getElementById('nombre') && document.getElementById('nombre').value.trim();
+        const categoria = document.getElementById('categoria') && document.getElementById('categoria').value;
+        let hasImage = false;
+        for(let i=1;i<=5;i++){ const inp = document.getElementById(`imagen_${i}`); if(inp && inp.files && inp.files.length>0){ hasImage = true; break; } }
+
+        if(!nombre){ Swal.fire({ title: 'Validación', text: 'El nombre del servicio es obligatorio.', icon: 'warning', confirmButtonColor: '#d33' }); return false; }
+        if(!categoria){ Swal.fire({ title: 'Validación', text: 'Debes seleccionar una categoría.', icon: 'warning', confirmButtonColor: '#d33' }); return false; }
+        if(!hasImage){ Swal.fire({ title: 'Validación', text: 'Debes seleccionar al menos una imagen.', icon: 'warning', confirmButtonColor: '#d33' }); return false; }
+
+        // Build FormData (includes csrf token input rendered by Django)
+        const fd = new FormData(form);
+        // Read CSRF token from form
+        const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        const csrfToken = csrfInput ? csrfInput.value : null;
+
+        // Disable submit UI
+        const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('input[type="submit"]');
+        if(submitBtn) submitBtn.disabled = true;
+
+        fetch(form.action, {
+          method: 'POST',
+          body: fd,
+          headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
+          credentials: 'same-origin'
+        }).then(resp => resp.json())
+          .then(data => {
+            if(data && data.success){
+              Swal.fire({ title: 'Éxito', text: data.message || 'Operación realizada', icon: 'success', confirmButtonColor: '#3085d6' })
+                .then(()=>{
+                  // on success you may want to redirect or reset the form
+                  if(data.redirect_url){ window.location.href = data.redirect_url; }
+                  else { window.location.reload(); }
+                });
+            } else {
+              Swal.fire({ title: 'Error', text: data && data.message ? data.message : 'Ocurrió un error', icon: 'error', confirmButtonColor: '#d33' });
+            }
+          }).catch(err => {
+            console.error('Submit fetch error', err);
+            Swal.fire({ title: 'Error', text: 'No se pudo enviar el formulario. Intenta de nuevo.', icon: 'error', confirmButtonColor: '#d33' });
+          }).finally(()=>{ if(submitBtn) submitBtn.disabled = false; });
+      });
+    });
+
+    // Utility: combine files from individual inputs into the hidden multiple input
+    function syncImagesToHiddenInput(){
+      try{
+        const dt = new DataTransfer();
+        for(let i=1;i<=5;i++){
+          const inp = document.getElementById(`imagen_${i}`);
+          if(inp && inp.files && inp.files.length>0){
+            // append all files from this input (usually 1)
+            for(let f=0; f<inp.files.length; f++) dt.items.add(inp.files[f]);
           }
         }
-        return false;
-      }
-    
-    // Validación personalizada para imágenes
-    $.validator.addMethod("atLeastOneImage", function(value, element) {
-      return hasAtLeastOneImage();
-    }, "Debes seleccionar al menos una imagen.");
-    
-    // Configuración de validación
-    $("#servicioForm").validate({
-      rules: {
-        nombre_servicio: {
-          required: true,
-          minlength: 2
-        },
-        descripcion_servicio: {
-          required: true,
-          minlength: 10
-        },
-        categoria_servicio: {
-          required: true
-        },
-        imagen_servicio_1: {
-          atLeastOneImage: true
-        }
-      },
-      messages: {
-        nombre_servicio: {
-          required: "Por favor ingresa el nombre del servicio",
-          minlength: "El nombre debe tener al menos 2 caracteres"
-        },
-        descripcion_servicio: {
-          required: "Por favor ingresa la descripción del servicio",
-          minlength: "La descripción debe tener al menos 10 caracteres"
-        },
-        categoria_servicio: {
-          required: "Por favor selecciona una categoría"
-        },
-        imagen_servicio_1: {
-          atLeastOneImage: "Por favor selecciona al menos una imagen"
-        }
-      },
-      errorElement: 'div',
-      errorClass: 'invalid-feedback',
-      validClass: 'is-valid',
-      errorPlacement: function(error, element) {
-        error.addClass('invalid-feedback');
-        element.closest('.form-group').append(error);
-      },
-      highlight: function(element, errorClass, validClass) {
-        $(element).addClass('is-invalid').removeClass('is-valid');
-      },
-      unhighlight: function(element, errorClass, validClass) {
-        $(element).removeClass('is-invalid').addClass('is-valid');
-      }
-    });
-    
-    // Manejo del envío del formulario
-    var form = document.getElementById('servicioForm');
-    if (!form) return;
-    form.addEventListener('submit', function(e) {
-      var nombre = document.getElementById('nombre_servicio').value.trim();
-      var descripcion = document.getElementById('descripcion_servicio').value.trim();
-      var categoria = document.getElementById('categoria_servicio').value;
-      var imagenInput = document.getElementById('imagenes_servicio');
-      let mensaje = '';
-      if (!nombre) mensaje = 'El nombre del servicio es obligatorio.';
-      else if (!categoria) mensaje = 'Debes seleccionar una categoría.';
-      else if (!imagenInput.files || imagenInput.files.length === 0) mensaje = 'Debes seleccionar al menos una imagen para el servicio.';
-      else if (imagenInput.files.length > 5) mensaje = 'Máximo 5 imágenes permitidas.';
-      if (mensaje) {
-        e.preventDefault();
-        Swal.fire({
-          title: 'Validación',
-          text: mensaje,
-          icon: 'warning',
-          confirmButtonColor: '#d33',
-        });
-        return false;
-      }
-    });
-  });
+        const hidden = document.getElementById('imagenes_servicio');
+        if(hidden){ hidden.files = dt.files; }
+      }catch(e){ console.warn('syncImagesToHiddenInput failed', e); }
+    }
   </script>
 
   </body>

@@ -1,0 +1,148 @@
+/* CSS extraído de vista_items.html - estilos para comentarios y responsive */
+
+/* Estilos para sección de comentarios */
+.comments-card {
+  margin-top: 28px; /* separación extra respecto a la imagen */
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.comment-textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: inset 0 1px 3px rgba(16,24,40,0.02);
+  background: linear-gradient(180deg, #ffffff, #fbfbfb);
+  padding: 12px;
+  resize: vertical;
+  min-height: 90px;
+}
+
+.comment-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.08);
+}
+
+#publicar-comentario-btn {
+  min-width: 140px;
+}
+
+#lista-comentarios .list-group-item {
+  border: none;
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+#lista-comentarios .list-group-item:last-child {
+  border-bottom: none;
+}
+
+.comentario-autor {
+  font-size: 0.95rem;
+}
+
+.comentario-texto {
+  white-space: pre-wrap;
+}
+
+/* Mantener estilos existentes que estaban en la plantilla */
+.thumbnail-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.thumbnail-img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+.thumbnail-img:hover,
+.thumbnail-img.active {
+  border-color: #007bff;
+}
+
+.main-image {
+  width: 100%;
+  height: auto;
+  max-height: 60vh; /* no superar altura de pantalla */
+}
+
+.product-info {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 24px;
+}
+
+.price-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.badge-custom {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+}
+
+.characteristic-item {
+  border-bottom: 1px solid #eee;
+  padding: 8px 0;
+}
+
+.characteristic-item:last-child {
+  border-bottom: none;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767.98px) {
+  .thumbnail-container {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: .5rem;
+    overflow-x: auto;
+    padding-bottom: .5rem;
+  }
+
+  .thumbnail-img {
+    width: 64px;
+    height: 64px;
+  }
+
+  .main-image {
+    max-height: 45vh;
+    object-fit: contain;
+  }
+
+  .comments-card {
+    padding: 16px;
+    margin-top: 18px;
+  }
+
+  #publicar-comentario-btn {
+    width: 100%;
+  }
+
+  .product-info {
+    margin-top: 18px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .thumbnail-img {
+    width: 72px;
+    height: 72px;
+  }
+  .main-image {
+    max-height: 50vh;
+    object-fit: cover;
+  }
+}

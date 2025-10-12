@@ -1,5 +1,4 @@
-{% load static %}       
-{% include 'ecommerce_app/barra_superior_operaciones.html' %}
+{% load static %}      
 <!doctype html>
 <html lang="es">
   <head>
@@ -10,92 +9,113 @@
 
     <link rel="stylesheet" href="{% static 'categoria_servicio/fonts/icomoon/style.css' %}">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{% static 'categoria_servicio/css/bootstrap.min.css' %}">
+  <!-- Bootstrap CSS (usar el mismo que categoria_producto para apariencia idéntica) -->
+  <link rel="stylesheet" href="{% static 'categoria_producto/css/bootstrap.min.css' %}">
     
     <!-- Style -->
-    <link rel="stylesheet" href="{% static 'categoria_servicio/css/style.css' %}">
-    <!-- Flatpickr CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="{% static 'categoria_servicio/css/style.css' %}">
+  <!-- Override con estilos de categoria_producto para apariencia idéntica -->
+  <link rel="stylesheet" href="{% static 'categoria_producto/css/style.css' %}">
+  <!-- Flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
     <title>Categoría de Servicios</title>
   </head>
    
   <body>
+  {% include 'ecommerce_app/barra_superior_operaciones.html' %}
   
   <div class="content">
     <div class="container">
       <div class="row align-items-stretch no-gutters contact-wrap">
-        <div class="col-md-8">
+        <div class="col-md-12">
           <div class="form h-100">
-            <h1 class="text-center mb-4" style="color: #0f0f0f; font-weight: 700; letter-spacing: 1px;">CATEGORÍA DE SERVICIOS</h1>
-            <form class="mb-5" method="post" id="categoriaForm" name="categoriaForm" action="">
-                {% csrf_token %}
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="nombre_categoria" class="col-form-label">Nombre de Categoría *</label>
-                  <input type="text" class="form-control" name="nombre_categoria" id="nombre_categoria" placeholder="Ingrese el nombre de la categoría" style="max-width: 300px;">
-                </div>
-              </div>
+            <h1 class="text-center mb-4" style="color: #333; font-weight: 700; letter-spacing: 1px;">CATEGORÍA DE SERVICIOS</h1>
+            <form class="mb-5" method="post" action="{% url 'categoria_servicio' %}" id="categoriaForm" name="categoriaForm">
+              {% csrf_token %}
 
-              <div class="row">
-                <div class="col-md-12 form-group mb-5">
-                  <label for="descripcion_categoria" class="col-form-label">Descripción Categoría</label>
-                  <textarea class="form-control" name="descripcion_categoria" id="descripcion_categoria" cols="30" rows="3" placeholder="Ingrese la descripción de la categoría" style="border: 2px solid #ced4da; border-radius: 0.25rem;"></textarea>
-                </div>
-              </div>
+              <!-- Acordeón: Sección 1 - Información General -->
+              <div class="accordion-section">
+                  <div class="accordion-header">
+                    <div class="accordion-title">
+                      <div class="accordion-icon">🏷️</div>
+                      <span>Información General</span>
+                    </div>
+                    <svg class="accordion-toggle" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chevron-down"></use></svg>
+                  </div>
+                  <div class="accordion-content">
+                    <div class="accordion-body">
+                      <div class="row">
+                        <div class="col-12 form-group mb-3">
+                          <label for="nombre_categoria" class="col-form-label">Nombre de Categoría*</label>
+                          <input type="text" class="form-control input-nombre" name="nombre_categoria" id="nombre_categoria" placeholder="Ingrese el nombre de la categoría">
+                        </div>
+                      </div>
 
-              <div class="row">
-                <div class="col-md-6 form-group mb-5">
-                  <label for="estatus_categoria" class="col-form-label">Estatus Categoría Servicio *</label>
-                  <select class="form-control" name="estatus_categoria" id="estatus_categoria">
-                    <option value="">Seleccione un estatus</option>
-                    <option value="Activo">Activo</option>
-                      <option value="Inactivo">Inactivo</option>
-                  </select>
-                </div>
-                <div class="col-md-6 form-group mb-5">
-                  <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría Servicio *</label>
-                  <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" readonly>
-                </div>
-              </div>
+                      <div class="row">
+                        <div class="col-12 form-group mb-3">
+                          <label for="descripcion_categoria" class="col-form-label">Descripción Categoría</label>
+                          <textarea class="form-control" name="descripcion_categoria" id="descripcion_categoria" cols="30" rows="3" placeholder="Ingrese la descripción de la categoría"></textarea>
+                        </div>
+                      </div>
 
-              <div class="row">
-                <div class="col-md-12 form-group">
-                  <input type="submit" value="Guardar Categoría" class="btn btn-primary rounded-0 py-2 px-4">
-                  <a href="{% url 'categ_servicio_config_funcion' %}" class="btn btn-ver-categorias rounded-0 py-2 px-4 ms-2" style="font-weight:500;">
-                    Ver Categorías
+                      <div class="row">
+                        <div class="col-md-6 col-12 form-group mb-3">
+                          <label for="estatus_categoria" class="col-form-label">Estatus Categoría *</label>
+                          <select class="form-control" name="estatus_categoria" id="estatus_categoria">
+                            <option value="">Seleccione un estatus</option>
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6 col-12 form-group mb-3">
+                          <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría*</label>
+                          <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" disabled>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              <!-- Acordeón: Sección 2 - Atributos -->
+              <!-- Atributos eliminados para la versión de servicio: mantenemos solo Información General -->
+
+              <!-- Botones de Acción (fuera del acordeón) -->
+              <div class="row mt-4">
+                <div class="col-12 form-group">
+                  <button type="submit" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #0077b6, #0096c7) !important; color: #fff; margin-right: 15px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-2" viewBox="0 0 16 16">
+                      <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                    </svg>
+                    Guardar
+                  </button>
+                  <a href="{% url 'categ_servicio_config_funcion' %}" class="btn" style="border-radius: 8px; font-size: 14px; letter-spacing: 0.05rem; text-transform: uppercase; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; height: 42px; min-width: 150px; padding: 0 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: none; background: linear-gradient(135deg, #06d6a0, #018158) !important; color: #fff;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul me-2" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                    </svg>
+                    Ver
                   </a>
                   <span class="submitting"></span>
                 </div>
               </div>
+
             </form>
-
-            <div id="form-message-warning mt-4"></div> 
-            <div id="form-message-success">
-              ¡Categoría guardada exitosamente!
-            </div>
-
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="contact-info h-100" style="position: relative; overflow: hidden; padding: 0; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);">
-            <img src="{% static 'categoria_servicio/images/servicios.jpg' %}" alt="Servicios" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(1.05) contrast(1.05);">
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="{% static 'categoria_servicio/js/jquery-3.3.1.min.js' %}"></script>
-  <script src="{% static 'categoria_servicio/js/popper.min.js' %}"></script>
-  <script src="{% static 'categoria_servicio/js/bootstrap.min.js' %}"></script>
-  <script src="{% static 'categoria_servicio/js/jquery.validate.min.js' %}"></script>
-  <!-- Flatpickr JS -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <!-- Select2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="{% static 'categoria_servicio/js/main.js' %}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <script>
     // Obtener lista de categorías existentes al cargar la página

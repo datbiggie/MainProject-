@@ -1380,3 +1380,48 @@ select.enhanced-input {
         font-size: 0.85rem;
     }
 }
+
+/* ---------- Styles moved from producto_config.html (head <style>) ---------- */
+/* Darker gradient background and container positioning moved from template */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #3498db 50%, #2980b9 75%, #1e3c72 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    position: relative;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.container { position: relative; z-index: 2; }
+
+/* Color para botón 'Asignar por sucursal' en tarjetas de producto (sucursal) */
+.action-btn.btn-assign-branch {
+    background-color: #28a745; /* verde */
+    color: #fff;
+    border: none;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.action-btn.btn-assign-branch i {
+    color: #fff;
+}
+.action-btn.btn-assign-branch:hover,
+.action-btn.btn-assign-branch:focus {
+    background-color: #218838; /* verde oscuro en hover */
+    color: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40,167,69,0.15);
+}
+
+/* End moved styles */

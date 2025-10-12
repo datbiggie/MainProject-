@@ -158,3 +158,71 @@ label.error {
   font-weight: bold;
   font-size: 12px;
   color: #000; }
+
+/* Accordion styles (copied from categoria_producto for parity) */
+.accordion-section {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #ffffff, #f7fbff);
+  cursor: pointer;
+}
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+.accordion-icon {
+  font-size: 1.2em;
+}
+.accordion-content {
+  max-height: 0;
+  transition: max-height 0.32s ease, padding 0.2s ease;
+  padding: 0 16px;
+}
+.accordion-section.active .accordion-content {
+  padding: 16px;
+  max-height: 2000px; /* sufficiently large for content */
+}
+.accordion-toggle {
+  transform: rotate(0deg);
+  transition: transform 0.25s ease;
+}
+.accordion-section.active .accordion-toggle {
+  transform: rotate(180deg);
+}
+
+/* Remove right-side divider/column for producto page: hide any leftover contact-info or col-md-4 inside contact-wrap */
+.contact-wrap > .col-md-4,
+.contact-wrap .contact-info {
+  display: none !important;
+}
+
+/* Optional: ensure the form column uses full width when right column hidden */
+.contact-wrap > .col-md-8 {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+/* Match container sizing used by categoria_producto */
+.contact-wrap {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 900px; /* ancho máximo para pantallas grandes */
+}
+
+@media (min-width: 992px) {
+  .contact-wrap {
+    max-width: 800px;
+  }
+}

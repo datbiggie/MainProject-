@@ -124,6 +124,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <button class="action-btn btn-delete" data-id="${productoId}" data-nombre="${productoNombre}" data-user-type="${userType}" data-tooltip="Eliminar producto">
                                     <i class="lni lni-trash-can"></i>
                                 </button>
+                                <button class="action-btn btn-assign-branch" data-id="${productoId}" data-nombre="${productoNombre}" data-user-type="${userType}" data-tooltip="Asignar por sucursal">
+                                    <i class="lni lni-map-marker"></i>
+                                </button>
                             </div>
                         </div>
                     </div>`;

@@ -963,6 +963,10 @@ $(document).ready(function() {
         $('#selectProducto').html('<option value="">Cargando productos...</option>');
         $('#inputStock').val('');
         $('#inputPrecio').val('');
+        // Limpiar y reiniciar campos de presentación
+        $('#selectUnidadPresentacionSucursal').val('unidad');
+        $('#inputCantidadPresentacionSucursal').val('');
+        toggleCantidadPresentacionSucursal();
 
         // AJAX para obtener productos disponibles
         $.ajax({
@@ -987,6 +991,34 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Toggle para mostrar/ocultar campo cantidad por presentación en el modal de sucursal
+    function toggleCantidadPresentacionSucursal() {
+        try{
+            var sel = document.getElementById('selectUnidadPresentacionSucursal');
+            var cantidadEl = document.getElementById('inputCantidadPresentacionSucursal');
+            if(!sel || !cantidadEl) return;
+            // buscar wrapper visual (columna) para esconder
+            var wrapper = cantidadEl.closest('.col-md-6') || cantidadEl.closest('.form-group') || cantidadEl.parentElement;
+            if(sel.value === 'unidad'){
+                if(wrapper) wrapper.style.display = 'none';
+                cantidadEl.value = '';
+                cantidadEl.disabled = true;
+            } else {
+                if(wrapper) wrapper.style.display = '';
+                cantidadEl.disabled = false;
+            }
+        }catch(e){ console.warn('toggleCantidadPresentacionSucursal error', e); }
+    }
+
+    // Attach listeners: DOM change + jQuery (por compatibilidad con plugins)
+    $(document).on('change', '#selectUnidadPresentacionSucursal', function(){ toggleCantidadPresentacionSucursal(); });
+    try{ if(typeof window.jQuery !== 'undefined'){
+        $('#selectUnidadPresentacionSucursal').on('select2:select select2:unselect', function(){ toggleCantidadPresentacionSucursal(); });
+    }}catch(e){}
+
+    // Inicializar el estado al cargar la página
+    try{ toggleCantidadPresentacionSucursal(); }catch(e){}
     
     // Evento para abrir el modal de servicios de sucursal
     $(document).on('click', '.servicios-sucursal', function() {
@@ -1089,8 +1121,10 @@ $(document).ready(function() {
                 producto_id: productoId,
                 servicio_id: '',
                 stock: stock,
-                precio: precio,
+                precio: saprecio,
                 estatus_producto_sucursal: estatusProducto,
+                unidad_presentacion_producto_sucursal: $('#selectUnidadPresentacionSucursal').val(),
+                cantidad_por_presentacion_producto_sucursal: $('#inputCantidadPresentacionSucursal').val(),
                 csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
             },
             success: function(response) {

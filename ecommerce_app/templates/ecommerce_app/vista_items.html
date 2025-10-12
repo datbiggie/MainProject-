@@ -15,74 +15,11 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
-    
-    <!-- SweetAlert2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    
-    <style>
-      .thumbnail-container {
-        max-height: 400px;
-        overflow-y: auto;
-      }
-      
-      .thumbnail-img {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        cursor: pointer;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        transition: border-color 0.3s ease;
-      }
-      
-      .thumbnail-img:hover,
-      .thumbnail-img.active {
-        border-color: #007bff;
-      }
-      
-      .main-image {
-        width: 100%;
-        max-width: 500px;
-        height: 400px;
-        object-fit: cover;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      }
-      
-      .product-info {
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        padding: 24px;
-      }
-      
-      .price-section {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 20px;
-      }
-      
-      .badge-custom {
-        font-size: 0.85rem;
-        padding: 6px 12px;
-      }
-      
-      .characteristic-item {
-        border-bottom: 1px solid #eee;
-        padding: 8px 0;
-      }
-      
-      .characteristic-item:last-child {
-        border-bottom: none;
-      }
-    </style>
+  <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'ecommerce_app/css/vista_items.css' %}">
   </head>
   <body>
-
-{% include 'ecommerce_app/barra_superior_index.html' %}
-
+    {% include 'ecommerce_app/barra_superior_index.html' %}
 <div class="container-lg py-4">
   {% if error %}
   <div class="text-center py-5">
@@ -136,6 +73,32 @@
             </div>
           </div>
         </div>
+
+        <!-- Sección de comentarios (debajo de la imagen principal) -->
+        <div class="row mt-3">
+          <div class="col-12">
+          <div class="card p-3 comments-card">
+              <h6 class="fw-bold mb-3"><i class="fas fa-comments text-secondary me-2"></i>Comentarios</h6>
+
+              <!-- Formulario para publicar comentario -->
+              <div class="d-flex align-items-start gap-2 mb-3">
+                <img src="{% static 'avatars/Cartoon Style Robot.jpg' %}" alt="avatar" style="width:48px;height:48px;object-fit:cover;border-radius:50%;">
+                <div class="flex-grow-1">
+                  <textarea id="comentario-input" class="form-control comment-textarea" rows="3" placeholder="Escribe tu comentario..." maxlength="1000"></textarea>
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small id="comentario-counter" class="text-muted">0/1000</small>
+                    <button id="publicar-comentario-btn" class="btn btn-primary">Publicar comentario</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lista de comentarios (se cargará dinámicamente) -->
+              <div id="lista-comentarios" class="list-group">
+                <!-- Comentarios existentes vendrán desde el servidor eventualmente -->
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Información del producto/servicio -->
@@ -169,7 +132,18 @@
                   {% if item.sucursal.stock %}
                     <div class="col-6">
                       <small class="text-muted">Stock disponible:</small>
-                      <div class="fw-semibold">{{ item.sucursal.stock }} unidades</div>
+                      <div class="fw-semibold">
+                        {% comment %} Mostrar presentación: si unidad -> 'X unidades', si otra unidad y cantidad_por_presentacion -> 'X [presentación] (cada [presentación] = Y unidades)' {% endcomment %}
+                        {% if item.sucursal.unidad_presentacion and item.sucursal.unidad_presentacion != 'unidad' %}
+                          {% if item.sucursal.cantidad_por_presentacion %}
+                            {{ item.sucursal.stock }} {{ item.sucursal.unidad_presentacion }} (cada {{ item.sucursal.unidad_presentacion }} = {{ item.sucursal.cantidad_por_presentacion }} unidades)
+                          {% else %}
+                            {{ item.sucursal.stock }} {{ item.sucursal.unidad_presentacion }}
+                          {% endif %}
+                        {% else %}
+                          {{ item.sucursal.stock }} unidades
+                        {% endif %}
+                      </div>
                       <!-- Input de cantidad -->
                       <div class="mt-3 mb-3">
                         <label for="cantidad" class="form-label fw-bold small mb-1">Cantidad</label>
@@ -269,6 +243,8 @@
             </div>
           {% endif %}
 
+          
+
           <!-- Botones de acción solo para servicios -->
           {% if item.tipo == 'servicio' %}
             {% if item.tipo_propietario == 'empresa' and item.sucursal and item.sucursal.id_servicio_fk %}
@@ -315,309 +291,23 @@
   {% endif %}
 </div>
 
-<script>
-  function changeMainImage(imageSrc, thumbnailElement) {
-    // Cambiar imagen principal
-    document.getElementById('mainImage').src = imageSrc;
+    <script>
+      // Inyectar configuración mínima para JS externo
+      window.csrfToken = '{{ csrf_token }}';
+      window.vistaItemsConfig = {
+        agregarAlCarritoUrl: '{% url "agregar_al_carrito" %}',
+        agregarFavoritoUrl: '{% url "agregar_quitar_favorito" %}',
+        iniciarSesionUrl: '{% url "iniciar_sesion" %}'
+      };
+    </script>
+    <script src="{% static 'ecommerce_app/js/vista_items_page.js' %}"></script>
+
     
-    // Remover clase active de todos los thumbnails
-    document.querySelectorAll('.thumbnail-img').forEach(img => {
-      img.classList.remove('active');
-    });
-    
-    // Agregar clase active al thumbnail seleccionado
-    thumbnailElement.classList.add('active');
-  }
-
-  function agregarAlCarrito(productoId, tipoPropietario) {
-    // Crear objeto con los datos del producto
-    const data = {
-      producto_id: productoId,
-      tipo_propietario: tipoPropietario,
-      csrfmiddlewaretoken: '{{ csrf_token }}'
-    };
-
-    // Realizar petición AJAX
-    fetch('{% url "agregar_al_carrito" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
-      body: new URLSearchParams(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        Swal.fire({
-          title: '¡Éxito!',
-          text: data.message,
-          icon: 'success',
-          confirmButtonText: 'Continuar',
-          confirmButtonColor: '#10b981'
-        });
-      } else {
-        if (data.message === 'Usuario no autenticado') {
-          Swal.fire({
-            title: 'Sesión requerida',
-            text: 'Debes iniciar sesión para agregar productos al carrito',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Iniciar sesión',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#3b82f6'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              window.location.href = '{% url "iniciar_sesion" %}';
-            }
-          });
-        } else if (data.stock_insuficiente) {
-          // Manejar específicamente errores de stock insuficiente
-          Swal.fire({
-            title: 'Stock insuficiente',
-            text: data.message,
-            icon: 'warning',
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#f59e0b'
-          });
-        } else {
-          Swal.fire({
-            title: 'Error',
-            text: data.message,
-            icon: 'error',
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#ef4444'
-          });
-        }
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Ocurrió un error al agregar el producto al carrito',
-        icon: 'error',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#ef4444'
-      });
-    });
-  }
-
-  function solicitarServicio(itemId, tipoPropietario) {
-    // Redirigir al formulario de solicitud de servicio
-  const url = `/ecommerce/solicitud_servicio/?servicio_id=${itemId}&tipo_propietario=${tipoPropietario}`;
-    window.location.href = url;
-  }
-
-  // Funciones para manejar la cantidad
-  function incrementarCantidad() {
-    const cantidadInput = document.getElementById('cantidad');
-    const maxStock = parseInt(cantidadInput.getAttribute('max'));
-    const currentValue = parseInt(cantidadInput.value);
-    
-    if (currentValue < maxStock) {
-      cantidadInput.value = currentValue + 1;
-    } else {
-      // Mostrar mensaje cuando se alcanza el límite de stock
-      Swal.fire({
-        title: 'Límite de stock alcanzado',
-        text: `No puedes agregar más unidades. Stock disponible: ${maxStock} unidades`,
-        icon: 'info',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#3085d6',
-        timer: 3000,
-        timerProgressBar: true
-      });
-    }
-  }
-
-  function decrementarCantidad() {
-    const cantidadInput = document.getElementById('cantidad');
-    const currentValue = parseInt(cantidadInput.value);
-    
-    if (currentValue > 1) {
-      cantidadInput.value = currentValue - 1;
-    }
-  }
-
-  // Función para agregar al carrito con cantidad
-  function agregarAlCarritoConCantidad(productoId, tipoPropietario) {
-    const cantidadInput = document.getElementById('cantidad');
-    const cantidad = cantidadInput ? parseInt(cantidadInput.value) : 1;
-    const stockDisponible = cantidadInput ? parseInt(cantidadInput.getAttribute('max')) : 999;
-    
-    // Validar que la cantidad no exceda el stock disponible
-    if (cantidad > stockDisponible) {
-      Swal.fire({
-        title: 'Cantidad no disponible',
-        text: `La cantidad solicitada (${cantidad}) excede el stock disponible (${stockDisponible} unidades)`,
-        icon: 'warning',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#f59e0b'
-      });
-      return;
-    }
-    
-    // Crear objeto con los datos del producto incluyendo cantidad
-    const data = {
-      producto_id: productoId,
-      tipo_propietario: tipoPropietario,
-      cantidad: cantidad,
-      csrfmiddlewaretoken: '{{ csrf_token }}'
-    };
-
-    // Realizar petición AJAX
-    fetch('{% url "agregar_al_carrito" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
-      body: new URLSearchParams(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        Swal.fire({
-          title: '¡Éxito!',
-          text: data.message,
-          icon: 'success',
-          confirmButtonText: 'Continuar',
-          confirmButtonColor: '#10b981'
-        });
-      } else {
-        if (data.message === 'Usuario no autenticado') {
-          Swal.fire({
-            title: 'Sesión requerida',
-            text: 'Debes iniciar sesión para agregar productos al carrito',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Iniciar sesión',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#3b82f6'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              window.location.href = '{% url "iniciar_sesion" %}';
-            }
-          });
-        } else if (data.stock_insuficiente) {
-          // Manejar específicamente errores de stock insuficiente
-          Swal.fire({
-            title: 'Stock insuficiente',
-            text: data.message,
-            icon: 'warning',
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#f59e0b'
-          });
-        } else {
-          Swal.fire({
-            title: 'Error',
-            text: data.message,
-            icon: 'error',
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#ef4444'
-          });
-        }
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Ocurrió un error al agregar el producto al carrito',
-        icon: 'error',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#ef4444'
-      });
-    });
-  }
-
-  // Función para agregar a favoritos
-  function agregarAFavoritos(itemId, tipoPropietario) {
-    // Determinar el tipo de item basado en la URL actual
-    const tipoItem = window.location.href.includes('tipo=servicio') ? 'servicio' : 'producto';
-    
-    const data = {
-      item_id: itemId,
-      tipo_propietario: tipoPropietario,
-      tipo_item: tipoItem
-    };
-
-    fetch('{% url "agregar_quitar_favorito" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
-      body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const icon = data.action === 'added' ? 'success' : 'info';
-        const title = data.action === 'added' ? '¡Agregado a favoritos!' : 'Eliminado de favoritos';
-        
-        Swal.fire({
-          title: title,
-          text: data.message,
-          icon: icon,
-          confirmButtonText: 'Continuar',
-          confirmButtonColor: '#10b981'
-        });
-        
-        // Actualizar el botón visualmente
-        const botonFavorito = document.querySelector(`button[onclick*="agregarAFavoritos('${itemId}', '${tipoPropietario}')"]`);
-        if (botonFavorito) {
-          const icono = botonFavorito.querySelector('i');
-          if (data.action === 'added') {
-            icono.style.color = '#ef4444';
-            botonFavorito.innerHTML = '<i class="fas fa-heart me-1" style="color: #ef4444;"></i>Quitar de favoritos';
-          } else {
-            icono.style.color = '';
-            botonFavorito.innerHTML = '<i class="fas fa-heart me-1"></i>Agregar a favoritos';
-          }
-        }
-      } else {
-        if (data.message === 'Debes iniciar sesión para agregar favoritos') {
-          Swal.fire({
-            title: 'Sesión requerida',
-            text: 'Debes iniciar sesión para agregar productos a favoritos',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Iniciar sesión',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#3b82f6'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              window.location.href = '{% url "iniciar_sesion" %}';
-            }
-          });
-        } else {
-          Swal.fire({
-            title: 'Error',
-            text: data.message,
-            icon: 'error',
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#ef4444'
-          });
-        }
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Ocurrió un error al procesar la solicitud',
-        icon: 'error',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#ef4444'
-      });
-    });
-  }
-</script>
 
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+<script>window.csrfToken = '{{ csrf_token }}';</script>
+<script src="{% static 'ecommerce_app/js/vista_items.js' %}"></script>
 </body>
 </html>

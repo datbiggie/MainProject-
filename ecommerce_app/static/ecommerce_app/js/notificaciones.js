@@ -22,7 +22,10 @@ function redirectToNotification(notificationElement) {
         tipo === 'servicio_aceptado' || tipo === 'servicio_completado') {
         // Actualizaciones de tus propias solicitudes -> ir a gestión de servicios
         redirectUrl = '/ecommerce/gestion_servicio/';
-    } else if (tipo === 'pedido_confirmado' || tipo === 'nuevo_pedido' || tipo === 'pago') {
+    } else if (tipo === 'pedido_confirmado') {
+        // Para notificaciones de pedido confirmado llevar siempre a la vista de pedidos confirmados
+        redirectUrl = '/ecommerce/pedidos_confirmados/';
+    } else if (tipo === 'nuevo_pedido' || tipo === 'pago') {
         if (pedidoId) {
             // Redireccionar a mis pedidos o mis ventas según el tipo de usuario
             if (window.accountType === 'empresa') {

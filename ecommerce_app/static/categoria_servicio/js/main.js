@@ -42,17 +42,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Inicializar flatpickr con configuración mejorada
-// Fecha de hoy por defecto y deshabilitado
-document.addEventListener('DOMContentLoaded', function() {
-  var fechaInput = document.getElementById('fecha_creacion');
-  if (fechaInput) {
-    var today = new Date();
-    var day = String(today.getDate()).padStart(2, '0');
-    var month = String(today.getMonth() + 1).padStart(2, '0');
-    var year = today.getFullYear();
-    fechaInput.value = day + '/' + month + '/' + year;
-  }
+// Inicializar flatpickr para #fecha_creacion con configuración similar a categoria_producto
+document.addEventListener('DOMContentLoaded', function () {
+        var fechaInput = document.getElementById('fecha_creacion');
+        if (fechaInput && typeof flatpickr !== 'undefined') {
+            flatpickr(fechaInput, {
+                dateFormat: "d/m/Y",
+                locale: "es",
+                altInput: true,
+                altFormat: "d/m/Y",
+                disableMobile: true,
+                minDate: "today",
+                maxDate: new Date().fp_incr(365),
+                defaultDate: "today"
+            });
+        } else if (fechaInput) {
+            // Fallback simple: asignar fecha de hoy si flatpickr no está disponible
+            var today = new Date();
+            var day = String(today.getDate()).padStart(2, '0');
+            var month = String(today.getMonth() + 1).padStart(2, '0');
+            var year = today.getFullYear();
+            fechaInput.value = day + '/' + month + '/' + year;
+        }
 });
 
 // Esperar a que el documento esté listo
@@ -118,13 +129,22 @@ $(document).ready(function() {
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
                     }).then(() => {
-                        // Foco automático según el mensaje de error
+                        // Foco automático según el mensaje de error y abrir la sección correspondiente
+                        var fieldToFocus = null;
                         if (response.message && response.message.toLowerCase().includes('nombre')) {
-                            $('#nombre_categoria').focus();
+                            fieldToFocus = $('#nombre_categoria');
                         } else if (response.message && response.message.toLowerCase().includes('estatus')) {
-                            $('#estatus_categoria').focus();
+                            fieldToFocus = $('#estatus_categoria');
                         } else if (response.message && response.message.toLowerCase().includes('descrip')) {
-                            $('#descripcion_categoria').focus();
+                            fieldToFocus = $('#descripcion_categoria');
+                        }
+
+                        if (fieldToFocus && fieldToFocus.length) {
+                            const section = fieldToFocus.closest('.accordion-section');
+                            if (section.length && !section.hasClass('active')) {
+                                section.find('.accordion-header').click();
+                            }
+                            setTimeout(() => fieldToFocus.focus(), 300); // pequeño delay para asegurar que la sección se abra
                         }
                     });
                 }
@@ -148,3 +168,22 @@ $(document).ready(function() {
         return false;
     });
 });
+
+    // ----- Comportamiento del acordeón para categoria_servicio -----
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cuando se hace clic en el header de una sección, alternar su estado
+        document.querySelectorAll('.accordion-header').forEach(function(header) {
+            header.addEventListener('click', function() {
+                var section = header.closest('.accordion-section');
+                var isActive = section.classList.contains('active');
+
+                // Cerrar todas las secciones
+                document.querySelectorAll('.accordion-section').forEach(function(s) {
+                    s.classList.remove('active');
+                });
+
+                // Si no estaba activa, abrirla
+                if (!isActive) section.classList.add('active');
+            });
+        });
+    });

@@ -141,12 +141,24 @@ def guardar_producto_servicio_sucursal(request):
                 if producto_sucursal.objects.filter(id_sucursal_fk=sucursal_obj, id_producto_fk=producto_obj).exists():
                     return JsonResponse({'success': False, 'message': 'Este producto ya está asociado a esta sucursal'})
                 
-                # Crear la relación producto-sucursal con el estatus y condición seleccionados
+                # Leer nuevos campos de presentación
+                unidad_presentacion = request.POST.get('unidad_presentacion_producto_sucursal', 'unidad')
+                cantidad_por_presentacion = request.POST.get('cantidad_por_presentacion_producto_sucursal', None)
+                try:
+                    cantidad_por_presentacion = int(cantidad_por_presentacion) if cantidad_por_presentacion else None
+                    if cantidad_por_presentacion is not None and cantidad_por_presentacion <= 0:
+                        cantidad_por_presentacion = None
+                except (ValueError, TypeError):
+                    cantidad_por_presentacion = None
+
+                # Crear la relación producto-sucursal con el estatus, condición y presentación seleccionados
                 producto_sucursal.objects.create(
                     stock_producto_sucursal=stock,
                     precio_producto_sucursal=precio,
                     estatus_producto_sucursal=estatus_producto_sucursal,
                     condicion_producto_sucursal=condicion_producto_sucursal,
+                    unidad_presentacion_producto_sucursal=unidad_presentacion,
+                    cantidad_por_presentacion_producto_sucursal=cantidad_por_presentacion,
                     id_sucursal_fk=sucursal_obj,
                     id_producto_fk=producto_obj
                 )
@@ -1539,7 +1551,11 @@ def producto_funcion(request):
             'tipo': current_user.rol_usuario,
             'is_authenticated': True
         }
-        categoria_producto_all = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
+        # Mostrar SOLO categorías definidas en la tabla de usuario: aquellas propias
+        # del usuario y las marcadas como genéricas (generico='s'). No incluir categorias de empresa.
+        categoria_producto_all = categoria_producto_usuario.objects.filter(
+            Q(id_usuario_fk=current_user) | Q(generico='s')
+        ).order_by('nombre_categoria_prod_usuario')
 
     if request.method == 'POST':
         try:
@@ -1598,7 +1614,31 @@ def producto_funcion(request):
                 procesar_atributos_producto(request, nuevo_producto, None, account_type)
                 
             else:
-                categoria_producto_consul = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
+                # Intentar buscar la categoría en las categorías de usuario;
+                # si no existe, podría tratarse de una categoría genérica de empresa, probar ahí.
+                try:
+                    categoria_producto_consul = categoria_producto_usuario.objects.get(id_categoria_prod_usuario=categoria_id)
+                except categoria_producto_usuario.DoesNotExist:
+                    # Si no existe como categoría de usuario, intentar buscar en categorías de empresa (genéricas)
+                    try:
+                        categoria_empresa_obj = categoria_producto_empresa.objects.get(id_categoria_prod_empresa=categoria_id)
+                        # Buscar si el usuario ya tiene una categoría con el mismo nombre
+                        categoria_usuario_obj = categoria_producto_usuario.objects.filter(
+                            nombre_categoria_prod_usuario__iexact=categoria_empresa_obj.nombre_categoria_prod_empresa,
+                            id_usuario_fk=current_user
+                        ).first()
+                        if not categoria_usuario_obj:
+                            # Crear una categoría de usuario basada en la genérica de empresa
+                            categoria_usuario_obj = categoria_producto_usuario.objects.create(
+                                nombre_categoria_prod_usuario=categoria_empresa_obj.nombre_categoria_prod_empresa,
+                                descripcion_categoria_prod_usuario=categoria_empresa_obj.descripcion_categoria_prod_empresa,
+                                generico='n',
+                                estatus_categoria_prod_usuario=categoria_empresa_obj.estatus_categoria_prod_empresa,
+                                id_usuario_fk=current_user
+                            )
+                        categoria_producto_consul = categoria_usuario_obj
+                    except categoria_producto_empresa.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'La categoría seleccionada no existe.', 'field': 'categoria'})
                 
                 # Obtener los campos adicionales para usuario
                 stock_producto = request.POST.get('stock_producto_usuario', 0)
@@ -1609,6 +1649,27 @@ def producto_funcion(request):
                 # Obtener los campos de ubicación (latitud y longitud)
                 latitud_entrega = request.POST.get('latitud_entrega_producto', None)
                 longitud_entrega = request.POST.get('longitud_entrega_producto', None)
+                # Nuevos campos: presentacin
+                unidad_presentacion = request.POST.get('unidad_presentacion_producto_usuario', 'unidad')
+                cantidad_por_presentacion = request.POST.get('cantidad_por_presentacion_producto_usuario', None)
+
+                # Validar/convetir cantidad si viene
+                if cantidad_por_presentacion:
+                    try:
+                        cantidad_por_presentacion = int(cantidad_por_presentacion)
+                        if cantidad_por_presentacion <= 0:
+                            cantidad_por_presentacion = None
+                    except (ValueError, TypeError):
+                        cantidad_por_presentacion = None
+
+                # Si la unidad es 'unidad', entonces no usamos cantidad_por_presentacion
+                if unidad_presentacion == 'unidad':
+                    cantidad_por_presentacion = None
+                else:
+                    # si no es 'unidad', podemos requerir la cantidad (opcional según policy)
+                    if cantidad_por_presentacion is None:
+                        # Si no se proporcionó cantidad válida, devolver error
+                        return JsonResponse({'success': False, 'message': 'Si la presentación no es "Unidad", debe indicar la cantidad por presentación (ej.: 6 por paquete).'} )
                 
                 # Validar y convertir latitud y longitud si están presentes
                 if latitud_entrega:
@@ -1634,6 +1695,8 @@ def producto_funcion(request):
                     estatus_producto_usuario=estatus_producto,
                     latitud_entrega_producto=latitud_entrega,
                     longitud_entrega_producto=longitud_entrega,
+                    unidad_presentacion_producto_usuario=unidad_presentacion,
+                    cantidad_por_presentacion_producto_usuario=cantidad_por_presentacion,
                     id_usuario_fk=current_user,
                     id_categoria_prod_fk=categoria_producto_consul
                 )
@@ -2720,24 +2783,40 @@ def obtener_atributos_categoria(request):
                     'message': 'Usuario no autenticado'
                 })
             
-            account_type = request.session.get('account_type', 'usuario')
+            # We no longer rely on session account_type to locate attributes because
+            # the product category select can contain mixed categories (empresa + usuario).
+            # Try to detect the category object first in empresa table, then in usuario.
             id_categoria = request.GET.get('id_categoria')
-            
+
             if not id_categoria:
                 return JsonResponse({
                     'success': False,
                     'message': 'ID de categoría requerido'
                 })
-            
-            # Obtener atributos según el tipo de cuenta
+
+            logger.info(f"obtener_atributos_categoria called with id_categoria={id_categoria} by user={getattr(current_user, 'id_usuario', getattr(current_user, 'id_empresa', None))}")
+
             atributos = []
-            
-            if account_type == 'empresa':
-                # Obtener atributos asociados a la categoría de empresa
+
+            # If frontend provides explicit tipo (empresa|usuario), prefer it to avoid ambiguity
+            tipo_param = request.GET.get('tipo')
+            if tipo_param:
+                logger.info(f"Tipo param recibido: {tipo_param}")
+
+            # Try empresa category first (or only if tipo indicates empresa)
+            categoria_empresa_obj = None
+            try:
+                if not tipo_param or tipo_param == 'empresa':
+                    categoria_empresa_obj = categoria_producto_empresa.objects.filter(id_categoria_prod_empresa=id_categoria).first()
+            except Exception:
+                categoria_empresa_obj = None
+
+            if categoria_empresa_obj:
+                logger.info(f"Categoria encontrada en empresa: id={categoria_empresa_obj.id_categoria_prod_empresa}")
                 categoria_atributos = CategoriaAtributo.objects.filter(
-                    categoria_empresa_id=id_categoria
+                    categoria_empresa=categoria_empresa_obj
                 ).select_related('atributo')
-                
+
                 for cat_attr in categoria_atributos:
                     atributos.append({
                         'id_categoria_atributo': cat_attr.id_categoria_atributo,
@@ -2750,22 +2829,41 @@ def obtener_atributos_categoria(request):
                         'orden': cat_attr.orden
                     })
             else:
-                # Obtener atributos asociados a la categoría de usuario
-                categoria_atributos = CategoriaAtributo.objects.filter(
-                    categoria_usuario_id=id_categoria
-                ).select_related('atributo')
-                
-                for cat_attr in categoria_atributos:
-                    atributos.append({
-                        'id_categoria_atributo': cat_attr.id_categoria_atributo,
-                        'id_atributo': cat_attr.atributo.id_atributo,
-                        'nombre': cat_attr.atributo.nombre,
-                        'tipo_dato': cat_attr.atributo.tipo_dato,
-                        'obligatorio': cat_attr.atributo.obligatorio,
-                        'descripcion': cat_attr.atributo.descripcion,
-                        'opciones': cat_attr.atributo.opciones,
-                        'orden': cat_attr.orden
+                logger.info(f"Categoria no encontrada en empresa, buscando en usuario con id {id_categoria}")
+                # Fallback to usuario category (or only if tipo indicates usuario)
+                categoria_usuario_obj = None
+                try:
+                    if not tipo_param or tipo_param == 'usuario':
+                        categoria_usuario_obj = categoria_producto_usuario.objects.filter(id_categoria_prod_usuario=id_categoria).first()
+                except Exception:
+                    categoria_usuario_obj = None
+
+                if categoria_usuario_obj:
+                    logger.info(f"Categoria encontrada en usuario: id={categoria_usuario_obj.id_categoria_prod_usuario}")
+                    categoria_atributos = CategoriaAtributo.objects.filter(
+                        categoria_usuario=categoria_usuario_obj
+                    ).select_related('atributo')
+
+                    for cat_attr in categoria_atributos:
+                        atributos.append({
+                            'id_categoria_atributo': cat_attr.id_categoria_atributo,
+                            'id_atributo': cat_attr.atributo.id_atributo,
+                            'nombre': cat_attr.atributo.nombre,
+                            'tipo_dato': cat_attr.atributo.tipo_dato,
+                            'obligatorio': cat_attr.atributo.obligatorio,
+                            'descripcion': cat_attr.atributo.descripcion,
+                            'opciones': cat_attr.atributo.opciones,
+                            'orden': cat_attr.orden
+                        })
+                else:
+                    # No category object found — log and return empty list (compatible with callers)
+                    logger.info(f"No se encontró categoría con id={id_categoria} en ninguna tabla")
+                    return JsonResponse({
+                        'success': True,
+                        'atributos': []
                     })
+
+            logger.info(f"Retornando {len(atributos)} atributos para categoria id={id_categoria}")
             
             # Ordenar atributos por orden
             atributos.sort(key=lambda x: x['orden'] if x['orden'] else 999)
@@ -3021,7 +3119,10 @@ def producto_config_funcion(request):
         productos_all = producto_empresa.objects.filter(id_empresa_fk=empresa_obj)
         # También obtenemos las relaciones producto_sucursal para tener acceso al estatus
         producto_sucursal_all = producto_sucursal.objects.select_related('id_producto_fk').filter(id_producto_fk__id_empresa_fk=empresa_obj)
-        categoria_producto_all = categoria_producto_empresa.objects.filter(id_empresa_fk=empresa_obj)
+        # Incluir categorías propias de la empresa y categorías genéricas (generico='s')
+        categoria_producto_all = categoria_producto_empresa.objects.filter(
+            Q(id_empresa_fk=empresa_obj) | Q(generico='s')
+        )
         
         # Calcular estadísticas de productos para empresa
         # Para empresas, contamos productos únicos que tienen al menos una sucursal con ese estatus
@@ -3055,7 +3156,10 @@ def producto_config_funcion(request):
         # Obtenemos los productos del usuario actual
         productos_all = producto_usuario.objects.filter(id_usuario_fk=current_user)
         producto_sucursal_all = []  # Los usuarios no tienen sucursales
-        categoria_producto_all = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
+        # Incluir categorías propias del usuario y categorías genéricas (generico='s')
+        categoria_producto_all = categoria_producto_usuario.objects.filter(
+            Q(id_usuario_fk=current_user) | Q(generico='s')
+        )
         
         # Calcular estadísticas de productos
         total_productos = productos_all.count()
@@ -4939,7 +5043,9 @@ def vista_items(request):
                         'precio': producto_sucursal_obj.precio_producto_sucursal,
                         'stock': producto_sucursal_obj.stock_producto_sucursal,
                         'condicion': producto_sucursal_obj.condicion_producto_sucursal,
-                        'estatus': producto_sucursal_obj.estatus_producto_sucursal
+                        'estatus': producto_sucursal_obj.estatus_producto_sucursal,
+                        'unidad_presentacion': getattr(producto_sucursal_obj, 'unidad_presentacion_producto_sucursal', 'unidad'),
+                        'cantidad_por_presentacion': getattr(producto_sucursal_obj, 'cantidad_por_presentacion_producto_sucursal', None)
                     }
                     
                     item_data = {
@@ -4973,7 +5079,9 @@ def vista_items(request):
                                 'precio': producto_sucursal_obj.precio_producto_sucursal,
                                 'stock': producto_sucursal_obj.stock_producto_sucursal,
                                 'condicion': producto_sucursal_obj.condicion_producto_sucursal,
-                                'estatus': producto_sucursal_obj.estatus_producto_sucursal
+                                'estatus': producto_sucursal_obj.estatus_producto_sucursal,
+                                'unidad_presentacion': getattr(producto_sucursal_obj, 'unidad_presentacion_producto_sucursal', 'unidad'),
+                                'cantidad_por_presentacion': getattr(producto_sucursal_obj, 'cantidad_por_presentacion_producto_sucursal', None)
                             }
                         
                         # Solo permitir agregar al carrito si existe producto_sucursal
@@ -5012,7 +5120,9 @@ def vista_items(request):
                         'precio': producto.precio_producto_usuario,
                         'stock': producto.stock_producto_usuario,
                         'condicion': producto.condicion_producto_usuario,
-                        'estatus': producto.estatus_producto_usuario
+                        'estatus': producto.estatus_producto_usuario,
+                        'unidad_presentacion': getattr(producto, 'unidad_presentacion_producto_usuario', 'unidad'),
+                        'cantidad_por_presentacion': getattr(producto, 'cantidad_por_presentacion_producto_usuario', None)
                     }
                     
                     item_data = {
@@ -6286,10 +6396,25 @@ def agregar_al_carrito(request):
                 'message': 'Usuario no encontrado'
             }, status=404)
         
-        # Obtener datos del request
-        producto_id = request.POST.get('producto_id')
-        tipo_producto = request.POST.get('tipo_propietario')  # 'empresa' o 'usuario'
-        cantidad = int(request.POST.get('cantidad', 1))
+        # Obtener datos del request (soportar JSON o form-encoded)
+        producto_id = None
+        tipo_producto = None
+        cantidad = 1
+        if request.content_type == 'application/json':
+            try:
+                payload = json.loads(request.body)
+                producto_id = payload.get('producto_id')
+                tipo_producto = payload.get('tipo_propietario')  # 'empresa' o 'usuario'
+                cantidad = int(payload.get('cantidad', 1) or 1)
+            except Exception:
+                # Fall back to POST parsing below
+                producto_id = request.POST.get('producto_id')
+                tipo_producto = request.POST.get('tipo_propietario')
+                cantidad = int(request.POST.get('cantidad', 1))
+        else:
+            producto_id = request.POST.get('producto_id')
+            tipo_producto = request.POST.get('tipo_propietario')  # 'empresa' o 'usuario'
+            cantidad = int(request.POST.get('cantidad', 1))
         
         if not producto_id or not tipo_producto:
             return JsonResponse({
@@ -6553,10 +6678,26 @@ def agregar_al_carrito(request):
             # Actualizar total del carrito
             recalcular_total_carrito(carrito, 'usuario')
         
+        # Calcular cantidad total de items (suma de cantidades) para respuesta
+        try:
+            from django.db.models import Sum
+            if account_type == 'empresa':
+                total_items = detalle_compra_producto_empresa.objects.filter(
+                    id_fk_carritocompra_empresa=carrito
+                ).aggregate(total=Sum('cantidad_deta_carrito_prod_empresa'))['total'] or 0
+            else:
+                total_items = detalle_compra_producto_usuario.objects.filter(
+                    id_fk_carritocompra_usuario=carrito
+                ).aggregate(total=Sum('cantidad_deta_carrito_prod_usuario'))['total'] or 0
+            total_items = int(total_items)
+        except Exception:
+            total_items = 0
+
         return JsonResponse({
             'success': True,
             'message': 'Producto agregado al carrito exitosamente',
-            'carrito_created': created
+            'carrito_created': created,
+            'total_items': total_items
         })
         
     except Exception as e:
@@ -7789,6 +7930,8 @@ def notificaciones(request):
         
         # Agregar notificaciones regulares
         for notif in notificaciones_list:
+            # Incluir las referencias al pedido (si existen) para que la plantilla pueda
+            # construir correctamente el atributo data-pedido-id y la lógica de redirección
             todas_notificaciones.append({
                 'id_notificacion': notif.id_notificacion_empresa if account_type == 'empresa' else notif.id_notificacion_usuario,
                 'tipo_notificacion': notif.tipo_notificacion,
@@ -7797,7 +7940,12 @@ def notificaciones(request):
                 'estado': notif.estado,
                 'fecha_creacion': notif.fecha_creacion,
                 'fecha_leida': notif.fecha_leida,
-                'es_venta_pendiente': False
+                'es_venta_pendiente': False,
+                # Pasamos las FK originales (pueden ser None). El template accede a
+                # notificacion.id_pedido_usuario_fk.id_pedido_usuario o
+                # notificacion.id_pedido_empresa_fk.id_pedido_empresa según corresponda.
+                'id_pedido_usuario_fk': getattr(notif, 'id_pedido_usuario_fk', None),
+                'id_pedido_empresa_fk': getattr(notif, 'id_pedido_empresa_fk', None)
             })
         
         # Agregar ventas pendientes

@@ -22,6 +22,11 @@
     
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+            <!-- Styles moved to static/producto_sucursal/css/producto_config.css -->
+
+            <!-- SweetAlert2 JS -->
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
    
 </head>
 
@@ -129,6 +134,9 @@
                                 <!-- Información del Producto para Empresa -->
                                 <div class="product-content">
                                     <h3 class="product-title">{{ producto_all.nombre_producto_empresa }}</h3>
+                                    <div class="product-meta">
+                                        <span class="product-type">Empresa</span>
+                                    </div>
                                     <div class="product-branches">
                                         <strong>Sucursales asignadas:</strong>
                                         {% if producto_all.sucursales_asignadas %}
@@ -145,10 +153,11 @@
                                 
                                 <!-- Acciones del Producto -->
                                 <div class="product-actions">
-                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
-                                            data-id="{{ producto_all.id_producto_empresa }}"
-                                            data-nombre="{{ producto_all.nombre_producto_empresa }}"
-                                            data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_empresa|default:'' }}"
+                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
+                        data-id="{{ producto_all.id_producto_empresa }}"
+                        data-nombre="{{ producto_all.nombre_producto_empresa }}"
+                        data-categoria-id="{{ producto_all.id_categoria_prod_fk.id_categoria_prod_empresa|default:'' }}"
+                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_empresa|default:'' }}"
                                             data-descripcion="{{ producto_all.descripcion_producto_empresa|default:'' }}"
                                             data-caracteristicas="{{ producto_all.caracteristicas_generales_empresa|default:'' }}"
                                             data-stock="{{ producto_all.stock_producto_empresa|default:'0' }}"
@@ -162,11 +171,17 @@
                                     <button class="action-btn btn-delete" data-id="{{ producto_all.id_producto_empresa }}" data-nombre="{{ producto_all.nombre_producto_empresa }}" data-tooltip="Eliminar producto">
                                         <i class="lni lni-trash-can"></i>
                                     </button>
+                                    <button class="action-btn btn-assign-branch" data-id="{{ producto_all.id_producto_empresa }}" data-nombre="{{ producto_all.nombre_producto_empresa }}" data-tooltip="Asignar por sucursal">
+                                        <i class="lni lni-package"></i>
+                                    </button>
                                 </div>
                             {% elif user_info.tipo == 'sucursal' %}
                                 <!-- Información del Producto para Sucursal -->
                                 <div class="product-content">
                                     <h3 class="product-title">{{ producto_all.nombre_producto_sucursal }}</h3>
+                                </div>
+                                <div class="product-meta">
+                                    <span class="product-type">Empresa</span>
                                 </div>
                                     
                                 <!-- Acciones del Producto -->
@@ -174,7 +189,8 @@
                                         <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
                                                 data-id="{{ producto_all.id_producto_sucursal }}"
                                                 data-nombre="{{ producto_all.nombre_producto_sucursal }}"
-                                                data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_sucursal|default:'' }}"
+                        data-categoria-id="{{ producto_all.id_categoria_prod_fk.id_categoria_prod_empresa|default:'' }}"
+                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_sucursal|default:'' }}"
                                                 data-descripcion="{{ producto_all.descripcion_producto_sucursal|default:'' }}"
                                                 data-caracteristicas="{{ producto_all.caracteristicas_generales_sucursal|default:'' }}"
                                                 data-stock="{{ producto_all.stock_producto_sucursal|default:'0' }}"
@@ -188,11 +204,14 @@
                                         <button class="action-btn btn-delete" data-id="{{ producto_all.id_producto_sucursal }}" data-nombre="{{ producto_all.nombre_producto_sucursal }}" data-tooltip="Eliminar producto">
                                             <i class="lni lni-trash-can"></i>
                                         </button>
+                                        <button class="action-btn btn-assign-branch" data-id="{{ producto_all.id_producto_sucursal }}" data-nombre="{{ producto_all.nombre_producto_sucursal }}" data-tooltip="Asignar por sucursal">
+                                            <i class="lni lni-map-marker"></i>
+                                        </button>
                                     </div>
                             {% else %}
-                <!-- Información del Producto para Usuario -->
-                <div class="product-content">
-                    <h3 class="product-title">{{ producto_all.nombre_producto_usuario }}</h3>
+                            <!-- Información del Producto para Usuario -->
+                            <div class="product-content">
+                                <h3 class="product-title">{{ producto_all.nombre_producto_usuario }}</h3>
                     <div class="product-details-centered">
                         <span class="status-badge status-{{ producto_all.estatus_producto_usuario|lower|default:'activo' }}">{{ producto_all.estatus_producto_usuario|default:'Activo' }}</span>
                         <div class="product-price">${{ producto_all.precio_producto_usuario|default:'0'|floatformat:2 }}</div>
@@ -204,7 +223,8 @@
                                         <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#EditProductModal"
                                                 data-id="{{ producto_all.id_producto_usuario }}"
                                                 data-nombre="{{ producto_all.nombre_producto_usuario }}"
-                                                data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
+                        data-categoria-id="{{ producto_all.id_categoria_prod_fk.id_categoria_prod_usuario|default:'' }}"
+                        data-categoria="{{ producto_all.id_categoria_prod_fk.nombre_categoria_prod_usuario|default:'' }}"
                                                 data-descripcion="{{ producto_all.descripcion_producto_usuario|default:'' }}"
                                                 data-caracteristicas="{{ producto_all.caracteristicas_generales_usuario|default:'' }}"
                                                 data-stock="{{ producto_all.stock_producto_usuario|default:'0' }}"

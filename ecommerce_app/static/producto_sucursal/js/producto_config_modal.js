@@ -65,6 +65,8 @@ function initializeModalEvents() {
             id: button.getAttribute('data-id'),
             nombre: button.getAttribute('data-nombre'),
 
+            // Preferir el id de la categoría cuando esté disponible
+            categoria_id: button.getAttribute('data-categoria-id'),
             categoria: button.getAttribute('data-categoria'),
             descripcion: button.getAttribute('data-descripcion'),
             caracteristicas: button.getAttribute('data-caracteristicas'),
@@ -338,14 +340,21 @@ function populateEditForm(data) {
     // Categoría
     const categoriaSelect = document.getElementById('edit_categoria');
     let categoriaId = null;
-    if (categoriaSelect && data.categoria) {
-        // Buscar la opción que coincida con el nombre de la categoría
-        for (let option of categoriaSelect.options) {
-            if (option.text === data.categoria) {
-                option.selected = true;
-                categoriaId = option.value;
-                categoriaAnteriorId = categoriaId; // Guardar la categoría actual
-                break;
+    if (categoriaSelect) {
+        // Si el botón incluyó el id de categoría, usarlo (más fiable)
+        if (data.categoria_id && data.categoria_id.trim() !== '') {
+            categoriaSelect.value = data.categoria_id;
+            categoriaId = categoriaSelect.value;
+            categoriaAnteriorId = categoriaId;
+        } else if (data.categoria) {
+            // Fallback: buscar la opción que coincida con el nombre de la categoría
+            for (let option of categoriaSelect.options) {
+                if (option.text === data.categoria) {
+                    option.selected = true;
+                    categoriaId = option.value;
+                    categoriaAnteriorId = categoriaId; // Guardar la categoría actual
+                    break;
+                }
             }
         }
     }
@@ -696,16 +705,21 @@ function initializeFormSubmission() {
                 // Cerrar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('EditProductModal'));
                 modal.hide();
-                
-                // Mostrar SweetAlert de éxito
+
+                // Mostrar SweetAlert de éxito y esperar confirmación explícita
                 Swal.fire({
                     title: '¡Éxito!',
                     text: 'Producto actualizado correctamente',
                     icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.reload();
+                    showConfirmButton: true,
+                    confirmButtonText: 'Aceptar',
+                    allowOutsideClick: false,
+                    focusConfirm: true
+                }).then((result) => {
+                    // Solo recargar cuando el usuario confirme
+                    if (result.isConfirmed) {
+                        window.location.reload();
+                    }
                 });
             } else {
                 showAlert('Error al actualizar el producto: ' + (data.message || 'Error desconocido'), 'error');

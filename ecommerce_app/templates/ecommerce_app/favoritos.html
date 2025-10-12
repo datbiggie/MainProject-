@@ -624,6 +624,10 @@
                     setTimeout(() => {
                         button.innerHTML = originalText;
                         button.style.background = '';
+                        // Actualizar badge del carrito si el endpoint devuelve total_items
+                        if (data.total_items !== undefined && typeof updateCartBadge === 'function') {
+                            updateCartBadge(data.total_items);
+                        }
                     }, 2000);
                 } else {
                     Swal.fire({

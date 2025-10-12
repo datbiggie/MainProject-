@@ -190,7 +190,8 @@ $(document).ready(function() {
             return false;
         }
 
-        const submitButton = form.find('input[type="submit"]');
+    // soportar botón <button type="submit"> y <input type="submit">
+    const submitButton = form.find('button[type="submit"], input[type="submit"]');
         submitButton.prop('disabled', true);
         isSubmitting = true;
 
@@ -227,24 +228,25 @@ $(document).ready(function() {
                         icon: 'success',
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#3b82f6'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form[0].reset();
-                            const container = document.querySelector('.file-upload-container');
-                            container.classList.remove('has-image');
-                            document.getElementById('imagePreview').style.display = 'none';
-                            
-                            // Mostrar el placeholder nuevamente
+                    });
+                    // Limpiar formulario y UI inmediatamente
+                    try{
+                        form[0].reset();
+                        const container = document.querySelector('.file-upload-container');
+                        if(container) container.classList.remove('has-image');
+                        const imagePreview = document.getElementById('imagePreview');
+                        if(imagePreview) imagePreview.style.display = 'none';
+                        // Mostrar el placeholder nuevamente si existe
+                        if(container){
                             const placeholder = container.querySelector('.file-upload-placeholder');
                             if (placeholder) {
                                 placeholder.style.display = 'flex';
                             }
-                            
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
                         }
-                    });
+                    }catch(e){ console.warn('Error limpiando UI tras éxito', e); }
+
+                    // Forzar recarga después de un breve delay aunque el usuario no confirme el modal
+                    setTimeout(function() { window.location.reload(); }, 1500);
                 } else {
                     Swal.fire({
                         title: 'Error',
@@ -278,5 +280,23 @@ $(document).ready(function() {
         });
 
         return false;
+    });
+});
+
+// Accordion toggle behavior (same as categoria_producto)
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.accordion-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            var section = header.closest('.accordion-section');
+            var isActive = section.classList.contains('active');
+
+            // Close all
+            document.querySelectorAll('.accordion-section').forEach(function(s) {
+                s.classList.remove('active');
+            });
+
+            // Open clicked if not active
+            if (!isActive) section.classList.add('active');
+        });
     });
 });

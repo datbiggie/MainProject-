@@ -80,6 +80,13 @@
           </button>
         </div>
         <ul class="d-flex align-items-center list-unstyled m-0 py-0 my-0">
+          <!-- Inicio (visible en la barra superior, junto al icono de perfil) -->
+          <li>
+            <a href="{% url 'index' %}" class="p-2 mx-1 d-flex align-items-center">
+              <svg width="24" height="24" style="color:#000;"><use xlink:href="#home"></use></svg>
+              <span class="d-none d-md-inline ms-1">Inicio</span>
+            </a>
+          </li>
           <!-- Mis Sucursales -->
           <li class="dropdown">
             <a href="#" class="p-2 mx-1 dropdown-toggle" id="sucursalesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -139,27 +146,9 @@
               <svg width="24" height="24" style="color:#0d6efd;"><use xlink:href="#user"></use></svg>
             </a>
           </li>
-          <li>
-            <a href="#" class="p-2 mx-1">
-              <svg width="24" height="24" style="color:#ffc107;"><use xlink:href="#bell"></use></svg>
-            </a>
-          </li>
-          <li>
-            <a href="#" class="p-2 mx-1">
-              <svg width="24" height="24" style="color:#dc3545;"><use xlink:href="#heart"></use></svg>
-            </a>
-          </li>
-          <li>
-                {% if user_info.is_authenticated %}
-                  <a href="{% url 'carrito' %}" class="p-2 mx-1">
-                    <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
-                  </a>
-                {% else %}
-                  <a href="#" class="p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-                    <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
-                  </a>
-                {% endif %}
-              </li>
+         
+         
+          
         </ul>
       </div>
     </nav>
