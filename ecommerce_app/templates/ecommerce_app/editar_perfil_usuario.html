@@ -5,90 +5,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Perfil de Usuario</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Editar Perfil — Mi Cuenta</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" type="text/css" href="{% static 'index/style.css' %}">
+    <style>
+        /* Estilos locales para mejorar la UI sin tocar index/style.css */
+        .profile-card {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .avatar-preview {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+        /* tamaño más pequeño para la miniatura grande del avatar en la sección */
+        .avatar-preview-large {
+            width: 56px !important;
+            height: 56px !important;
+            object-fit: cover !important;
+        }
+        .bg-soft {
+            background: linear-gradient(90deg, rgba(248,249,250,1) 0%, rgba(255,255,255,1) 100%);
+        }
+        .form-label .required { color: #d00; margin-left: 6px; }
+        .small-muted { color: #6c757d; font-size: .9rem; }
+        /* Estilos del modal de avatares (copiados de la plantilla de empresa para mantener consistencia) */
+        #avatarModal .modal-content {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 880px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(16,24,40,0.12);
+            border: 1px solid rgba(15,23,42,0.04);
+        }
+        #avatarModal .modal-header { padding: 18px 22px; border-bottom: 0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(59,130,246,0.06), rgba(29,78,216,0.03)); }
+        #avatarModal .modal-header h3 { margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 600; }
+        #avatarModal .close-modal { background: #fff; border: 1px solid rgba(15,23,42,0.06); width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; box-shadow: 0 4px 10px rgba(2,6,23,0.06); cursor: pointer; color: #334155; }
+        #avatarModal .modal-body { padding: 20px; overflow-y: auto; flex: 1 1 auto; background: transparent; }
+        #avatarModal .modal-footer { padding: 14px 20px; border-top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9)); }
+    #avatarModal #avatars-modal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; align-items: start; }
+    #avatarModal .avatar-card { background: #ffffff; border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; border: 1px solid rgba(15,23,42,0.04); box-shadow: 0 3px 6px rgba(2,6,23,0.04); position: relative; min-height: 90px; }
+    #avatarModal .avatar-card img { width: 64px; height: 64px; object-fit: contain; object-position: center center; display: block; border-radius: 50%; padding: 3px; background: linear-gradient(180deg,#ffffff,#f8fafc); border: 1.5px solid rgba(229,231,235,1); margin-bottom: 6px; transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease; box-shadow: 0 4px 10px rgba(2,6,23,0.05); filter: contrast(1.02) saturate(1.02); }
+        #avatarModal .avatar-card:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(2,6,23,0.06); border-color: rgba(59,130,246,0.10); }
+        #avatarModal .avatar-card:hover img { transform: scale(1.04); filter: contrast(1.05) saturate(1.05); box-shadow: 0 6px 18px rgba(2,6,23,0.07); }
+        #avatarModal .avatar-card.selected { outline: 3px solid rgba(59,130,246,0.12); background: linear-gradient(180deg, rgba(239,246,255,0.5), #ffffff); }
+        #avatarModal .avatar-card .avatar-name { font-size: 0.72rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        #avatarModal .avatar-card .avatar-badge { margin-top: 4px; font-size: 0.62rem; color: #334155; opacity: 0.85; }
+    #avatarModal .check-overlay { position: absolute; top: 8px; right: 8px; background: rgba(16,185,129,0.98); color: white; width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 12px rgba(2,6,23,0.12); font-size: 0.75rem; }
+        #avatars-loading { text-align: center; padding: 42px 16px; color: #64748b; font-size: 0.98rem; }
+        #avatarModal .btn-cancel { background: transparent; border: 1px solid rgba(15,23,42,0.06); color: #0f172a; padding: 10px 16px; border-radius: 10px; }
+        #avatarModal .btn-confirm { background: linear-gradient(90deg,#3b82f6,#1d4ed8); color: #fff; padding: 10px 18px; border-radius: 10px; box-shadow: 0 8px 20px rgba(29,78,216,0.12); }
+        #avatarModal .btn-confirm:disabled { opacity: 0.6; box-shadow: none; background: #9aa8d6; cursor: not-allowed; }
+    </style>
+    <style>
+        /* Forzar estilo gris para los encabezados de los acordeones (coincide con editar_perfil_empresa) */
+        .accordion-button {
+            transition: all 0.25s ease;
+            background-color: #f8f9fa; /* gris suave */
+            color: #212529; /* texto oscuro */
+            padding: 0.9rem 1rem;
+            border-radius: 0.5rem;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #f8f9fa;
+            color: #212529;
+            box-shadow: none;
+        }
+        .accordion-button:focus {
+            box-shadow: none;
+            border-color: rgba(0,0,0,.06);
+        }
+        /* Ocultar la flecha por defecto y usar iconografía consistente si se desea */
+        .accordion-button::after {
+            display: none !important;
+        }
+        /* Icono de chevron con FontAwesome si se añade manualmente dentro del botón */
+        .accordion-button .fa-chevron-down { margin-left: auto; transition: transform 0.3s ease; }
+        .accordion-button:not(.collapsed) .fa-chevron-down { transform: rotate(180deg); }
+    </style>
 </head>
-<body>
+<body class="bg-light">
 
 {% include 'ecommerce_app/barra_superior_index.html' %}
 
-<div class="container mt-5">
+<main class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="fas fa-user-edit me-2"></i>Editar Perfil</h4>
-                </div>
-                <div class="card-body">
-                    {% if error %}
-                        <div class="alert alert-danger">{{ error }}</div>
-                    {% endif %}
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-
-                        <!-- Nombre de Usuario -->
-                        <div class="mb-3">
-                            <label for="nombre_usuario" class="form-label">Nombre Completo</label>
-                            <input type="text" class="form-control" id="nombre_usuario" name="nombre_usuario" value="{{ usuario.nombre_usuario }}">
-                        </div>
-
-                        <!-- Teléfono -->
-                        <div class="mb-3">
-                            <label for="telefono_usuario" class="form-label">Teléfono</label>
-                            <input type="tel" class="form-control" id="telefono_usuario" name="telefono_usuario" value="{{ usuario.telefono_usuario|default:'' }}">
-                        </div>
-
-                        <!-- Fecha de Nacimiento -->
-                        <div class="mb-3">
-                            <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento</label>
-                            <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" value="{{ usuario.fecha_nacimiento|date:'Y-m-d' }}">
-                        </div>
-
-                        <!-- País y Estado -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="pais" class="form-label">País</label>
-                                <input type="text" class="form-control" id="pais" name="pais" value="{{ usuario.pais }}">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="estado" class="form-label">Estado</label>
-                                <input type="text" class="form-control" id="estado" name="estado" value="{{ usuario.estado }}">
-                            </div>
-                        </div>
-
-                        <!-- Foto de Perfil -->
-                        <div class="mb-3">
-                            <label for="foto_usuario" class="form-label">Foto de Perfil</label>
-                            <input type="file" class="form-control" id="foto_usuario" name="foto_usuario" accept="image/*">
+        <div class="col-lg-10">
+            <div class="card profile-card shadow-sm">
+                <div class="row g-0">
+                    <div class="col-md-4 bg-primary text-white d-flex align-items-center justify-content-center p-4">
+                        <div class="text-center">
                             {% if usuario.foto_usuario %}
-                                <small class="form-text text-muted">Actual: <a href="{{ usuario.foto_usuario.url }}" target="_blank">ver imagen</a></small>
+                                <img src="{{ usuario.foto_usuario.url }}" alt="Avatar" class="avatar-preview mb-3">
+                            {% else %}
+                                <img src="{% static 'index/default-avatar.png' %}" alt="Avatar" class="avatar-preview mb-3">
                             {% endif %}
+                            <h5 class="mb-1">{{ usuario.nombre_usuario|default:'Usuario' }}</h5>
+                            <a href="{% url 'perfil_usuario' %}" class="btn btn-outline-light btn-sm text-white">Ver Perfil</a>
+                        </div>
+                    </div>
+                    <div class="col-md-8 bg-soft p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <h4 class="mb-0 me-2"><i class="fas fa-user-gear text-primary"></i></h4>
+                            <div>
+                                <h5 class="mb-0">Editar Perfil</h5>
+                                <small class="small-muted">Actualiza tu información personal y la foto de perfil</small>
+                            </div>
                         </div>
 
-                        <!-- Avatar del Chatbot -->
-                        <div class="mb-3">
-                            <label for="avatar_chatbot" class="form-label">Avatar del Chatbot</label>
-                            <input type="text" class="form-control" id="avatar_chatbot" name="avatar_chatbot" value="{{ usuario.avatar_chatbot }}">
-                            <small class="form-text text-muted">Ruta al archivo del avatar. Ej: avatars/mi_avatar.jpg</small>
-                        </div>
+                        {% if error %}
+                            <div class="alert alert-danger">{{ error }}</div>
+                        {% endif %}
 
-                        <hr>
+                        <form method="post" enctype="multipart/form-data" novalidate>
+                            {% csrf_token %}
 
-                        <div class="d-flex justify-content-end">
-                            <a href="{% url 'perfil_usuario' %}" class="btn btn-secondary me-2">Cancelar</a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Guardar Cambios
-                            </button>
-                        </div>
-                    </form>
+                            <div class="accordion" id="userAccordion">
+                                <!-- Datos personales -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingPersonal">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal" aria-expanded="true" aria-controls="collapsePersonal">
+                                            Datos personales
+                                        </button>
+                                    </h2>
+                                    <div id="collapsePersonal" class="accordion-collapse collapse show" aria-labelledby="headingPersonal" data-bs-parent="#userAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row g-3 align-items-center">
+                                                <div class="col-md-6">
+                                                    <label for="nombre_usuario" class="form-label">Nombre completo <span class="required">*</span></label>
+                                                    <input type="text" class="form-control" id="nombre_usuario" name="nombre_usuario" value="{{ usuario.nombre_usuario }}" placeholder="Tu nombre completo" required>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="telefono_usuario" class="form-label">Teléfono</label>
+                                                    <input type="tel" class="form-control" id="telefono_usuario" name="telefono_usuario" value="{{ usuario.telefono_usuario|default:'' }}" placeholder="+51 912 345 678">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="fecha_nacimiento" class="form-label">Fecha de nacimiento</label>
+                                                    <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" value="{{ usuario.fecha_nacimiento|date:'Y-m-d' }}">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="bio" class="form-label">Biografía</label>
+                                                    <input type="text" class="form-control" id="bio" name="bio" value="{{ usuario.bio|default:'' }}" placeholder="Una frase sobre ti">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Ubicación -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingUbicacion">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUbicacion" aria-expanded="false" aria-controls="collapseUbicacion">
+                                            Ubicación
+                                        </button>
+                                    </h2>
+                                    <div id="collapseUbicacion" class="accordion-collapse collapse" aria-labelledby="headingUbicacion" data-bs-parent="#userAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label for="pais" class="form-label">País</label>
+                                                    <input type="text" class="form-control" id="pais" name="pais" value="{{ usuario.pais }}" placeholder="Ej: Perú">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="estado" class="form-label">Estado / Región</label>
+                                                    <input type="text" class="form-control" id="estado" name="estado" value="{{ usuario.estado }}" placeholder="Ej: Lima">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Foto de perfil -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingFoto">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFoto" aria-expanded="false" aria-controls="collapseFoto">
+                                            Foto de perfil
+                                        </button>
+                                    </h2>
+                                    <div id="collapseFoto" class="accordion-collapse collapse" aria-labelledby="headingFoto" data-bs-parent="#userAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row g-3 align-items-center">
+                                                <div class="col-md-4 text-center">
+                                                    <img id="previewImg" src="{% if usuario.foto_usuario %}{{ usuario.foto_usuario.url }}{% else %}{% static 'index/default-avatar.png' %}{% endif %}" alt="preview" class="avatar-preview mb-2">
+                                                    {% if usuario.foto_usuario %}
+                                                        <div class="small-muted">Actual: <a href="{{ usuario.foto_usuario.url }}" target="_blank">abrir</a></div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <label for="foto_usuario" class="form-label">Cambiar foto de perfil</label>
+                                                    <input type="file" class="form-control mb-2" id="foto_usuario" name="foto_usuario" accept="image/*">
+                                                    <div class="small-muted">Recomendado: .jpg/.png — máximo 2MB</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Avatar del Chatbot -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingAvatar">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAvatar" aria-expanded="false" aria-controls="collapseAvatar">
+                                            Avatar del Chatbot
+                                        </button>
+                                    </h2>
+                                    <div id="collapseAvatar" class="accordion-collapse collapse" aria-labelledby="headingAvatar" data-bs-parent="#userAccordion">
+                                        <div class="accordion-body">
+                                            <div class="avatar-selection-container">
+                                                <div class="selected-avatar-preview mb-3 p-3 border rounded">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="me-3">
+                                                            <img id="avatarPreviewLarge" src="{% static usuario.avatar_chatbot|default:'img/default-avatar.png' %}" class="img-thumbnail rounded-circle avatar-preview-large" onerror="this.onerror=null;this.style.display='none';">
+                                                        </div>
+                                                        <div>
+                                                            <div class="d-flex align-items-center">
+                                                                <h6 class="mb-0" id="selected_avatar_name">{{ usuario.avatar_chatbot|default:'Avatar predeterminado'|cut:'avatars/'|cut:'.jpg'|title }}</h6>
+                                                                <span id="selectedBadge" class="badge bg-success ms-2"><i class="fas fa-check"></i> Actual</span>
+                                                            </div>
+                                                            <p class="text-muted small mb-0">Vista previa del avatar</p>
+                                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="openAvatarModalBtn"><i class="fas fa-robot me-1"></i> Cambiar Avatar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" id="avatar_chatbot" name="avatar_chatbot" value="{{ usuario.avatar_chatbot }}">
+                                                <div class="small-muted mt-2">Selecciona un avatar para el chatbot (opcional)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <a href="{% url 'perfil_usuario' %}" class="btn btn-outline-secondary">Cancelar</a>
+                                <div>
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        <i class="fas fa-save me-1"></i> Guardar cambios
+                                    </button>
+                                    
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+    {% include 'ecommerce_app/modal_avatars.html' %}
+    </body>
+    </html>

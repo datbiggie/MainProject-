@@ -15,6 +15,14 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 	{% include 'ecommerce_app/barra_superior_bienvenido.html' %}
+
+	<style>
+	/* Small styles for the password visibility toggle */
+	.password-wrapper{position:relative;}
+	.password-wrapper .form-input{padding-right:44px;}
+	.toggle-password{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;cursor:pointer;color:#666;font-size:18px;display:flex;align-items:center;justify-content:center;padding:6px}
+	.toggle-password:focus{outline:none}
+	</style>
 </head>
 <body>
 	<div class="login-page">
@@ -50,13 +58,18 @@
 								<i class="zmdi zmdi-lock"></i>
 								Contraseña
 							</label>
-							<input 
-								class="form-input" 
-								type="password" 
-								name="password" 
-								id="password" 
-								placeholder="Ingresa tu contraseña" 
-								required>
+							<div class="password-wrapper">
+								<input 
+									class="form-input" 
+									type="password" 
+									name="password" 
+									id="password" 
+									placeholder="Ingresa tu contraseña" 
+									required>
+								<button type="button" id="togglePassword" class="toggle-password" aria-label="Mostrar contraseña">
+									<i class="zmdi zmdi-eye"></i>
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>

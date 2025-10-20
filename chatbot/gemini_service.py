@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class GeminiService:
     def __init__(self):
         # TODO: Mover esto a variables de entorno en producción
-        genai.configure(api_key="AIzaSyB0m9xT_Yt7MMSPFgHL4YgWxOgq2ujZTaA")
+        genai.configure(api_key="AIzaSyC6ibe8a5vrglQR9DB76jshvMwG-ueF7PM")
         
         # Configurar el modelo
         self.model = genai.GenerativeModel('gemini-2.5-flash')
@@ -27,7 +27,7 @@ class GeminiService:
                 usuario_email = usuario.username
             
             # Analizar el mensaje para determinar si necesita consultar la base de datos
-            informacion_bd = self._consultar_base_datos(mensaje_usuario, usuario_email)
+            informacion_bd = self._consultar_base_datos(mensaje_usuario, usuario_email, contexto_conversacion)
             
             if informacion_bd:
                 contexto_bd = json.dumps(informacion_bd, ensure_ascii=False, indent=2)
@@ -103,7 +103,7 @@ class GeminiService:
             logger.error(f"Error al generar respuesta con Gemini: {e}")
             return "Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo."
     
-    def _consultar_base_datos(self, mensaje_usuario, usuario_email=None):
+    def _consultar_base_datos(self, mensaje_usuario, usuario_email=None, contexto_conversacion=None):
         """Analiza el mensaje del usuario y consulta la base de datos si es necesario"""
         mensaje_lower = mensaje_usuario.lower()
         informacion = {}

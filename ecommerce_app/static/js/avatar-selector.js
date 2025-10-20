@@ -2,11 +2,15 @@ class AvatarSelector {
     constructor() {
         // Elementos del DOM
         this.avatarModal = document.getElementById('avatarModal');
-        this.avatarInput = document.getElementById('avatar_chatbot_empresa');
-        this.avatarPreview = document.getElementById('avatarPreviewLarge');
-        this.avatarNameElement = document.getElementById('selected_avatar_name');
-        this.confirmBtn = document.getElementById('confirmAvatarBtn');
-        this.openModalBtn = document.getElementById('openAvatarModalBtn');
+    // Buscar inputs compatibles (empresa o usuario). Puede haber varios en la página.
+    this.avatarInputs = document.querySelectorAll('#avatar_chatbot, #avatar_chatbot_empresa, input[name="avatar_chatbot"]');
+    // Input principal (el primero) — usado para leer valor actual al abrir
+    this.avatarInput = this.avatarInputs && this.avatarInputs.length ? this.avatarInputs[0] : null;
+    this.avatarPreview = document.getElementById('avatarPreviewLarge');
+    this.avatarNameElement = document.getElementById('selected_avatar_name');
+    this.confirmBtn = document.getElementById('confirmAvatarBtn');
+    // Puede haber varios botones para abrir el modal (empresa/usuario) — usar selector
+    this.openModalBtn = document.querySelectorAll('#openAvatarModalBtn');
         this.avatarsGrid = document.getElementById('avatars-modal-grid');
         this.loadingElement = document.getElementById('avatars-loading');
         this.modalInstance = null;
@@ -60,8 +64,8 @@ class AvatarSelector {
         }
         
         // Configurar botón para abrir el modal
-        if (this.openModalBtn) {
-            this.openModalBtn.addEventListener('click', () => this.openModal());
+        if (this.openModalBtn && this.openModalBtn.length) {
+            this.openModalBtn.forEach(btn => btn.addEventListener('click', () => this.openModal()));
         }
         
         // Configurar botón de confirmación
@@ -69,7 +73,7 @@ class AvatarSelector {
             this.confirmBtn.addEventListener('click', () => this.confirmSelection());
         }
         
-        // Cargar avatar actual si existe
+        // Cargar avatar actual si existe (usar input principal si existe)
         if (this.avatarInput && this.avatarInput.value) {
             this.updatePreview(this.avatarInput.value);
         }
@@ -190,6 +194,21 @@ class AvatarSelector {
                 option.classList.add('selected');
                 this.selectedAvatar = option.dataset.avatar;
                 this.confirmBtn.disabled = false;
+                // Debug: log selección
+                try { console.debug('[AvatarSelector] option clicked:', this.selectedAvatar, option.dataset.name); } catch (e) {}
+                // Informar a cualquier integración externa que espere una API global
+                try {
+                    const staticUrl = this.avatarsGrid ? this.avatarsGrid.dataset.staticUrl || '' : '';
+                    const src = (staticUrl || '') + this.selectedAvatar;
+                    const name = option.dataset.name || '';
+                    if (typeof window !== 'undefined' && typeof window.onAvatarSelected === 'function') {
+                        window.onAvatarSelected({ id: this.selectedAvatar, src: src, name: name });
+                    }
+                    try { console.debug('[AvatarSelector] onAvatarSelected called with', { id: this.selectedAvatar, src: src, name: name }); } catch (e) {}
+                } catch (err) {
+                    // no bloquear en caso de error
+                    console.warn('onAvatarSelected error', err);
+                }
             });
         });
     }
@@ -202,15 +221,22 @@ class AvatarSelector {
     
     confirmSelection() {
         if (!this.selectedAvatar) return;
-        
-        // Actualizar input oculto
-        if (this.avatarInput) {
-            this.avatarInput.value = this.selectedAvatar;
+
+        // Actualizar todos los inputs ocultos encontrados en la página
+        if (this.avatarInputs && this.avatarInputs.length) {
+            this.avatarInputs.forEach(input => {
+                try {
+                    input.value = this.selectedAvatar;
+                } catch (e) {
+                    console.warn('No se pudo actualizar input avatar:', e);
+                }
+            });
         }
-        
+
         // Actualizar vista previa
         this.updatePreview(this.selectedAvatar);
-        
+    try { console.debug('[AvatarSelector] confirmSelection:', this.selectedAvatar); } catch (e) {}
+
         // Cerrar modal
         if (this.modalInstance) {
             this.modalInstance.hide();

@@ -1070,4 +1070,100 @@ class pago_servicio(models.Model):
         return f"Pago {self.id_pago_servicio} - {solicitud} ({tipo}) - {self.estado_pago}"
 
 
+class comentario(models.Model):
+    """
+    Comentarios sobre productos o servicios.
+    - Autor: usuario OR empresa (exactamente uno).
+    - Objetivo: producto_usuario OR producto_sucursal OR servicio_usuario OR servicio_sucursal (exactamente uno).
+    """
+    id_comentario = models.AutoField(primary_key=True)
+    texto = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    # Autor (exactamente uno debe estar definido)
+    id_usuario_autor = models.ForeignKey(
+        'usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='comentarios'
+    )
+    id_empresa_autor = models.ForeignKey(
+        'empresa',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='comentarios'
+    )
+
+    # Objetivo del comentario (exactamente uno debe estar definido)
+    producto_usuario = models.ForeignKey(
+        'producto_usuario',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='comentarios'
+    )
+    producto_sucursal = models.ForeignKey(
+        'producto_sucursal',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='comentarios'
+    )
+    servicio_usuario = models.ForeignKey(
+        'servicio_usuario',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='comentarios'
+    )
+    servicio_sucursal = models.ForeignKey(
+        'servicio_sucursal',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='comentarios'
+    )
+
+    class Meta:
+        db_table = 'ecommerce_app_comentario'
+        ordering = ['-fecha_creacion']
+        indexes = [
+            models.Index(fields=['fecha_creacion']),
+            models.Index(fields=['producto_sucursal']),
+            models.Index(fields=['producto_usuario']),
+            models.Index(fields=['servicio_sucursal']),
+            models.Index(fields=['servicio_usuario']),
+            models.Index(fields=['id_usuario_autor']),
+            models.Index(fields=['id_empresa_autor']),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Validar autor único (usuario XOR empresa)
+        if not ((self.id_usuario_autor and not self.id_empresa_autor) or
+                (self.id_empresa_autor and not self.id_usuario_autor)):
+            raise ValidationError('Debe especificar exactamente un autor (usuario o empresa).')
+
+        # Validar objetivo único (exactamente uno de los objetos comentados)
+        objetos = [
+            self.producto_usuario, self.producto_sucursal,
+            self.servicio_usuario, self.servicio_sucursal
+        ]
+        if sum(x is not None for x in objetos) != 1:
+            raise ValidationError('Debe especificar exactamente un objeto comentado (producto o servicio).')
+
+    def __str__(self):
+        autor = None
+        try:
+            autor = self.id_usuario_autor.nombre_usuario if self.id_usuario_autor else self.id_empresa_autor.nombre_empresa
+        except Exception:
+            autor = str(self.id_usuario_autor or self.id_empresa_autor)
+        objetivo = self.producto_sucursal or self.producto_usuario or self.servicio_sucursal or self.servicio_usuario
+        return f'Comentario {self.id_comentario} por {autor} sobre {objetivo}'
+
+
 

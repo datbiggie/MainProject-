@@ -131,26 +131,28 @@
             </div>
         </div>
 
-        <!-- Sales List -->
+        <!-- Sales List (accordion) -->
         {% if ventas_rechazadas %}
+            <div class="accordion" id="accordionVentasRechazadas">
             {% for venta in ventas_rechazadas %}
-            <div class="card sale-card mb-4">
-                <div class="card-header sale-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h6 class="mb-0">
+            <div class="accordion-item sale-card mb-3">
+                <h2 class="accordion-header" id="headingRechazada{{ forloop.counter }}">
+                    <button class="accordion-button collapsed sale-header" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRechazada{{ forloop.counter }}" aria-expanded="false" aria-controls="collapseRechazada{{ forloop.counter }}">
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+                            <div>
                                 <i class="fas fa-receipt me-2"></i>
                                 Venta #{{ venta.numero_pedido }}
-                            </h6>
+                            </div>
+                            <div>
+                                <span class="badge status-badge bg-danger">
+                                    <i class="fas fa-times-circle me-1"></i>Rechazada
+                                </span>
+                            </div>
                         </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge bg-danger">
-                                <i class="fas fa-times-circle me-1"></i>Rechazada
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
+                    </button>
+                </h2>
+                <div id="collapseRechazada{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="headingRechazada{{ forloop.counter }}" data-bs-parent="#accordionVentasRechazadas">
+                    <div class="accordion-body">
                     <!-- Sale Info -->
                     <div class="row mb-3">
                         <div class="col-md-3">
@@ -286,9 +288,11 @@
                             </span>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
             {% endfor %}
+            </div>
         {% else %}
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">

@@ -94,7 +94,51 @@
 
               <!-- Lista de comentarios (se cargará dinámicamente) -->
               <div id="lista-comentarios" class="list-group">
-                <!-- Comentarios existentes vendrán desde el servidor eventualmente -->
+                {% if initial_comments %}
+                  {% for c in initial_comments %}
+                    <div class="list-group-item">
+                      <div class="comentario-card" data-comentario-id="{{ c.id }}">
+                        <img class="comentario-avatar" src="{{ c.avatar }}" alt="avatar">
+                        <div class="w-100">
+                          <div class="comentario-meta">
+                            <div class="comentario-autor">{{ c.autor }}</div>
+                            <div class="comentario-fecha">{{ c.fecha }}</div>
+                          </div>
+                          <div class="comentario-texto">{{ c.texto }}</div>
+                        </div>
+                        {% if c.is_author %}
+                          <div class="comentario-actions ms-2">
+                            <button class="editar-comentario-btn btn-icon" title="Editar comentario" aria-label="Editar comentario">
+                              <i class="fa fa-pen" aria-hidden="true"></i>
+                            </button>
+                            <button class="eliminar-comentario-btn btn-icon ms-1" title="Eliminar comentario" aria-label="Eliminar comentario">
+                              <i class="fa fa-trash" aria-hidden="true"></i>
+                            </button>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <div class="text-center">
+                <!-- Non-button 'Ver más' control: JS will attach handlers and toggle visibility -->
+                <div id="cargar-mas-comentarios-btn" class="load-more-control" role="button" tabindex="0" aria-label="Ver más comentarios" style="display:none;">
+                  <div class="load-more-left">
+                    <span class="load-more-label">Ver más</span>
+                    <small class="load-more-subtitle" aria-hidden="true"></small>
+                  </div>
+                  <div class="load-more-right">
+                    <svg class="load-more-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="load-more-spinner" aria-hidden="true" style="display:none;">
+                      <svg width="18" height="18" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke="#374151" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)"></circle>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -104,10 +148,19 @@
       <!-- Información del producto/servicio -->
       <div class="col-lg-5">
         <div class="product-info">
+      {# Hidden container with coordinates for client-side distance calc #}
+      <div id="item-coords" style="display:none;"
+        data-lat="{{ item.sucursal.latitud|default_if_none:'' }}"
+        data-lng="{{ item.sucursal.longitud|default_if_none:'' }}"></div>
           <!-- Título y empresa -->
           <div class="mb-3">
             <span class="badge {% if item.tipo == 'producto' %}bg-primary{% else %}bg-success{% endif %} badge-custom mb-2">{{ item.tipo|title }}</span>
-            <h1 class="h3 fw-bold mb-2">{{ item.nombre }}</h1>
+            {% if item.distancia %}
+              <span class="distance-badge ms-2"><i class="fas fa-map-marker-alt me-1"></i>{{ item.distancia }} km</span>
+            {% endif %}
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <h1 class="h3 fw-bold mb-0">{{ item.nombre }}</h1>
+            </div>
             <p class="mb-0" style="color: #495057; font-size: 1.1rem;">por <strong style="color: #007bff; font-weight: 600;">{{ item.empresa }}</strong></p>
           </div>
 
@@ -299,7 +352,10 @@
         agregarFavoritoUrl: '{% url "agregar_quitar_favorito" %}',
         iniciarSesionUrl: '{% url "iniciar_sesion" %}'
       };
+      // Exponer conteo total de comentarios para control de carga
+      window.commentsTotalCount = '{{ comments_total_count|default:0 }}';
     </script>
+    
     <script src="{% static 'ecommerce_app/js/vista_items_page.js' %}"></script>
 
     
@@ -309,5 +365,52 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
 <script>window.csrfToken = '{{ csrf_token }}';</script>
 <script src="{% static 'ecommerce_app/js/vista_items.js' %}"></script>
+    <script>
+  (function(){
+    try{
+      // Read coordinates from hidden DOM element (safer than template interpolation)
+      var coordEl = document.getElementById('item-coords');
+      if (!coordEl) return;
+      var latAttr = coordEl.getAttribute('data-lat');
+      var lngAttr = coordEl.getAttribute('data-lng');
+      if (!latAttr || !lngAttr) return;
+      var sucursalLat = parseFloat(latAttr);
+      var sucursalLng = parseFloat(lngAttr);
+      if (isNaN(sucursalLat) || isNaN(sucursalLng)) return;
+
+      function toRad(x) { return x * Math.PI / 180; }
+      function haversine(lat1, lon1, lat2, lon2) {
+        var R = 6371; // km
+        var dLat = toRad(lat2 - lat1);
+        var dLon = toRad(lon2 - lon1);
+        var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+      }
+
+      if (navigator && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos){
+          try{
+            var d = haversine(pos.coords.latitude, pos.coords.longitude, sucursalLat, sucursalLng);
+            var el = document.querySelector('.distance-badge');
+            if (el) {
+              el.textContent = d.toFixed(1) + ' km';
+            } else {
+              var tipoBadge = document.querySelector('.product-info .badge-custom');
+              if (tipoBadge && tipoBadge.parentNode) {
+                var badge = document.createElement('span');
+                badge.className = 'distance-badge ms-2';
+                badge.innerHTML = '<i class="fas fa-map-marker-alt me-1"></i>' + d.toFixed(1) + ' km';
+                tipoBadge.parentNode.insertBefore(badge, tipoBadge.nextSibling);
+                }
+              }
+          }catch(e){/* ignore */}
+        }, function(){/*ignore*/}, { maximumAge: 600000, timeout: 8000, enableHighAccuracy: false });
+      }
+    }catch(e){/* ignore */}
+  })();
+</script>
 </body>
 </html>

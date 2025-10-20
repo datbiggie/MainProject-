@@ -120,149 +120,147 @@
             </div>
         </div>
 
-        <!-- Services List -->
+        <!-- Services List (Accordion) -->
         {% if servicios_confirmados %}
+        <div class="accordion" id="serviciosConfirmadosAccordion">
             {% for servicio in servicios_confirmados %}
-            <div class="card sale-card mb-4">
-                <div class="card-header sale-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h6 class="mb-0">
+            <div class="accordion-item mb-3">
+                <h2 class="accordion-header" id="heading-{{ servicio.id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ servicio.id }}" aria-expanded="false" aria-controls="collapse-{{ servicio.id }}">
+                        <div class="d-flex justify-content-between w-100 align-items-center">
+                            <div>
                                 <i class="fas fa-tools me-2"></i>
-                                Servicio #{{ servicio.id }}
-                            </h6>
+                                Servicio #{{ servicio.id }} — <span class="text-success fw-bold ms-2">{{ servicio.nombre_servicio }}</span>
+                            </div>
+                            <div>
+                                <span class="badge status-badge bg-{% if servicio.estado == 'aceptada' %}info{% elif servicio.estado == 'pagada' %}warning{% elif servicio.estado == 'completada' %}success{% else %}primary{% endif %}">
+                                    {% if servicio.estado == 'aceptada' %}Aceptado{% elif servicio.estado == 'pagada' %}Pagado{% elif servicio.estado == 'completada' %}Completado{% else %}{{ servicio.estado|capfirst }}{% endif %}
+                                </span>
+                            </div>
                         </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge bg-{% if servicio.estado == 'aceptada' %}info{% elif servicio.estado == 'pagada' %}warning{% elif servicio.estado == 'completada' %}success{% else %}primary{% endif %}">
-                                {% if servicio.estado == 'aceptada' %}Aceptado{% elif servicio.estado == 'pagada' %}Pagado{% elif servicio.estado == 'completada' %}Completado{% else %}{{ servicio.estado|capfirst }}{% endif %}
-                            </span>
+                    </button>
+                </h2>
+                <div id="collapse-{{ servicio.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ servicio.id }}" data-bs-parent="#serviciosConfirmadosAccordion">
+                    <div class="accordion-body">
+                        <!-- Body content (kept the same as previous card body) -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <strong>Fecha de Solicitud:</strong><br>
+                                <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Servicio:</strong><br>
+                                <span class="text-success fw-bold">{{ servicio.nombre_servicio }}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Categoría:</strong><br>
+                                <span class="text-muted">{{ servicio.categoria_servicio }}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Tipo de Cliente:</strong><br>
+                                <span class="badge bg-info">{{ servicio.tipo_cliente|capfirst }}</span>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Service Info -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <strong>Fecha de Solicitud:</strong><br>
-                            <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Servicio:</strong><br>
-                            <span class="text-success fw-bold">{{ servicio.nombre_servicio }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Categoría:</strong><br>
-                            <span class="text-muted">{{ servicio.categoria_servicio }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Tipo de Cliente:</strong><br>
-                            <span class="badge bg-info">{{ servicio.tipo_cliente|capfirst }}</span>
-                        </div>
-                    </div>
 
-                    <!-- Cotización Info -->
-                    {% if servicio.presupuesto %}
-                    <div class="cotizacion-info">
-                        <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Información de la Cotización</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Presupuesto Acordado:</strong><br>
-                                <span class="text-success fw-bold fs-5">${{ servicio.presupuesto|floatformat:2 }}</span>
+                        {% if servicio.presupuesto %}
+                        <div class="cotizacion-info">
+                            <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Información de la Cotización</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Presupuesto Acordado:</strong><br>
+                                    <span class="text-success fw-bold fs-5">${{ servicio.presupuesto|floatformat:2 }}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Fecha de Aceptación:</strong><br>
+                                    <span class="text-muted">{{ servicio.fecha_aceptacion|date:"d/m/Y H:i"|default:"No especificada" }}</span>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <strong>Fecha de Aceptación:</strong><br>
-                                <span class="text-muted">{{ servicio.fecha_aceptacion|date:"d/m/Y H:i"|default:"No especificada" }}</span>
+                            {% if servicio.descripcion_cotizacion %}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <strong>Descripción de la Cotización:</strong><br>
+                                    <span class="text-muted">{{ servicio.descripcion_cotizacion }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="client-info">
+                            <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Nombre:</strong><br>
+                                    <span class="text-muted">{{ servicio.nombre_cliente }}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Email:</strong><br>
+                                    <span class="text-muted">{{ servicio.email_cliente }}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Teléfono:</strong><br>
+                                    <span class="text-muted">{{ servicio.telefono_cliente|default:"No proporcionado" }}</span>
+                                </div>
                             </div>
                         </div>
-                        {% if servicio.descripcion_cotizacion %}
-                        <div class="row mt-2">
+
+                        <div class="row mb-3">
                             <div class="col-12">
-                                <strong>Descripción de la Cotización:</strong><br>
-                                <span class="text-muted">{{ servicio.descripcion_cotizacion }}</span>
+                                <strong>Descripción del Servicio:</strong><br>
+                                <div class="bg-light p-3 rounded mt-2">
+                                    <span class="text-muted">{{ servicio.descripcion_solicitud|default:"Sin descripción específica" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if servicio.ubicacion %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Ubicación del Servicio:</strong><br>
+                                <span class="text-muted">{{ servicio.ubicacion }}</span>
                             </div>
                         </div>
                         {% endif %}
-                    </div>
-                    {% endif %}
 
-                    <!-- Client Information -->
-                    <div class="client-info">
-                        <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Nombre:</strong><br>
-                                <span class="text-muted">{{ servicio.nombre_cliente }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Email:</strong><br>
-                                <span class="text-muted">{{ servicio.email_cliente }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Teléfono:</strong><br>
-                                <span class="text-muted">{{ servicio.telefono_cliente|default:"No proporcionado" }}</span>
+                        {% if servicio.imagenes %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Imágenes del Servicio:</strong><br>
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    {% for imagen in servicio.imagenes %}
+                                    <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                        {% endif %}
 
-                    <!-- Service Details -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Descripción del Servicio:</strong><br>
-                            <div class="bg-light p-3 rounded mt-2">
-                                <span class="text-muted">{{ servicio.descripcion_solicitud|default:"Sin descripción específica" }}</span>
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                {% if servicio.estado == 'aceptada' %}
+                                    <span class="badge bg-info fs-6 p-3">
+                                        <i class="fas fa-handshake me-2"></i>Servicio Aceptado - Esperando Pago
+                                    </span>
+                                {% elif servicio.estado == 'pagada' %}
+                                    <span class="badge bg-warning fs-6 p-3">
+                                        <i class="fas fa-credit-card me-2"></i>Servicio Pagado - En Proceso
+                                    </span>
+                                {% elif servicio.estado == 'completada' %}
+                                    <span class="badge bg-success fs-6 p-3">
+                                        <i class="fas fa-check-double me-2"></i>Servicio Completado
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-primary fs-6 p-3">
+                                        <i class="fas fa-info-circle me-2"></i>Estado: {{ servicio.estado|capfirst }}
+                                    </span>
+                                {% endif %}
                             </div>
-                        </div>
-                    </div>
-
-                    {% if servicio.ubicacion %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Ubicación del Servicio:</strong><br>
-                            <span class="text-muted">{{ servicio.ubicacion }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Service Images -->
-                    {% if servicio.imagenes %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Imágenes del Servicio:</strong><br>
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                {% for imagen in servicio.imagenes %}
-                                <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" 
-                                     style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Status Actions -->
-                    <div class="row mt-4">
-                        <div class="col-12 text-center">
-                            {% if servicio.estado == 'aceptada' %}
-                                <span class="badge bg-info fs-6 p-3">
-                                    <i class="fas fa-handshake me-2"></i>Servicio Aceptado - Esperando Pago
-                                </span>
-                            {% elif servicio.estado == 'pagada' %}
-                                <span class="badge bg-warning fs-6 p-3">
-                                    <i class="fas fa-credit-card me-2"></i>Servicio Pagado - En Proceso
-                                </span>
-                            {% elif servicio.estado == 'completada' %}
-                                <span class="badge bg-success fs-6 p-3">
-                                    <i class="fas fa-check-double me-2"></i>Servicio Completado
-                                </span>
-                            {% else %}
-                                <span class="badge bg-primary fs-6 p-3">
-                                    <i class="fas fa-info-circle me-2"></i>Estado: {{ servicio.estado|capfirst }}
-                                </span>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
+        </div>
         {% else %}
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">

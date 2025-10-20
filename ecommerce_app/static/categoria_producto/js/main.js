@@ -136,13 +136,13 @@ function agregarNuevoAtributo() {
     atributoDiv.id = `nuevo-atributo-${contadorAtributos}`;
 
     atributoDiv.innerHTML = `
-        <div class="row">
-            <div class="col-md-4">
+        <div class="row align-items-end">
+            <div class="col-md-4 col-12">
                 <label class="form-label">Nombre del Atributo *</label>
                 <input type="text" class="form-control" name="nuevo_atributo_nombre_${contadorAtributos}" placeholder="Ej: Color, Tamaño, Marca" required onblur="validarNombreAtributo(this, ${contadorAtributos})">
                 <div id="error-nombre-${contadorAtributos}" class="text-danger small" style="display: none;"></div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-12 mt-3 mt-md-0">
                 <label class="form-label">Tipo de Dato *</label>
                 <select class="form-control" name="nuevo_atributo_tipo_${contadorAtributos}" onchange="manejarTipoAtributo(${contadorAtributos}, this.value)" required>
                     <option value="">Seleccionar</option>
@@ -154,26 +154,25 @@ function agregarNuevoAtributo() {
                     <option value="lista">Lista de opciones</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Obligatorio</label>
-                <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" name="nuevo_atributo_obligatorio_${contadorAtributos}" value="1">
-                    <label class="form-check-label">Sí</label>
+            <div class="col-md-2 col-12 d-flex align-items-center mt-3 mt-md-0">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" name="nuevo_atributo_obligatorio_${contadorAtributos}" value="1" id="nuevo_obligatorio_${contadorAtributos}">
+                    <label class="form-check-label ms-2 mb-0" for="nuevo_obligatorio_${contadorAtributos}">Obligatorio</label>
                 </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">&nbsp;</label>
-                <button type="button" class="btn btn-danger btn-sm d-block" onclick="eliminarAtributo(${contadorAtributos})">
+            <div class="col-md-3 col-12 d-flex align-items-center justify-content-md-end mt-3 mt-md-0">
+                <button type="button" class="btn btn-danger btn-sm" onclick="eliminarAtributo(${contadorAtributos})">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
         </div>
         <div class="row mt-2">
-            <div class="col-md-8">
+       
+            <div class="col-md-8 col-12 order-2 order-md-1">
                 <label class="form-label">Descripción</label>
                 <textarea class="form-control" name="nuevo_atributo_descripcion_${contadorAtributos}" rows="2" placeholder="Descripción opcional del atributo"></textarea>
             </div>
-            <div class="col-md-4" id="opciones-container-${contadorAtributos}" style="display: none;">
+            <div class="col-md-4 col-12 order-1 order-md-2" id="opciones-container-${contadorAtributos}" style="display: none;">
                 <label class="form-label">Opciones (separadas por coma)</label>
                 <textarea class="form-control" name="nuevo_atributo_opciones_${contadorAtributos}" rows="2" placeholder="Opción1, Opción2, Opción3"></textarea>
             </div>

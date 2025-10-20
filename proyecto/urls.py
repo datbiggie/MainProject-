@@ -22,6 +22,8 @@ from django.conf import settings
 from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Expose sucursales API also at the project root to support clients calling /api/sucursales_disponibles/
+    path('api/sucursales_disponibles/', api_sucursales_disponibles),
     path('ecommerce/', include('ecommerce_app.urls')),  # Esto enlaza todas las rutas de la app 
     path('chatbot/', include('chatbot.urls')),  # URLs del chatbot
 ]

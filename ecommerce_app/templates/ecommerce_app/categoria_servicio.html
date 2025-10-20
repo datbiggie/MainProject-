@@ -73,7 +73,8 @@
                         </div>
                         <div class="col-md-6 col-12 form-group mb-3">
                           <label for="fecha_creacion" class="col-form-label">Fecha Creación Categoría*</label>
-                          <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" disabled>
+                          <!-- Use readonly instead of disabled so the value is submitted with the form -->
+                          <input type="text" class="form-control" name="fecha_creacion" id="fecha_creacion" placeholder="DD/MM/YYYY" readonly>
                         </div>
                       </div>
                     </div>

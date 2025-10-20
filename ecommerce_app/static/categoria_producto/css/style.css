@@ -451,6 +451,44 @@ label.error {
   }
 }
 
+/* Ajustes específicos para los nuevos atributos añadidos dinámicamente */
+.border.p-3 {
+  border-radius: 8px;
+}
+
+/* Forzar que el grupo de obligatorio + eliminar se alinee a la derecha en pantallas grandes
+   pero se muestre como bloque (arriba de la descripción) en móviles */
+.d-flex.align-items-start.justify-content-md-end {
+  gap: 10px;
+}
+
+/* Asegurar que el label del checkbox no ocupe demasiado y se alinee correctamente */
+.form-check .form-check-label {
+  margin-bottom: 0;
+}
+
+/* Evitar que la palabra 'Obligatorio' se divida en varias líneas */
+.form-check .form-check-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 9rem; /* ajustar si necesitas más o menos espacio */
+}
+
+/* Asegurar espacio en el contenedor cuando el texto sea corto */
+.col-md-2 .form-check { display: inline-flex; align-items: center; }
+
+/* Asegurar que filas con align-items-end muestren controles alineados con inputs más altos */
+.row.align-items-end { align-items: end !important; }
+.row.align-items-end > [class*="col-"] { min-height: 56px; }
+
+/* En móviles, colocar opciones encima y descripción después (ya controlado por order classes) */
+@media (max-width: 767.98px) {
+  .border.p-3 { padding: 12px !important; }
+  .form-check { margin-bottom: 8px; }
+  .btn-danger { width: auto; }
+}
+
 @media (min-width: 768px) and (max-width: 991.98px) {
   /* Tablets: permitir botones en línea pero adaptativos */
   .col-md-12 .btn {

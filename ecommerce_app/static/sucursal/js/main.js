@@ -1121,7 +1121,7 @@ $(document).ready(function() {
                 producto_id: productoId,
                 servicio_id: '',
                 stock: stock,
-                precio: saprecio,
+                precio: precio,
                 estatus_producto_sucursal: estatusProducto,
                 unidad_presentacion_producto_sucursal: $('#selectUnidadPresentacionSucursal').val(),
                 cantidad_por_presentacion_producto_sucursal: $('#inputCantidadPresentacionSucursal').val(),

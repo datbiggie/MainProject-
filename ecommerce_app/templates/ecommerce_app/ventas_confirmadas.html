@@ -131,161 +131,163 @@
             </div>
         </div>
 
-        <!-- Sales List -->
+        <!-- Sales List (Accordion) -->
         {% if ventas_confirmadas %}
+            <div class="accordion" id="ventasAccordion">
             {% for venta in ventas_confirmadas %}
-            <div class="card sale-card mb-4">
-                <div class="card-header sale-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h6 class="mb-0">
+                <div class="accordion-item sale-card mb-3">
+                    <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                        <button class="accordion-button collapsed sale-header d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
+                            <div class="d-flex align-items-center">
                                 <i class="fas fa-receipt me-2"></i>
-                                Venta #{{ venta.numero_pedido }}
-                            </h6>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge bg-success">
-                                <i class="fas fa-check-circle me-1"></i>Confirmada
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Sale Info -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <strong>Fecha:</strong><br>
-                            <span class="text-muted">{{ venta.fecha_pedido|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Total:</strong><br>
-                            <span class="text-success fw-bold">${{ venta.total_pedido|floatformat:2 }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Método de Pago:</strong><br>
-                            <span class="text-muted">{{ venta.metodo_pago|default:"No especificado" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Tipo de Comprador:</strong><br>
-                            <span class="badge bg-info">{{ venta.tipo_comprador|capfirst }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Fecha de confirmación -->
-                    {% if venta.fecha_confirmacion %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="alert alert-success" role="alert">
-                                <i class="fas fa-check-circle me-2"></i>
-                                <strong>Venta confirmada el:</strong> {{ venta.fecha_confirmacion|date:"d/m/Y H:i" }}
+                                <strong class="me-3">Venta #{{ venta.numero_pedido }}</strong>
                             </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Buyer Information -->
-                    <div class="buyer-info">
-                        <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Comprador</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Nombre:</strong><br>
-                                <span class="text-muted">{{ venta.nombre_comprador }}</span>
+                            <div>
+                                <span class="badge status-badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Confirmada
+                                </span>
                             </div>
-                            <div class="col-md-4">
-                                <strong>Email:</strong><br>
-                                <span class="text-muted">{{ venta.email_comprador }}</span>
+                        </button>
+                    </h2>
+                    <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#ventasAccordion">
+                        <div class="accordion-body">
+                            <!-- Sale Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <strong>Fecha:</strong><br>
+                                    <span class="text-muted">{{ venta.fecha_pedido|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Total:</strong><br>
+                                    <span class="text-success fw-bold">${{ venta.total_pedido|floatformat:2 }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Método de Pago:</strong><br>
+                                    <span class="text-muted">{{ venta.metodo_pago|default:"No especificado" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Tipo de Comprador:</strong><br>
+                                    <span class="badge bg-info">{{ venta.tipo_comprador|capfirst }}</span>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <strong>Teléfono:</strong><br>
-                                <span class="text-muted">{{ venta.telefono_comprador|default:"No proporcionado" }}</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    {% if venta.direccion_envio %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Dirección de Entrega:</strong><br>
-                            <span class="text-muted">{{ venta.direccion_envio }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if venta.notas_pedido %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Notas del Pedido:</strong><br>
-                            <span class="text-muted">{{ venta.notas_pedido }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Payment Proof -->
-                    {% if venta.comprobante_pago %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Comprobante de Pago:</strong><br>
-                            <div class="mt-2">
-                                <button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#paymentModal{{ forloop.counter }}">
-                                    <i class="fas fa-file-image me-2"></i>Ver comprobante
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Comprobante de Pago:</strong><br>
-                            <span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>No se ha subido comprobante</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Products List -->
-                    <div class="row">
-                        <div class="col-12">
-                            <h6 class="mb-3"><i class="fas fa-box me-2"></i>Productos Vendidos ({{ venta.detalles|length }})</h6>
-                            {% for detalle in venta.detalles %}
-                            <div class="product-item">
-                                <div class="row align-items-center">
-                                    <div class="col-md-1">
-                                        {% if detalle.imagen %}
-                                            <img src="{{ detalle.imagen }}" alt="{{ detalle.nombre_producto }}" class="product-image">
-                                        {% else %}
-                                            <div class="product-image bg-light d-flex align-items-center justify-content-center">
-                                                <i class="fas fa-image text-muted"></i>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-5">
-                                        <strong>{{ detalle.nombre_producto }}</strong>
-                                    </div>
-                                    <div class="col-md-2 text-center">
-                                        <span class="badge bg-light text-dark">Cant: {{ detalle.cantidad }}</span>
-                                    </div>
-                                    <div class="col-md-2 text-center">
-                                        <span class="text-muted">${{ detalle.precio_unitario|floatformat:2 }}</span>
-                                    </div>
-                                    <div class="col-md-2 text-end">
-                                        <strong class="text-success">${{ detalle.subtotal|floatformat:2 }}</strong>
+                            <!-- Fecha de confirmación -->
+                            {% if venta.fecha_confirmacion %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="alert alert-success" role="alert">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <strong>Venta confirmada el:</strong> {{ venta.fecha_confirmacion|date:"d/m/Y H:i" }}
                                     </div>
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
-                    </div>
+                            {% endif %}
 
-                    <!-- Status Badge -->
-                    <div class="row mt-4">
-                        <div class="col-12 text-center">
-                            <span class="confirmed-badge">
-                                <i class="fas fa-check-circle me-2"></i>Venta Confirmada y Procesada
-                            </span>
+                            <!-- Buyer Information -->
+                            <div class="buyer-info">
+                                <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Comprador</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>Nombre:</strong><br>
+                                        <span class="text-muted">{{ venta.nombre_comprador }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Email:</strong><br>
+                                        <span class="text-muted">{{ venta.email_comprador }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Teléfono:</strong><br>
+                                        <span class="text-muted">{{ venta.telefono_comprador|default:"No proporcionado" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if venta.direccion_envio %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Dirección de Entrega:</strong><br>
+                                    <span class="text-muted">{{ venta.direccion_envio }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if venta.notas_pedido %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Notas del Pedido:</strong><br>
+                                    <span class="text-muted">{{ venta.notas_pedido }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Payment Proof -->
+                            {% if venta.comprobante_pago %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Comprobante de Pago:</strong><br>
+                                    <div class="mt-2">
+                                        <button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#paymentModal{{ forloop.counter }}">
+                                            <i class="fas fa-file-image me-2"></i>Ver comprobante
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Comprobante de Pago:</strong><br>
+                                    <span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>No se ha subido comprobante</span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Products List -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="mb-3"><i class="fas fa-box me-2"></i>Productos Vendidos ({{ venta.detalles|length }})</h6>
+                                    {% for detalle in venta.detalles %}
+                                    <div class="product-item">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-1">
+                                                {% if detalle.imagen %}
+                                                    <img src="{{ detalle.imagen }}" alt="{{ detalle.nombre_producto }}" class="product-image">
+                                                {% else %}
+                                                    <div class="product-image bg-light d-flex align-items-center justify-content-center">
+                                                        <i class="fas fa-image text-muted"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-5">
+                                                <strong>{{ detalle.nombre_producto }}</strong>
+                                            </div>
+                                            <div class="col-md-2 text-center">
+                                                <span class="badge bg-light text-dark">Cant: {{ detalle.cantidad }}</span>
+                                            </div>
+                                            <div class="col-md-2 text-center">
+                                                <span class="text-muted">${{ detalle.precio_unitario|floatformat:2 }}</span>
+                                            </div>
+                                            <div class="col-md-2 text-end">
+                                                <strong class="text-success">${{ detalle.subtotal|floatformat:2 }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Status Badge -->
+                            <div class="row mt-4">
+                                <div class="col-12 text-center">
+                                    <span class="confirmed-badge">
+                                        <i class="fas fa-check-circle me-2"></i>Venta Confirmada y Procesada
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
             {% endfor %}
+            </div>
         {% else %}
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">

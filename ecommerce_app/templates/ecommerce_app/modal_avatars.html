@@ -1,0 +1,378 @@
+{% load static %}
+<!-- Modal de Selección de Avatares (include reutilizable) -->
+<style>
+	/* Modal avatar: estilos agrupados aquí para que el include los provea */
+	#avatarModal .modal-content {
+		background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+		border-radius: 14px;
+		width: 100%;
+		max-width: 880px;
+		max-height: 90vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		box-shadow: 0 20px 40px rgba(16,24,40,0.12);
+		border: 1px solid rgba(15,23,42,0.04);
+	}
+
+	#avatarModal .modal-header {
+		padding: 18px 22px;
+		border-bottom: 0;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background: linear-gradient(90deg, rgba(59,130,246,0.06), rgba(29,78,216,0.03));
+	}
+
+	#avatarModal .modal-header h3 {
+		margin: 0;
+		font-size: 1.25rem;
+		color: #0f172a;
+		font-weight: 600;
+	}
+
+	/* Close button */
+	#avatarModal .close-modal {
+		background: #fff;
+		border: 1px solid rgba(15,23,42,0.06);
+		width: 40px;
+		height: 40px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 10px;
+		box-shadow: 0 4px 10px rgba(2,6,23,0.06);
+		cursor: pointer;
+		color: #334155;
+	}
+
+	#avatarModal .modal-body {
+		padding: 20px;
+		overflow-y: auto;
+		flex: 1 1 auto;
+		background: transparent;
+	}
+
+	#avatarModal .modal-footer {
+		padding: 14px 20px;
+		border-top: 0;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9));
+	}
+
+	/* Grid y tarjetas */
+	#avatarModal #avatars-modal-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		gap: 12px;
+		align-items: start;
+	}
+
+	/* Visual parity: make .avatar-option hover/selected look like empresa template */
+	.avatar-option {
+		transition: all 0.3s ease;
+		cursor: pointer;
+		border: 2px solid transparent;
+		border-radius: 0.5rem;
+		overflow: hidden;
+	}
+
+	.avatar-option:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+		border-color: #0d6efd; /* azul visible */
+	}
+
+	.avatar-option.selected {
+		border-color: #0d6efd;
+		background-color: #f0f7ff;
+	}
+
+	#avatarModal .avatar-card {
+		background: #ffffff;
+		border-radius: 8px;
+		padding: 6px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		cursor: pointer;
+		transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+		border: 1px solid rgba(15,23,42,0.04);
+		box-shadow: 0 3px 6px rgba(2,6,23,0.04);
+		position: relative;
+		min-height: 90px;
+	}
+
+	#avatarModal .avatar-card img {
+		width: 64px;
+		height: 64px;
+		object-fit: contain;
+		object-position: center center;
+		display: block;
+		border-radius: 50%;
+		padding: 3px;
+		background: linear-gradient(180deg,#ffffff,#f8fafc);
+		border: 1.5px solid rgba(229,231,235,1);
+		margin-bottom: 6px;
+		transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+		box-shadow: 0 4px 10px rgba(2,6,23,0.05);
+		filter: contrast(1.02) saturate(1.02);
+	}
+
+	/* Overrides para imágenes inyectadas por el selector */
+	#avatarModal .avatar-option img,
+	#avatarModal .avatar-option .img-fluid,
+	#avatarModal .avatar-option img.img-fluid {
+		width: 64px !important;
+		height: 64px !important;
+		object-fit: contain !important;
+		object-position: center center !important;
+		padding: 3px !important;
+		border-radius: 50% !important;
+		border: 1.5px solid rgba(229,231,235,1) !important;
+		box-shadow: 0 4px 10px rgba(2,6,23,0.05) !important;
+		display: inline-block !important;
+	}
+
+	#avatarModal .avatar-option {
+		padding: 6px !important;
+		margin: 0 auto !important;
+		max-width: 200px !important;
+	}
+
+	#avatarModal .avatar-option p.small {
+		font-size: 0.72rem !important;
+		margin: 0 !important;
+		white-space: nowrap !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+	}
+
+	.avatar-card:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 16px rgba(2,6,23,0.06);
+		border-color: rgba(59,130,246,0.10);
+	}
+
+	.avatar-card:hover img {
+		transform: scale(1.04);
+		filter: contrast(1.05) saturate(1.05);
+		box-shadow: 0 6px 18px rgba(2,6,23,0.07);
+	}
+
+	.avatar-card.selected {
+		outline: 3px solid rgba(59,130,246,0.12);
+		background: linear-gradient(180deg, rgba(239,246,255,0.5), #ffffff);
+	}
+
+	.avatar-card .avatar-name {
+		font-size: 0.72rem;
+		color: #0f172a;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.avatar-card .avatar-badge {
+		margin-top: 4px;
+		font-size: 0.62rem;
+		color: #334155;
+		opacity: 0.85;
+	}
+
+	.avatar-preview-large {
+		width: 72px !important;
+		height: 72px !important;
+		padding: 3px !important;
+		border-radius: 50% !important;
+		object-fit: contain !important;
+		object-position: center center !important;
+		box-shadow: 0 6px 14px rgba(2,6,23,0.06) !important;
+		border: 1.5px solid rgba(229,231,235,1) !important;
+		background: linear-gradient(180deg,#ffffff,#f8fafc) !important;
+	}
+
+	#avatarPreviewLarge.avatar-preview-large {
+		width: 72px !important;
+		height: 72px !important;
+	}
+
+	.avatar-card .check-overlay {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		background: rgba(16,185,129,0.98);
+		color: white;
+		width: 28px;
+		height: 28px;
+		border-radius: 8px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 6px 12px rgba(2,6,23,0.12);
+		font-size: 0.85rem;
+	}
+
+	#avatars-loading {
+		text-align: center;
+		padding: 42px 16px;
+		color: #64748b;
+		font-size: 0.98rem;
+	}
+
+	#avatarModal .btn-cancel {
+		background: transparent;
+		border: 1px solid rgba(15,23,42,0.06);
+		color: #0f172a;
+		padding: 10px 16px;
+		border-radius: 10px;
+	}
+
+	#avatarModal .btn-confirm {
+		background: linear-gradient(90deg,#3b82f6,#1d4ed8);
+		color: #fff;
+		padding: 10px 18px;
+		border-radius: 10px;
+		box-shadow: 0 8px 20px rgba(29,78,216,0.12);
+	}
+
+	#avatarModal .btn-confirm:disabled {
+		opacity: 0.6;
+		box-shadow: none;
+		background: #9aa8d6;
+		cursor: not-allowed;
+	}
+
+	/* Contenedores auxiliares */
+	.avatar-selection-container { margin-top: 1rem; }
+	.selected-avatar-preview { background-color: #f8f9fa; border-radius: 0.5rem; transition: all 0.3s ease; }
+	.selected-avatar-preview:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
+</style>
+
+<!-- Modal HTML -->
+<div id="avatarModal" class="modal fade" tabindex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-centered">
+		<div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="avatarModalLabel">
+			<div class="modal-header">
+				<div>
+					<h3 id="avatarModalLabel">Selecciona el Avatar del Chatbot</h3>
+					<p class="text-muted small mb-0">Elige un avatar para que tu asistente tenga una identidad visual coherente.</p>
+				</div>
+				<button type="button" class="close-modal" data-bs-dismiss="modal" aria-label="Cerrar">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				</button>
+			</div>
+
+			<div class="modal-body">
+				<div id="avatars-loading" class="loading-message" aria-live="polite">Cargando avatares...</div>
+
+				<div class="container-fluid px-0">
+					<div id="avatars-modal-grid" class="row g-3" style="display: none;" data-static-url="{% static '' %}">
+						<!-- Los avatares se cargarán dinámicamente aquí -->
+					</div>
+				</div>
+			</div>
+
+			<div class="modal-footer">
+				<div class="d-flex align-items-center">
+					<small class="text-muted me-3">Selecciona un avatar y confirma para aplicar</small>
+				</div>
+				<div>
+					<button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn-confirm" id="confirmAvatarBtn" disabled>Confirmar Selección</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Avatar selector script + integración específica para el modal -->
+<script src="{% static 'js/avatar-selector.js' %}" data-static-url="{% static '' %}"></script>
+<script>
+	(function(){
+		// Inicialización y binding centralizados para confirmar selección
+		// El modal se abre desde `avatar-selector.js` para evitar crear múltiples instancias
+		const confirmBtn = document.getElementById('confirmAvatarBtn');
+		const previewLarge = document.getElementById('avatarPreviewLarge');
+		const selectedName = document.getElementById('selected_avatar_name');
+		// soportar inputs de usuario y empresa y también selector por name
+		const avatarInputs = document.querySelectorAll('#avatar_chatbot, #avatar_chatbot_empresa, input[name="avatar_chatbot"]'); // puede haber uno en cada formulario
+		// Inputs que el backend espera cuando se selecciona un avatar predefinido
+		const avatarOptionInputs = document.querySelectorAll('input[name="avatar_option"], #selected_avatar_input');
+		const avatarsGrid = document.getElementById('avatars-modal-grid');
+		const staticBase = avatarsGrid ? (avatarsGrid.dataset.staticUrl || '') : '';
+
+
+
+		// API que avatar-selector.js debería llamar: window.onAvatarSelected({id, src, name})
+		window.onAvatarSelected = function(data){
+			if (!confirmBtn) return;
+			confirmBtn.disabled = false;
+			confirmBtn.dataset.selectedId = data.id;
+			confirmBtn.dataset.selectedSrc = data.src;
+			confirmBtn.dataset.selectedName = data.name;
+		};
+
+		if (confirmBtn) {
+			confirmBtn.addEventListener('click', function(){
+				const src = this.dataset.selectedSrc;
+				const name = this.dataset.selectedName;
+				if (!src) return;
+				// Actualizar todas las vistas previas y campos ocultos donde existan
+				if (previewLarge) previewLarge.src = src;
+				if (selectedName) selectedName.textContent = name || 'Avatar seleccionado';
+				// Calcular valor relativo esperado por el servidor: quitar staticBase si está presente
+				let relative = src;
+				if (staticBase && relative.indexOf(staticBase) === 0) {
+					relative = relative.slice(staticBase.length);
+				}
+				// quitar barras iniciales
+				relative = relative.replace(/^\/+/, '');
+				// Actualizar inputs relacionados con avatar (valor relativo)
+				avatarInputs.forEach(input => {
+					try {
+						input.value = relative;
+						console.debug('[modal_avatars] set avatar input', input, '=>', relative);
+					} catch (e) {
+						console.warn('No se pudo actualizar input avatar:', e);
+					}
+				});
+				// Actualizar inputs avatar_option que el backend espera (por ejemplo: registrar_persona/empresa)
+				avatarOptionInputs.forEach(input => {
+					try {
+						input.value = relative;
+						console.debug('[modal_avatars] set avatar_option input', input, '=>', relative);
+					} catch (e) {
+						console.warn('No se pudo actualizar input avatar_option:', e);
+					}
+				});
+				// Cerrar modal
+				const modalEl = document.getElementById('avatarModal');
+				const modal = bootstrap.Modal.getInstance(modalEl);
+				if (modal) modal.hide();
+			});
+		}
+
+		// Limpieza por si queda backdrop huérfano: al ocultarse el modal, eliminar cualquier .modal-backdrop
+		(function(){
+			const modalEl = document.getElementById('avatarModal');
+			if (!modalEl) return;
+			modalEl.addEventListener('hidden.bs.modal', function(){
+				try {
+					const backdrops = document.querySelectorAll('.modal-backdrop');
+					backdrops.forEach(b => b.parentNode && b.parentNode.removeChild(b));
+					document.body.classList.remove('modal-open');
+					console.debug('[modal_avatars] cleaned up backdrops on hidden');
+				} catch (e) { console.warn('Error cleaning backdrops', e); }
+			});
+		})();
+	})();
+</script>
+

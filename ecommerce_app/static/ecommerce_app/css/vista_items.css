@@ -1,3 +1,25 @@
+/* Additional styles for distance badge */
+.distance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem; /* larger so it reads clearly */
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+  /* stronger, warmer red to stand out */
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 10px 24px rgba(220,38,38,0.12);
+  line-height: 1;
+  transform: translateZ(0);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.distance-badge:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 36px rgba(220,38,38,0.18);
+}
 /* CSS extraído de vista_items.html - estilos para comentarios y responsive */
 
 /* Estilos para sección de comentarios */
@@ -31,8 +53,8 @@
 
 #lista-comentarios .list-group-item {
   border: none;
-  padding: 12px 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
+  padding: 10px 8px;
+  border-bottom: none;
 }
 
 #lista-comentarios .list-group-item:last-child {
@@ -46,6 +68,178 @@
 .comentario-texto {
   white-space: pre-wrap;
 }
+
+/* New comment card styling */
+#lista-comentarios .comentario-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: linear-gradient(180deg, #ffffff, #fbfbfb);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 6px 12px rgba(16,24,40,0.04);
+  border: 1px solid rgba(15,23,42,0.04);
+}
+
+#lista-comentarios .comentario-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid rgba(0,0,0,0.04);
+}
+
+/* Ensure the main content area inside the comment card can shrink/grow
+   so action buttons (which are siblings) stay on the same row instead
+   of being pushed below by a width:100% helper class (like .w-100). */
+#lista-comentarios .comentario-card > .w-100 {
+  flex: 1 1 auto; /* grow and shrink as needed */
+  width: auto;     /* override any width:100% utilities */
+  min-width: 0;    /* allow truncation / proper flex behavior */
+}
+
+#lista-comentarios .comentario-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+#lista-comentarios .comentario-autor {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+#lista-comentarios .comentario-fecha {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+#lista-comentarios .comentario-texto {
+  margin-top: 6px;
+  color: #374151;
+  line-height: 1.45;
+}
+
+/* Separator between comments */
+#lista-comentarios .list-group-item + .list-group-item {
+  margin-top: 10px;
+}
+
+/* Load more button styling */
+/* Modern load-more component */
+.load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(30,58,138,0.16);
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+
+.load-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(30,58,138,0.18);
+}
+
+.load-more-label { font-size: 0.95rem; }
+.load-more-chevron { transition: transform 220ms ease; }
+.load-more-btn.loading .load-more-chevron { transform: rotate(180deg); opacity: 0; }
+.load-more-btn.loading .load-more-label { opacity: 0.9; }
+.load-more-spinner { display: inline-block; }
+.load-more-btn .load-more-spinner svg { animation: rotate 1s linear infinite; }
+@keyframes rotate { to { transform: rotate(360deg); } }
+
+/* New control variant (non-button) */
+.load-more-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 420px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(37,99,235,0.12), rgba(124,58,237,0.06));
+  color: #0f172a;
+  cursor: pointer;
+  border: 1px solid rgba(15,23,42,0.06);
+  box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+}
+.load-more-control:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.08);
+}
+.load-more-control .load-more-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.load-more-control .load-more-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.load-more-control .load-more-label {
+  font-weight: 700;
+  color: #0f172a;
+}
+.load-more-subtitle {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+.load-more-control .load-more-chevron { transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 180ms ease; color: #374151; }
+.load-more-control.loading { opacity: 0.9; transform: translateY(-1px); }
+.load-more-control.loading .load-more-chevron { transform: rotate(180deg); opacity: 0; }
+.load-more-control .load-more-spinner svg { width: 18px; height: 18px; color: #374151; }
+
+
+/* Icon buttons for comment actions */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(15,23,42,0.04);
+  border: 1px solid rgba(15,23,42,0.06);
+  color: #374151;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+.btn-icon i { font-size: 14px; }
+.btn-icon:hover { background: rgba(15,23,42,0.08); transform: translateY(-1px); }
+.btn-icon:focus { outline: none; box-shadow: 0 0 0 4px rgba(59,130,246,0.08); }
+.comentario-actions .eliminar-comentario-btn { color: #ef4444; border-color: rgba(239,68,68,0.08); }
+.comentario-actions .editar-comentario-btn { color: #0f172a; border-color: rgba(15,23,42,0.06); }
+
+/* Make actions appear inline (side-by-side) and prevent vertical stacking */
+#lista-comentarios .comentario-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* keep actions from shrinking away when space is tight */
+}
+
+/* On very small screens allow actions to wrap to a second line gracefully */
+@media (max-width: 420px) {
+  #lista-comentarios .comentario-actions {
+    gap: 6px;
+    /* allow wrapping if absolutely necessary */
+    flex-wrap: wrap;
+  }
+}
+
 
 /* Mantener estilos existentes que estaban en la plantilla */
 .thumbnail-container {
@@ -133,6 +327,47 @@
 
   .product-info {
     margin-top: 18px;
+  }
+}
+
+/* Inline edit area styling: make the textarea occupy the comment content width */
+.comentario-edit-area {
+  width: 100%;
+  margin-top: 8px;
+}
+.comentario-edit-area .comentario-edit-text {
+  width: 100%;
+  min-height: 90px; /* a bit larger for comfortable editing */
+  resize: vertical;
+}
+
+/* Ensure the edit controls align nicely under the textarea */
+.comentario-edit-area .guardar-comentario-btn,
+.comentario-edit-area .cancelar-comentario-btn {
+  min-width: 80px;
+}
+
+/* Highlight the inline editor so it's clearly visible while editing */
+.comentario-edit-area .comentario-edit-text {
+  background: #ffffff; /* pure white to contrast card background */
+  border: 1.5px solid rgba(59,130,246,0.22); /* soft blue border */
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.06); /* subtle blue-ish shadow */
+  padding: 12px;
+  border-radius: 8px;
+  transition: box-shadow 140ms ease, border-color 140ms ease, transform 120ms ease;
+}
+.comentario-edit-area .comentario-edit-text::placeholder { color: #9ca3af; }
+.comentario-edit-area .comentario-edit-text:focus {
+  outline: none;
+  border-color: rgba(59,130,246,0.9);
+  box-shadow: 0 10px 30px rgba(59,130,246,0.12);
+  transform: translateY(-1px);
+}
+
+/* Slightly increase contrast of the edit area on small screens as well */
+@media (max-width: 420px) {
+  .comentario-edit-area .comentario-edit-text {
+    border-width: 1px;
   }
 }
 

@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginForm = getElement('loginForm');
     const title = document.querySelector('.login-title');
 
+    // Toggle de visibilidad de contraseña
+    const togglePasswordBtn = document.getElementById('togglePassword');
+
+
     // Verificar que todos los elementos críticos estén presentes
     // Si faltan elementos críticos, mostrar error y recargar la página
     if (!emailInput || !passwordInput || !emailField || !passwordField || !nextButton || !loginForm) {
@@ -111,6 +115,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.remove('required-error');
                 this.removeAttribute('title');
             }
+        });
+    }
+
+    // Manejo del botón para mostrar/ocultar contraseña
+    if (togglePasswordBtn && passwordInput) {
+        togglePasswordBtn.addEventListener('click', function() {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            if (isPassword) {
+                passwordInput.setAttribute('type', 'text');
+                this.innerHTML = '<i class="zmdi zmdi-eye-off"></i>';
+                this.setAttribute('aria-label', 'Ocultar contraseña');
+            } else {
+                passwordInput.setAttribute('type', 'password');
+                this.innerHTML = '<i class="zmdi zmdi-eye"></i>';
+                this.setAttribute('aria-label', 'Mostrar contraseña');
+            }
+            // Mantener el foco en el campo de contraseña
+            passwordInput.focus();
         });
     }
 

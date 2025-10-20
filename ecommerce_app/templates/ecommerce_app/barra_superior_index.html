@@ -194,6 +194,7 @@
                 <span>Mis Pedidos</span>
                 <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
               </button>
+             
               <div class="collapse ps-5" id="offcanvasPedidosCollapse">
                 <ul class="list-unstyled mb-0">
                   <li><a class="nav-link no-blue-effect" href="{% url 'pedidos_pendientes' %}">Pendientes</a></li>
@@ -209,11 +210,25 @@
               </a>
             {% endif %}
           </li>
+          <!-- Mis Solicitudes (servicio) - link placed after Mis Pedidos -->
+          <li class="nav-item">
+            {% if user_info.is_authenticated %}
+              <a href="{% url 'mis_solicitudes' %}" class="nav-link d-flex align-items-center gap-3">
+                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
+                <span>Mis Solicitudes (servicio)</span>
+              </a>
+            {% else %}
+              <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver tus solicitudes')">
+                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
+                <span>Mis Solicitudes (servicio)</span>
+              </a>
+            {% endif %}
+          </li>
           <li class="nav-item">
             {% if user_info.is_authenticated %}
               <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasVentasCollapse" aria-expanded="false" aria-controls="offcanvasVentasCollapse" style="box-shadow:none;">
                 <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
-                <span>Mis Ventas</span>
+                <span>Mis Ventas (Productos)</span>
                 <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
               </button>
               <div class="collapse ps-5" id="offcanvasVentasCollapse">
@@ -226,7 +241,7 @@
             {% else %}
               <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver tus ventas')">
                 <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
-                <span>Mis Ventas</span>
+                <span>Mis Ventas (Productos)</span>
               </a>
             {% endif %}
           </li>

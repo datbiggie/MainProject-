@@ -93,6 +93,45 @@ def api_productos_servicios_disponibles(request):
         return JsonResponse({'success': True, 'productos': productos_list, 'servicios': servicios_list})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
+
+@require_GET
+def api_sucursales_disponibles(request):
+    """Devuelve las sucursales de la empresa actual en formato JSON para poblar checkboxes/selects."""
+    try:
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+
+        account_type = request.session.get('account_type', 'usuario')
+        if account_type != 'empresa':
+            return JsonResponse({'success': False, 'message': 'Acceso no autorizado'})
+
+        empresa_obj = current_user
+        # Si se pasa producto_id o servicio_id, excluir sucursales donde ya existe la asociación
+        producto_id = request.GET.get('producto_id')
+        servicio_id = request.GET.get('servicio_id')
+
+        sucursales_qs = sucursal.objects.filter(id_empresa_fk=empresa_obj)
+        if producto_id:
+            try:
+                # obtener IDs de sucursales que ya tienen este producto
+                assigned_ids = producto_sucursal.objects.filter(id_producto_fk__id_producto_empresa=producto_id).values_list('id_sucursal_fk__id_sucursal', flat=True)
+                sucursales_qs = sucursales_qs.exclude(id_sucursal__in=list(assigned_ids))
+            except Exception:
+                # si ocurre algún error al filtrar por producto, devolvemos todas las sucursales
+                pass
+        elif servicio_id:
+            try:
+                assigned_ids = servicio_sucursal.objects.filter(id_servicio_fk__id_servicio_empresa=servicio_id).values_list('id_sucursal_fk__id_sucursal', flat=True)
+                sucursales_qs = sucursales_qs.exclude(id_sucursal__in=list(assigned_ids))
+            except Exception:
+                pass
+
+        sucursales = [{'id': s.id_sucursal, 'nombre': s.nombre_sucursal} for s in sucursales_qs]
+        return JsonResponse({'success': True, 'sucursales': sucursales})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 from django.views.decorators.http import require_POST
 
 # API para guardar producto o servicio en una sucursal
@@ -608,7 +647,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password, make_password
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import os
 from django.conf import settings
 from django.views.decorators.http import require_GET
@@ -637,6 +676,317 @@ def get_current_user(request):
             # Si el usuario/empresa no existe, limpiar la sesión
             logout_user(request)
             return None
+    return None
+
+
+@csrf_exempt
+def publicar_comentario(request):
+    """Vista AJAX para publicar un comentario desde la vista de item.
+    Espera JSON con: item_id, tipo (producto/servicio), origen (empresa/usuario), comentario
+    Retorna JSON {success: bool, message: str, autor: str, fecha: str, avatar: str}
+    """
+    import json
+    from django.utils import timezone
+    try:
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+
+        data = json.loads(request.body.decode('utf-8')) if request.body else {}
+        logger.info(f"publicar_comentario called with data: {data}")
+
+        # Validar sesión
+        if not is_user_authenticated(request):
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado. Debes iniciar sesión para comentar.'}, status=403)
+
+        comentario_text = data.get('comentario') or data.get('texto') or ''
+        if not comentario_text.strip():
+            return JsonResponse({'success': False, 'message': 'Comentario vacío'}, status=400)
+
+        item_id = data.get('item_id')
+        tipo = data.get('tipo')  # 'producto' o 'servicio'
+        origen = data.get('origen', 'empresa')  # 'empresa' o 'usuario'
+
+        # Obtener autor actual
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Sesión inválida'}, status=403)
+
+        # Crear instancia de comentario según tipo/origen
+        c = comentario()
+        c.texto = comentario_text.strip()
+        # Autor
+        if isinstance(current_user, usuario):
+            c.id_usuario_autor = current_user
+        else:
+            c.id_empresa_autor = current_user
+
+        # Asociar al objeto comentado
+        if tipo == 'producto':
+            if origen == 'empresa':
+                # item_id se refiere a producto_sucursal id
+                try:
+                    prod_s = producto_sucursal.objects.get(id_producto_sucursal=item_id)
+                    c.producto_sucursal = prod_s
+                except producto_sucursal.DoesNotExist:
+                    return JsonResponse({'success': False, 'message': 'Producto (sucursal) no encontrado'}, status=404)
+            else:
+                try:
+                    prod_u = producto_usuario.objects.get(id_producto_usuario=item_id)
+                    c.producto_usuario = prod_u
+                except producto_usuario.DoesNotExist:
+                    return JsonResponse({'success': False, 'message': 'Producto (usuario) no encontrado'}, status=404)
+        elif tipo == 'servicio':
+            if origen == 'empresa':
+                try:
+                    svc_s = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
+                    c.servicio_sucursal = svc_s
+                except servicio_sucursal.DoesNotExist:
+                    return JsonResponse({'success': False, 'message': 'Servicio (sucursal) no encontrado'}, status=404)
+            else:
+                try:
+                    svc_u = servicio_usuario.objects.get(id_servicio_usuario=item_id)
+                    c.servicio_usuario = svc_u
+                except servicio_usuario.DoesNotExist:
+                    return JsonResponse({'success': False, 'message': 'Servicio (usuario) no encontrado'}, status=404)
+        else:
+            return JsonResponse({'success': False, 'message': 'Tipo inválido'}, status=400)
+
+        # Validar y guardar
+        try:
+            c.full_clean()
+        except Exception as e:
+            logger.error(f"Validación comentario falló: {e}")
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+        c.save()
+
+        autor_nombre = current_user.nombre_usuario if isinstance(current_user, usuario) else current_user.nombre_empresa
+
+        # Obtener url de avatar si existe (ImageFieldFile) y convertir a string
+        avatar_field = getattr(current_user, 'foto_usuario', None) or getattr(current_user, 'logo_empresa', None)
+        avatar_url = None
+        try:
+            if avatar_field:
+                # Si es ImageFieldFile, usar .url; si es string, usar tal cual
+                avatar_url = avatar_field.url if hasattr(avatar_field, 'url') else str(avatar_field)
+        except Exception:
+            avatar_url = None
+        return JsonResponse({'success': True, 'message': 'Comentario publicado', 'id': c.id_comentario, 'is_author': True, 'autor': autor_nombre, 'fecha': timezone.localtime(c.fecha_creacion).strftime('%Y-%m-%d %H:%M:%S'), 'avatar': avatar_url})
+
+    except Exception as e:
+        logger.exception(f"Error en publicar_comentario: {e}")
+        return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
+
+
+@require_GET
+def obtener_comentarios(request):
+    """API GET que devuelve comentarios paginados para un item.
+    Parámetros: item_id, tipo (producto|servicio), origen (empresa|usuario), offset, limit
+    Retorna JSON: {success: True, comments: [...], has_more: bool, next_offset: int}
+    """
+    try:
+        item_id = request.GET.get('item_id') or request.GET.get('id')
+        tipo = request.GET.get('tipo')
+        origen = request.GET.get('origen', 'empresa')
+        try:
+            offset = int(request.GET.get('offset', 0))
+        except (ValueError, TypeError):
+            offset = 0
+        try:
+            limit = int(request.GET.get('limit', 5))
+        except (ValueError, TypeError):
+            limit = 5
+
+        if not item_id or not tipo:
+            return JsonResponse({'success': False, 'message': 'Parámetros inválidos', 'comments': []})
+
+        # Current user (if any) to mark ownership
+        current_user = get_current_user(request)
+
+        qs = comentario.objects.none()
+
+        if tipo == 'producto':
+            if origen == 'empresa':
+                qs = comentario.objects.filter(producto_sucursal__id_producto_sucursal=item_id)
+            else:
+                qs = comentario.objects.filter(producto_usuario__id_producto_usuario=item_id)
+        elif tipo == 'servicio':
+            if origen == 'empresa':
+                qs = comentario.objects.filter(servicio_sucursal__id_servicio_sucursal=item_id)
+            else:
+                qs = comentario.objects.filter(servicio_usuario__id_servicio_usuario=item_id)
+        else:
+            return JsonResponse({'success': False, 'message': 'Tipo inválido', 'comments': []})
+
+        total = qs.count()
+        # qs already ordered by -fecha_creacion from Meta
+        comentarios = list(qs[offset:offset+limit])
+
+        comments_data = []
+        for c in comentarios:
+            if c.id_usuario_autor:
+                autor = getattr(c.id_usuario_autor, 'nombre_usuario', 'Usuario')
+                avatar_field = getattr(c.id_usuario_autor, 'foto_usuario', None)
+            else:
+                autor = getattr(c.id_empresa_autor, 'nombre_empresa', 'Empresa')
+                avatar_field = getattr(c.id_empresa_autor, 'logo_empresa', None)
+
+            avatar_url = None
+            try:
+                if avatar_field:
+                    avatar_url = avatar_field.url if hasattr(avatar_field, 'url') else str(avatar_field)
+            except Exception:
+                avatar_url = None
+
+            if not avatar_url:
+                avatar_url = '/static/avatars/Cartoon Style Robot.jpg'
+
+            # Determine if current_user is the author
+            is_author = False
+            try:
+                if current_user:
+                    # usuario instance
+                    if hasattr(current_user, 'id_usuario') and c.id_usuario_autor and c.id_usuario_autor.id_usuario == getattr(current_user, 'id_usuario'):
+                        is_author = True
+                    # empresa instance
+                    if hasattr(current_user, 'id_empresa') and c.id_empresa_autor and c.id_empresa_autor.id_empresa == getattr(current_user, 'id_empresa'):
+                        is_author = True
+            except Exception:
+                is_author = False
+
+            comments_data.append({
+                'id': c.id_comentario,
+                'autor': autor,
+                'avatar': avatar_url,
+                'texto': c.texto,
+                'fecha': timezone.localtime(c.fecha_creacion).strftime('%Y-%m-%d %H:%M:%S'),
+                'is_author': is_author
+            })
+
+        next_offset = offset + len(comments_data)
+        has_more = next_offset < total
+
+        return JsonResponse({'success': True, 'comments': comments_data, 'has_more': has_more, 'next_offset': next_offset})
+    except Exception as e:
+        logger.exception(f"Error en obtener_comentarios: {e}")
+        return JsonResponse({'success': False, 'message': str(e), 'comments': []}, status=500)
+
+
+def safe_get(obj, path, default=None):
+    """Accede de forma segura a atributos anidados. path es 'a.b.c'."""
+    try:
+        cur = obj
+        for part in path.split('.'):
+            if cur is None:
+                return default
+            cur = getattr(cur, part, None)
+        return cur if cur is not None else default
+    except Exception:
+        return default
+
+
+def collect_service_images(svc_obj):
+    """Devuelve lista de dicts con la forma que espera la plantilla: [{'imagen': {'url': '...'}}]
+       Acepta objetos de servicio tanto de usuario como de empresa.
+    """
+    images = []
+    try:
+        if not svc_obj:
+            return images
+        imgs_manager = getattr(svc_obj, 'imagenes', None)
+        if imgs_manager is None:
+            return images
+        # imgs_manager puede ser un RelatedManager
+        for img in imgs_manager.all():
+            # Intentar obtener el campo de ruta conocido
+            url = None
+            for attr in ('ruta_imagen_servicio_empresa', 'ruta_imagen_servicio_usuario'):
+                if hasattr(img, attr):
+                    filefield = getattr(img, attr)
+                    try:
+                        url = filefield.url
+                        break
+                    except Exception:
+                        url = None
+            if url:
+                images.append({'imagen': {'url': url}})
+    except Exception:
+        return images
+    return images
+
+
+def resolve_service_name_from_solicitud(solicitud):
+    """Intentar resolver un nombre de servicio desde una solicitud inspeccionando múltiples relaciones."""
+    # Posibles caminos donde buscar el nombre
+    candidates = [
+        'id_servicio_usuario_fk.nombre_servicio_usuario',
+        'id_servicio_usuario_fk.nombre_servicio_empresa',
+        'id_servicio_sucursal_fk.nombre_servicio_sucursal',
+        'id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa',
+        'id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_usuario',
+    ]
+    for path in candidates:
+        val = safe_get(solicitud, path, None)
+        if val:
+            return val
+    # Fallback a descripción o dirección
+    desc = safe_get(solicitud, 'descripcion_detallada', None)
+    if desc:
+        # Use first 30 chars
+        return (desc[:30] + '...') if len(desc) > 30 else desc
+    direccion = safe_get(solicitud, 'direccion', None)
+    if direccion:
+        return direccion
+    # Fallback final: usar el id de la solicitud si está disponible
+    try:
+        sid = getattr(solicitud, 'id_solicitud_servicio_usuario', None) or getattr(solicitud, 'id_solicitud_servicio_empresa', None)
+        if sid:
+            return f"Solicitud #{sid}"
+    except Exception:
+        pass
+    return None
+
+
+def resolve_service_name_strict(solicitud):
+    """Resolver el nombre del servicio inspeccionando atributos ORM directamente y logueando el hallazgo."""
+    try:
+        # servicio_usuario direct
+        svc_user = getattr(solicitud, 'id_servicio_usuario_fk', None)
+        if svc_user:
+            if getattr(svc_user, 'nombre_servicio_usuario', None):
+                logger.info(f"resolve_service_name_strict: found nombre_servicio_usuario='{svc_user.nombre_servicio_usuario}' on solicitud {getattr(solicitud,'id_solicitud_servicio_usuario', getattr(solicitud,'id_solicitud_servicio_empresa', '?'))}")
+                return svc_user.nombre_servicio_usuario
+            if getattr(svc_user, 'nombre_servicio_empresa', None):
+                logger.info(f"resolve_service_name_strict: found nombre_servicio_empresa on servicio_usuario: '{svc_user.nombre_servicio_empresa}'")
+                return svc_user.nombre_servicio_empresa
+
+        # servicio_sucursal
+        svc_sucursal = getattr(solicitud, 'id_servicio_sucursal_fk', None)
+        if svc_sucursal:
+            if getattr(svc_sucursal, 'nombre_servicio_sucursal', None):
+                logger.info(f"resolve_service_name_strict: found nombre_servicio_sucursal='{svc_sucursal.nombre_servicio_sucursal}' on solicitud")
+                return svc_sucursal.nombre_servicio_sucursal
+            svc_empresa = getattr(svc_sucursal, 'id_servicio_fk', None)
+            if svc_empresa:
+                if getattr(svc_empresa, 'nombre_servicio_empresa', None):
+                    logger.info(f"resolve_service_name_strict: found nombre_servicio_empresa='{svc_empresa.nombre_servicio_empresa}' via servicio_sucursal")
+                    return svc_empresa.nombre_servicio_empresa
+                if getattr(svc_empresa, 'nombre_servicio_usuario', None):
+                    logger.info(f"resolve_service_name_strict: found nombre_servicio_usuario='{svc_empresa.nombre_servicio_usuario}' via servicio_sucursal")
+                    return svc_empresa.nombre_servicio_usuario
+
+        # Try description or fallback
+        desc = getattr(solicitud, 'descripcion_detallada', None)
+        if desc:
+            return desc[:30] + '...' if len(desc) > 30 else desc
+        direccion = getattr(solicitud, 'direccion', None)
+        if direccion:
+            return direccion
+        sid = getattr(solicitud, 'id_solicitud_servicio_usuario', None) or getattr(solicitud, 'id_solicitud_servicio_empresa', None)
+        if sid:
+            return f"Solicitud #{sid}"
+    except Exception as e:
+        logger.debug(f"resolve_service_name_strict error: {e}")
     return None
 
 def is_user_authenticated(request):
@@ -3144,6 +3494,9 @@ def producto_config_funcion(request):
             prod.sucursales_asignadas = [ps.id_sucursal_fk for ps in sucursales_asignadas]
             
             productos_con_imagenes.append(prod)
+        # Obtener sucursales de la empresa para facilitar selección en la vista de productos
+        sucursales_empresa_qs = sucursal.objects.filter(id_empresa_fk=empresa_obj).values('id_sucursal', 'nombre_sucursal')
+        sucursales_empresa_list = list(sucursales_empresa_qs)
     else:
         # Para usuarios, usar productos de usuario
         user_info = {
@@ -3181,6 +3534,7 @@ def producto_config_funcion(request):
         'total_productos': total_productos,
         'productos_activos': productos_activos,
         'productos_inactivos': productos_inactivos
+        , 'sucursales_empresa': sucursales_empresa_list if account_type == 'empresa' else []
     })
 
 
@@ -5044,6 +5398,8 @@ def vista_items(request):
                         'stock': producto_sucursal_obj.stock_producto_sucursal,
                         'condicion': producto_sucursal_obj.condicion_producto_sucursal,
                         'estatus': producto_sucursal_obj.estatus_producto_sucursal,
+                        'latitud': getattr(producto_sucursal_obj.id_sucursal_fk, 'latitud_sucursal', None),
+                        'longitud': getattr(producto_sucursal_obj.id_sucursal_fk, 'longitud_sucursal', None),
                         'unidad_presentacion': getattr(producto_sucursal_obj, 'unidad_presentacion_producto_sucursal', 'unidad'),
                         'cantidad_por_presentacion': getattr(producto_sucursal_obj, 'cantidad_por_presentacion_producto_sucursal', None)
                     }
@@ -5057,6 +5413,7 @@ def vista_items(request):
                         'tipo': 'producto',
                         'tipo_propietario': 'empresa',
                         'empresa': producto.id_empresa_fk.nombre_empresa,
+                        'producto_empresa_id': producto.id_producto_empresa,
                         'sucursal': sucursal_info
                     }
                 except producto_sucursal.DoesNotExist:
@@ -5080,6 +5437,8 @@ def vista_items(request):
                                 'stock': producto_sucursal_obj.stock_producto_sucursal,
                                 'condicion': producto_sucursal_obj.condicion_producto_sucursal,
                                 'estatus': producto_sucursal_obj.estatus_producto_sucursal,
+                                'latitud': getattr(producto_sucursal_obj.id_sucursal_fk, 'latitud_sucursal', None),
+                                'longitud': getattr(producto_sucursal_obj.id_sucursal_fk, 'longitud_sucursal', None),
                                 'unidad_presentacion': getattr(producto_sucursal_obj, 'unidad_presentacion_producto_sucursal', 'unidad'),
                                 'cantidad_por_presentacion': getattr(producto_sucursal_obj, 'cantidad_por_presentacion_producto_sucursal', None)
                             }
@@ -5095,6 +5454,7 @@ def vista_items(request):
                                 'caracteristicas': producto.caracteristicas_generales_empresa,
                                 'tipo': 'producto',
                                 'empresa': producto.id_empresa_fk.nombre_empresa,
+                                'producto_empresa_id': producto.id_producto_empresa,
                                 'sucursal': sucursal_info
                             }
                         else:
@@ -5121,6 +5481,8 @@ def vista_items(request):
                         'stock': producto.stock_producto_usuario,
                         'condicion': producto.condicion_producto_usuario,
                         'estatus': producto.estatus_producto_usuario,
+                        'latitud': getattr(producto, 'latitud_entrega_producto', None),
+                        'longitud': getattr(producto, 'longitud_entrega_producto', None),
                         'unidad_presentacion': getattr(producto, 'unidad_presentacion_producto_usuario', 'unidad'),
                         'cantidad_por_presentacion': getattr(producto, 'cantidad_por_presentacion_producto_usuario', None)
                     }
@@ -5159,6 +5521,8 @@ def vista_items(request):
                         'precio': servicio_sucursal_obj.precio_servicio_sucursal,
                         'estatus': servicio_sucursal_obj.estatus_servicio_sucursal,
                         'id_sucursal': servicio_sucursal_obj.id_sucursal_fk.id_sucursal,
+                        'latitud': getattr(servicio_sucursal_obj.id_sucursal_fk, 'latitud_sucursal', None),
+                        'longitud': getattr(servicio_sucursal_obj.id_sucursal_fk, 'longitud_sucursal', None),
                         'id_servicio_fk': servicio.id_servicio_empresa
                     }
                     
@@ -5191,6 +5555,8 @@ def vista_items(request):
                                 'direccion': servicio_sucursal_obj.id_sucursal_fk.direccion_sucursal,
                                 'precio': servicio_sucursal_obj.precio_servicio_sucursal,
                                 'estatus': servicio_sucursal_obj.estatus_servicio_sucursal
+                                , 'latitud': getattr(servicio_sucursal_obj.id_sucursal_fk, 'latitud_sucursal', None)
+                                , 'longitud': getattr(servicio_sucursal_obj.id_sucursal_fk, 'longitud_sucursal', None)
                             }
                         
                         item_data = {
@@ -5221,6 +5587,8 @@ def vista_items(request):
                         'direccion': 'Información de contacto disponible',
                         'precio': servicio.precio_servicio_usuario if servicio.precio_servicio_usuario else 'Consultar',
                         'estatus': servicio.estatus_servicio_usuario
+                        , 'latitud': None
+                        , 'longitud': None
                     }
                     
                     item_data = {
@@ -5244,7 +5612,20 @@ def vista_items(request):
         atributos_producto = []
         if item_tipo == 'producto' and item_data:
             if item_data.get('tipo_propietario') == 'empresa':
-                valores_atributos = ValorAtributoProducto.objects.filter(producto_empresa__id_producto_empresa=item_data['id'])
+                # Para productos de empresa, item_data['id'] puede ser el id de producto_sucursal.
+                # Preferir producto_empresa_id si fue incluido en el contexto; si no, intentar resolverlo desde producto_sucursal.
+                prod_empresa_id = item_data.get('producto_empresa_id')
+                if not prod_empresa_id:
+                    try:
+                        prod_suc = producto_sucursal.objects.get(id_producto_sucursal=item_data['id'])
+                        prod_empresa_id = prod_suc.id_producto_fk.id_producto_empresa
+                    except Exception:
+                        prod_empresa_id = None
+
+                if prod_empresa_id:
+                    valores_atributos = ValorAtributoProducto.objects.filter(producto_empresa__id_producto_empresa=prod_empresa_id)
+                else:
+                    valores_atributos = ValorAtributoProducto.objects.none()
             else:
                 valores_atributos = ValorAtributoProducto.objects.filter(producto_usuario__id_producto_usuario=item_data['id'])
             atributos_producto = [
@@ -5282,6 +5663,128 @@ def vista_items(request):
             'es_favorito': es_favorito
         }
 
+        # If the user's coordinates were provided (e.g. from search 'Cerca de mi'),
+        # calculate distance (km) between user and the item's location and
+        # include it in the context so the template can show it.
+        try:
+            user_lat = request.GET.get('latitud') or request.GET.get('lat')
+            user_lng = request.GET.get('longitud') or request.GET.get('lng')
+            if user_lat and user_lng and item_data:
+                try:
+                    user_lat_f = float(user_lat)
+                    user_lng_f = float(user_lng)
+                    target_lat = None
+                    target_lng = None
+                    # Determine target coordinates depending on item type and origin
+                    if item_tipo == 'producto':
+                        if item_origen == 'empresa':
+                            try:
+                                prod_suc = producto_sucursal.objects.select_related('id_sucursal_fk').get(id_producto_sucursal=item_data['id'])
+                                suc = prod_suc.id_sucursal_fk
+                                target_lat = getattr(suc, 'latitud_sucursal', None)
+                                target_lng = getattr(suc, 'longitud_sucursal', None)
+                            except Exception:
+                                target_lat = target_lng = None
+                        else:
+                            try:
+                                prod = producto_usuario.objects.get(id_producto_usuario=item_data['id'])
+                                target_lat = getattr(prod, 'latitud_entrega_producto', None)
+                                target_lng = getattr(prod, 'longitud_entrega_producto', None)
+                            except Exception:
+                                target_lat = target_lng = None
+                    elif item_tipo == 'servicio':
+                        if item_origen == 'empresa':
+                            try:
+                                serv_suc = servicio_sucursal.objects.select_related('id_sucursal_fk').get(id_servicio_sucursal=item_data['id'])
+                                suc = serv_suc.id_sucursal_fk
+                                target_lat = getattr(suc, 'latitud_sucursal', None)
+                                target_lng = getattr(suc, 'longitud_sucursal', None)
+                            except Exception:
+                                target_lat = target_lng = None
+                        else:
+                            # Servicios de usuario no siempre tienen coordenadas; skip
+                            target_lat = target_lng = None
+
+                    if target_lat is not None and target_lng is not None and str(target_lat).strip() != '' and str(target_lng).strip() != '':
+                        try:
+                            tlat = float(target_lat)
+                            tlng = float(target_lng)
+                            # Haversine formula
+                            import math
+                            def haversine(lat1, lon1, lat2, lon2):
+                                R = 6371.0
+                                dlat = math.radians(lat2 - lat1)
+                                dlon = math.radians(lon2 - lon1)
+                                a = math.sin(dlat/2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2) ** 2
+                                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                                return R * c
+
+                            distancia_km = round(haversine(user_lat_f, user_lng_f, tlat, tlng), 2)
+                            # Add to both context and item for template convenience
+                            context['distancia'] = distancia_km
+                            if isinstance(context.get('item'), dict):
+                                context['item']['distancia'] = distancia_km
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        except Exception:
+            # Non-fatal; ignore distance calculation errors
+            pass
+
+        # Cargar primeros 5 comentarios para renderizado inicial en la plantilla
+        try:
+            # Reusar lógica similar a obtener_comentarios
+            comments_qs = comentario.objects.none()
+            if item_tipo == 'producto':
+                if item_origen == 'empresa':
+                    comments_qs = comentario.objects.filter(producto_sucursal__id_producto_sucursal=item_data['id'])
+                else:
+                    comments_qs = comentario.objects.filter(producto_usuario__id_producto_usuario=item_data['id'])
+            elif item_tipo == 'servicio':
+                if item_origen == 'empresa':
+                    comments_qs = comentario.objects.filter(servicio_sucursal__id_servicio_sucursal=item_data['id'])
+                else:
+                    comments_qs = comentario.objects.filter(servicio_usuario__id_servicio_usuario=item_data['id'])
+
+            total_comments = comments_qs.count()
+            initial_comments = comments_qs[:5]
+            # Convertir a formato serializable simple para template
+            iniciales = []
+            for c in initial_comments:
+                if c.id_usuario_autor:
+                    autor = getattr(c.id_usuario_autor, 'nombre_usuario', 'Usuario')
+                    avatar_field = getattr(c.id_usuario_autor, 'foto_usuario', None)
+                else:
+                    autor = getattr(c.id_empresa_autor, 'nombre_empresa', 'Empresa')
+                    avatar_field = getattr(c.id_empresa_autor, 'logo_empresa', None)
+                avatar_url = None
+                try:
+                    if avatar_field:
+                        avatar_url = avatar_field.url if hasattr(avatar_field, 'url') else str(avatar_field)
+                except Exception:
+                    avatar_url = None
+                if not avatar_url:
+                    avatar_url = '/static/avatars/Cartoon Style Robot.jpg'
+                # Determine if current_user is the author of this comment
+                is_author = False
+                try:
+                    if current_user:
+                        if hasattr(current_user, 'id_usuario') and c.id_usuario_autor and c.id_usuario_autor.id_usuario == getattr(current_user, 'id_usuario'):
+                            is_author = True
+                        if hasattr(current_user, 'id_empresa') and c.id_empresa_autor and c.id_empresa_autor.id_empresa == getattr(current_user, 'id_empresa'):
+                            is_author = True
+                except Exception:
+                    is_author = False
+
+                iniciales.append({'id': c.id_comentario, 'autor': autor, 'avatar': avatar_url, 'texto': c.texto, 'fecha': timezone.localtime(c.fecha_creacion).strftime('%Y-%m-%d %H:%M:%S'), 'is_author': is_author})
+
+            context['initial_comments'] = iniciales
+            context['comments_total_count'] = total_comments
+        except Exception:
+            context['initial_comments'] = []
+            context['comments_total_count'] = 0
+
         print(f"DEBUG: Renderizando vista_items exitosamente para {item_data['tipo']}: {item_data['nombre']}")
         return render(request, 'ecommerce_app/vista_items.html', context)
         
@@ -5296,6 +5799,98 @@ def vista_items(request):
             'user_info': user_info
         }
         return render(request, 'ecommerce_app/vista_items.html', context)
+
+
+@csrf_exempt
+def eliminar_comentario(request):
+    """Eliminar un comentario. POST con: comentario_id. Solo el autor (usuario o empresa) puede eliminar su comentario."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+    try:
+        import json
+        data = json.loads(request.body.decode('utf-8')) if request.body else {}
+        comentario_id = data.get('comentario_id')
+        if not comentario_id:
+            return JsonResponse({'success': False, 'message': 'ID de comentario requerido'}, status=400)
+
+        # Verificar autenticación
+        if not is_user_authenticated(request):
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'}, status=403)
+
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Sesión inválida'}, status=403)
+
+        try:
+            c = comentario.objects.get(id_comentario=comentario_id)
+        except comentario.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Comentario no encontrado'}, status=404)
+
+        # Verificar autoría
+        is_author = False
+        try:
+            if hasattr(current_user, 'id_usuario') and c.id_usuario_autor and c.id_usuario_autor.id_usuario == getattr(current_user, 'id_usuario'):
+                is_author = True
+            if hasattr(current_user, 'id_empresa') and c.id_empresa_autor and c.id_empresa_autor.id_empresa == getattr(current_user, 'id_empresa'):
+                is_author = True
+        except Exception:
+            is_author = False
+
+        if not is_author:
+            return JsonResponse({'success': False, 'message': 'No autorizado para eliminar este comentario'}, status=403)
+
+        # Eliminar
+        c.delete()
+        return JsonResponse({'success': True, 'message': 'Comentario eliminado'})
+    except Exception as e:
+        logger.exception(f"Error en eliminar_comentario: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def editar_comentario(request):
+    """Editar un comentario. POST con: comentario_id, texto. Solo el autor puede editar."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+    try:
+        import json
+        data = json.loads(request.body.decode('utf-8')) if request.body else {}
+        comentario_id = data.get('comentario_id')
+        nuevo_texto = (data.get('texto') or '').strip()
+        if not comentario_id or not nuevo_texto:
+            return JsonResponse({'success': False, 'message': 'ID de comentario y texto requerido'}, status=400)
+
+        if not is_user_authenticated(request):
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'}, status=403)
+
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Sesión inválida'}, status=403)
+
+        try:
+            c = comentario.objects.get(id_comentario=comentario_id)
+        except comentario.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Comentario no encontrado'}, status=404)
+
+        # Verificar autoría
+        is_author = False
+        try:
+            if hasattr(current_user, 'id_usuario') and c.id_usuario_autor and c.id_usuario_autor.id_usuario == getattr(current_user, 'id_usuario'):
+                is_author = True
+            if hasattr(current_user, 'id_empresa') and c.id_empresa_autor and c.id_empresa_autor.id_empresa == getattr(current_user, 'id_empresa'):
+                is_author = True
+        except Exception:
+            is_author = False
+
+        if not is_author:
+            return JsonResponse({'success': False, 'message': 'No autorizado para editar este comentario'}, status=403)
+
+        c.texto = nuevo_texto
+        c.save()
+        return JsonResponse({'success': True, 'message': 'Comentario actualizado', 'texto': c.texto, 'fecha': timezone.localtime(c.fecha_actualizacion).strftime('%Y-%m-%d %H:%M:%S')})
+    except Exception as e:
+        logger.exception(f"Error en editar_comentario: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 
@@ -9602,6 +10197,97 @@ def mis_pedidos(request):
 
 
 @require_login
+def mis_solicitudes(request):
+    """Mostrar todas las solicitudes de servicios relacionadas con el usuario actual.
+    Para account_type 'usuario' muestra solicitudes hechas por el usuario (solicitud_servicio_usuario).
+    Para account_type 'empresa' muestra solicitudes dirigidas a la empresa (solicitud_servicio_empresa).
+    """
+    current_user = get_current_user(request)
+    if not current_user:
+        return redirect('/ecommerce/iniciar_sesion')
+
+    try:
+        account_type = request.session.get('account_type', 'usuario')
+        solicitudes_list = []
+
+        if account_type == 'empresa':
+            # solicitudes dirigidas a la empresa
+            solicitudes_qs = solicitud_servicio_empresa.objects.filter(id_empresa_fk=current_user).order_by('-fecha_solicitud')
+            for s in solicitudes_qs:
+                # resolver nombre del servicio y obtener imágenes si aplica
+                nombre_servicio = resolve_service_name_strict(s) or ''
+                imagenes = []
+                if s.id_servicio_usuario_fk:
+                    imagenes = collect_service_images(s.id_servicio_usuario_fk)
+                elif s.id_servicio_sucursal_fk:
+                    # intentar obtener imágenes desde el servicio asociado en la sucursal
+                    svc = getattr(s.id_servicio_sucursal_fk, 'id_servicio_fk', None)
+                    imagenes = collect_service_images(svc)
+
+                solicitudes_list.append({
+                    'id': s.id_solicitud_servicio_empresa,
+                    'fecha_solicitud': s.fecha_solicitud,
+                    'fecha_requerida': s.fecha_requerida,
+                    'direccion': s.direccion,
+                    'descripcion': s.descripcion_detallada,
+                    'estado': s.estado,
+                    'presupuesto': s.presupuesto_cotizacion,
+                    'descripcion_cotizacion': s.descripcion_cotizacion,
+                    'archivo_cotizacion': s.archivo_cotizacion.url if s.archivo_cotizacion else None,
+                    'motivo_rechazo': s.motivo_rechazo,
+                    'fecha_rechazo': s.fecha_rechazo,
+                    'nombre_servicio': nombre_servicio,
+                    'imagenes': imagenes,
+                    'tipo': 'empresa'
+                })
+
+        else:
+            # solicitudes creadas por el usuario
+            solicitudes_qs = solicitud_servicio_usuario.objects.filter(id_usuario_fk=current_user).order_by('-fecha_solicitud')
+            for s in solicitudes_qs:
+                nombre_servicio = resolve_service_name_strict(s) or ''
+                imagenes = []
+                if s.id_servicio_usuario_fk:
+                    imagenes = collect_service_images(s.id_servicio_usuario_fk)
+                elif s.id_servicio_sucursal_fk:
+                    svc = getattr(s.id_servicio_sucursal_fk, 'id_servicio_fk', None)
+                    imagenes = collect_service_images(svc)
+
+                solicitudes_list.append({
+                    'id': s.id_solicitud_servicio_usuario,
+                    'fecha_solicitud': s.fecha_solicitud,
+                    'fecha_requerida': s.fecha_requerida,
+                    'direccion': s.direccion,
+                    'descripcion': s.descripcion_detallada,
+                    'estado': s.estado,
+                    'presupuesto': s.presupuesto_cotizacion,
+                    'descripcion_cotizacion': s.descripcion_cotizacion,
+                    'archivo_cotizacion': s.archivo_cotizacion.url if s.archivo_cotizacion else None,
+                    'motivo_rechazo': s.motivo_rechazo,
+                    'fecha_rechazo': s.fecha_rechazo,
+                    'nombre_servicio': nombre_servicio,
+                    'imagenes': imagenes,
+                    'tipo': 'usuario'
+                })
+
+        # preparar user_info compatible con templates
+        user_info = get_user_info_with_avatar(current_user, account_type)
+
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+            'solicitudes': solicitudes_list,
+            'total_solicitudes': len(solicitudes_list)
+        }
+
+        return render(request, 'ecommerce_app/mis_solicitudes.html', context)
+
+    except Exception as e:
+        logger.error(f"Error en mis_solicitudes: {str(e)}")
+        return redirect('/ecommerce/index/')
+
+
+@require_login
 def confirmar_venta(request):
     """
     Vista para confirmar una venta cambiando el estado del pedido de 'pendiente' a 'confirmado'.
@@ -12167,11 +12853,14 @@ def servicios_ventas_pendientes(request):
                 estado='pendiente'
             ).select_related('id_empresa_fk', 'id_servicio_usuario_fk')
             
+            logger.info(f"servicios_ventas_pendientes - solicitudes_usuario count: {solicitudes_usuario.count()}")
             # Procesar solicitudes de usuarios
             for solicitud in solicitudes_usuario:
                 logger.info(f"Procesando solicitud de usuario: {solicitud.id_solicitud_servicio_usuario}")
-                logger.info(f"Cliente nombre: {solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'None'}")
-                logger.info(f"Cliente email: {solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'None'}")
+                servicio_obj = safe_get(solicitud, 'id_servicio_usuario_fk', None)
+                cliente_nombre = safe_get(solicitud, 'id_usuario_fk.nombre_usuario', 'Sin nombre')
+                cliente_email = safe_get(solicitud, 'id_usuario_fk.correo_usuario', 'Sin email')
+                cliente_telefono = safe_get(solicitud, 'id_usuario_fk.telefono_usuario', 'Sin teléfono')
                 servicios_pendientes.append({
                     'id': solicitud.id_solicitud_servicio_usuario,
                     'id_solicitud': solicitud.id_solicitud_servicio_usuario,
@@ -12180,22 +12869,28 @@ def servicios_ventas_pendientes(request):
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
                     'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'nombre_servicio': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'nombre_servicio': safe_get(servicio_obj, 'nombre_servicio_usuario', 'Sin nombre'),
+                    'servicio_nombre': safe_get(servicio_obj, 'nombre_servicio_usuario', 'Sin nombre'),
+                    'servicio_precio': safe_get(servicio_obj, 'precio_servicio_usuario', 0),
                     'categoria_servicio': 'Servicio de Usuario',
                     'tipo_cliente': 'usuario',
-                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'Sin nombre',
-                    'cliente_email': solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'Sin email',
-                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario if solicitud.id_usuario_fk else 'Sin teléfono',
+                    'cliente_nombre': cliente_nombre,
+                    'cliente_email': cliente_email,
+                    'cliente_telefono': cliente_telefono,
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(servicio_obj),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
             
+            logger.info(f"servicios_ventas_pendientes - solicitudes_empresa count: {solicitudes_empresa.count()}")
             # Procesar solicitudes de empresas
             for solicitud in solicitudes_empresa:
                 logger.info(f"Procesando solicitud de empresa: {solicitud.id_solicitud_servicio_empresa}")
-                logger.info(f"Empresa nombre: {solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'None'}")
-                logger.info(f"Empresa email: {solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'None'}")
+                servicio_obj = safe_get(solicitud, 'id_servicio_usuario_fk', None)
                 servicios_pendientes.append({
                     'id': solicitud.id_solicitud_servicio_empresa,
                     'id_solicitud': solicitud.id_solicitud_servicio_empresa,
@@ -12204,15 +12899,21 @@ def servicios_ventas_pendientes(request):
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
                     'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'nombre_servicio': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
+                    'nombre_servicio': safe_get(servicio_obj, 'nombre_servicio_usuario', 'Sin nombre'),
+                    'servicio_nombre': safe_get(servicio_obj, 'nombre_servicio_usuario', 'Sin nombre'),
+                    'servicio_precio': safe_get(servicio_obj, 'precio_servicio_usuario', 0),
                     'categoria_servicio': 'Servicio de Usuario',
                     'tipo_cliente': 'empresa',
-                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'Sin nombre',
-                    'cliente_email': solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'Sin email',
+                    'cliente_nombre': safe_get(solicitud, 'id_empresa_fk.nombre_empresa', 'Sin nombre'),
+                    'cliente_email': safe_get(solicitud, 'id_empresa_fk.correo_empresa', 'Sin email'),
                     'cliente_telefono': 'No disponible',
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(servicio_obj),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
         
         elif account_type == 'empresa':
@@ -12227,10 +12928,12 @@ def servicios_ventas_pendientes(request):
                 estado='pendiente'
             ).select_related('id_empresa_fk', 'id_servicio_sucursal_fk__id_sucursal_fk')
             
+            logger.info(f"servicios_ventas_pendientes - solicitudes_usuario count (empresa): {solicitudes_usuario.count()}")
             # Procesar solicitudes de usuarios
             for solicitud in solicitudes_usuario:
                 logger.info(f"Empresa - Procesando solicitud de usuario: {solicitud.id_solicitud_servicio_usuario}")
-                logger.info(f"Empresa - Cliente nombre: {solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'None'}")
+                servicio_sucursal_obj = safe_get(solicitud, 'id_servicio_sucursal_fk', None)
+                servicio_empresa_obj = safe_get(servicio_sucursal_obj, 'id_servicio_fk', None)
                 servicios_pendientes.append({
                     'id': solicitud.id_solicitud_servicio_usuario,
                     'id_solicitud': solicitud.id_solicitud_servicio_usuario,
@@ -12239,22 +12942,30 @@ def servicios_ventas_pendientes(request):
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
                     'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'nombre_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
-                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
-                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
-                    'categoria_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría',
+                    'nombre_servicio': safe_get(servicio_sucursal_obj, 'nombre_servicio_sucursal', safe_get(servicio_empresa_obj, 'nombre_servicio_empresa', 'Sin nombre')),
+                    'servicio_nombre': safe_get(servicio_sucursal_obj, 'nombre_servicio_sucursal', safe_get(servicio_empresa_obj, 'nombre_servicio_empresa', 'Sin nombre')),
+                    'servicio_precio': safe_get(servicio_sucursal_obj, 'precio_servicio_sucursal', safe_get(servicio_empresa_obj, 'precio_servicio_empresa', 0)),
+                    'categoria_servicio': safe_get(servicio_empresa_obj, 'id_categoria_servicios_fk.nombre_categoria_serv_empresa', 'Sin categoría'),
                     'tipo_cliente': 'usuario',
-                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
-                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario if solicitud.id_usuario_fk else 'Sin nombre',
-                    'cliente_email': solicitud.id_usuario_fk.correo_usuario if solicitud.id_usuario_fk else 'Sin email',
-                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario if solicitud.id_usuario_fk else 'Sin teléfono',
+                    'sucursal_nombre': safe_get(servicio_sucursal_obj, 'id_sucursal_fk.nombre_sucursal', 'Sin sucursal'),
+                    'cliente_nombre': safe_get(solicitud, 'id_usuario_fk.nombre_usuario', 'Sin nombre'),
+                    'cliente_email': safe_get(solicitud, 'id_usuario_fk.correo_usuario', 'Sin email'),
+                    'cliente_telefono': safe_get(solicitud, 'id_usuario_fk.telefono_usuario', 'Sin teléfono'),
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(servicio_empresa_obj),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
             
+            logger.info(f"servicios_ventas_pendientes - solicitudes_empresa count (empresa): {solicitudes_empresa.count()}")
             # Procesar solicitudes de empresas
             for solicitud in solicitudes_empresa:
                 logger.info(f"Empresa - Procesando solicitud de empresa: {solicitud.id_solicitud_servicio_empresa}")
-                logger.info(f"Empresa - Cliente empresa nombre: {solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'None'}")
+                servicio_sucursal_obj = safe_get(solicitud, 'id_servicio_sucursal_fk', None)
+                servicio_empresa_obj = safe_get(servicio_sucursal_obj, 'id_servicio_fk', None)
                 servicios_pendientes.append({
                     'id': solicitud.id_solicitud_servicio_empresa,
                     'id_solicitud': solicitud.id_solicitud_servicio_empresa,
@@ -12263,16 +12974,22 @@ def servicios_ventas_pendientes(request):
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
                     'descripcion': solicitud.descripcion_detallada,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'nombre_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
-                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa,
-                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
-                    'categoria_servicio': solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa if solicitud.id_servicio_sucursal_fk.id_servicio_fk.id_categoria_servicios_fk else 'Sin categoría',
+                    'nombre_servicio': safe_get(servicio_sucursal_obj, 'nombre_servicio_sucursal', safe_get(servicio_empresa_obj, 'nombre_servicio_empresa', 'Sin nombre')),
+                    'servicio_nombre': safe_get(servicio_sucursal_obj, 'nombre_servicio_sucursal', safe_get(servicio_empresa_obj, 'nombre_servicio_empresa', 'Sin nombre')),
+                    'servicio_precio': safe_get(servicio_sucursal_obj, 'precio_servicio_sucursal', safe_get(servicio_empresa_obj, 'precio_servicio_empresa', 0)),
+                    'categoria_servicio': safe_get(servicio_empresa_obj, 'id_categoria_servicios_fk.nombre_categoria_serv_empresa', 'Sin categoría'),
                     'tipo_cliente': 'empresa',
-                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
-                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa if solicitud.id_empresa_fk else 'Sin nombre',
-                    'cliente_email': solicitud.id_empresa_fk.correo_empresa if solicitud.id_empresa_fk else 'Sin email',
+                    'sucursal_nombre': safe_get(servicio_sucursal_obj, 'id_sucursal_fk.nombre_sucursal', 'Sin sucursal'),
+                    'cliente_nombre': safe_get(solicitud, 'id_empresa_fk.nombre_empresa', 'Sin nombre'),
+                    'cliente_email': safe_get(solicitud, 'id_empresa_fk.correo_empresa', 'Sin email'),
                     'cliente_telefono': 'No disponible',
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(servicio_empresa_obj),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
         
         # Ordenar por fecha de solicitud (más recientes primero)
@@ -12339,36 +13056,74 @@ def servicios_ventas_confirmadas(request):
             
             # Procesar solicitudes de usuarios
             for solicitud in solicitudes_usuario:
+                servicio_obj = safe_get(solicitud, 'id_servicio_usuario_fk', None)
+                # Debug: log service object and candidate names
+                name_candidate_1 = safe_get(servicio_obj, 'nombre_servicio_usuario', None)
+                name_candidate_2 = safe_get(servicio_obj, 'nombre_servicio_empresa', None)
+                logger.info(f"servicios_confirmados(usuario) - solicitud {getattr(solicitud, 'id_solicitud_servicio_usuario', '?')}: servicio_obj={servicio_obj!r}, name1={name_candidate_1}, name2={name_candidate_2}")
+                # Resolve name from solicitud model
+                resolved_name = resolve_service_name_strict(solicitud) or name_candidate_1 or name_candidate_2 or 'Servicio sin nombre'
                 servicios_confirmados.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
                     'id_solicitud': solicitud.id_solicitud_servicio_usuario,
                     'tipo_solicitud': 'usuario',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
-                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
-                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
-                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                    'nombre_servicio': resolved_name,
+                    'servicio_nombre': resolved_name,
+                    'precio_servicio': safe_get(servicio_obj, 'precio_servicio_usuario', 0),
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(servicio_obj),
+                    'categoria_servicio': safe_get(servicio_obj, 'id_categoria_servicios_fk.nombre_categoria_serv_usuario', 'Sin categoría'),
+                    'tipo_cliente': 'usuario',
+                    'nombre_cliente': safe_get(solicitud, 'id_usuario_fk.nombre_usuario', 'Sin nombre'),
+                    'cliente_nombre': safe_get(solicitud, 'id_usuario_fk.nombre_usuario', 'Sin nombre'),
+                    'email_cliente': safe_get(solicitud, 'id_usuario_fk.correo_usuario', 'Sin email'),
+                    'cliente_email': safe_get(solicitud, 'id_usuario_fk.correo_usuario', 'Sin email'),
+                    'telefono_cliente': safe_get(solicitud, 'id_usuario_fk.telefono_usuario', 'No proporcionado'),
+                    'cliente_telefono': safe_get(solicitud, 'id_usuario_fk.telefono_usuario', 'No proporcionado'),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
             
             # Procesar solicitudes de empresas
             for solicitud in solicitudes_empresa:
+                servicio_obj = safe_get(solicitud, 'id_servicio_usuario_fk', None)
+                name_candidate_1 = safe_get(servicio_obj, 'nombre_servicio_usuario', None)
+                name_candidate_2 = safe_get(servicio_obj, 'nombre_servicio_empresa', None)
+                logger.info(f"servicios_confirmados(empresa->usuario) - solicitud {getattr(solicitud, 'id_solicitud_servicio_empresa', '?')}: servicio_obj={servicio_obj!r}, name1={name_candidate_1}, name2={name_candidate_2}")
+                resolved_name = resolve_service_name_strict(solicitud) or name_candidate_1 or name_candidate_2 or 'Servicio sin nombre'
                 servicios_confirmados.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
                     'id_solicitud': solicitud.id_solicitud_servicio_empresa,
                     'tipo_solicitud': 'empresa',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
-                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
-                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'nombre_servicio': resolved_name,
+                    'servicio_nombre': resolved_name,
+                    'precio_servicio': safe_get(servicio_obj, 'precio_servicio_usuario', 0),
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(servicio_obj),
+                    'categoria_servicio': safe_get(servicio_obj, 'id_categoria_servicios_fk.nombre_categoria_serv_usuario', 'Sin categoría'),
+                    'tipo_cliente': 'empresa',
+                    'nombre_cliente': safe_get(solicitud, 'id_empresa_fk.nombre_empresa', 'Sin nombre'),
+                    'cliente_nombre': safe_get(solicitud, 'id_empresa_fk.nombre_empresa', 'Sin nombre'),
+                    'email_cliente': safe_get(solicitud, 'id_empresa_fk.correo_empresa', 'Sin email'),
+                    'cliente_email': safe_get(solicitud, 'id_empresa_fk.correo_empresa', 'Sin email'),
+                    'telefono_cliente': 'No disponible',
                     'cliente_telefono': 'No disponible',
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
         
         elif account_type == 'empresa':
@@ -12385,42 +13140,90 @@ def servicios_ventas_confirmadas(request):
             
             # Procesar solicitudes de usuarios
             for solicitud in solicitudes_usuario:
+                servicio_obj = safe_get(solicitud, 'id_servicio_sucursal_fk', None)
+                servicio_empresa_obj = safe_get(servicio_obj, 'id_servicio_fk', None)
+                name_sucursal = safe_get(servicio_obj, 'nombre_servicio_sucursal', None)
+                name_empresa = safe_get(servicio_empresa_obj, 'nombre_servicio_empresa', None)
+                # Prefer the empresa-level service name when present (servicio_sucursal -> id_servicio_fk)
+                resolved_name = name_empresa or name_sucursal or 'Servicio sin nombre'
+                logger.info(f"servicios_confirmados(empresa->sucursal usuario) - solicitud {getattr(solicitud, 'id_solicitud_servicio_usuario', '?')}: sucursal_obj={servicio_obj!r}, empresa_obj={servicio_empresa_obj!r}, name_sucursal={name_sucursal}, name_empresa={name_empresa}, resolved_name={resolved_name}")
                 servicios_confirmados.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
                     'id_solicitud': solicitud.id_solicitud_servicio_usuario,
                     'tipo_solicitud': 'usuario',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
-                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
-                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
-                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
-                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
-                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                    'nombre_servicio': resolved_name,
+                    'servicio_nombre': resolved_name,
+                    'precio_servicio': safe_get(servicio_obj, 'precio_servicio_sucursal', 0),
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(safe_get(servicio_obj, 'id_servicio_fk', None)),
+                    'categoria_servicio': safe_get(servicio_obj, 'id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa', 'Sin categoría'),
+                    'tipo_cliente': 'usuario',
+                    'nombre_cliente': safe_get(solicitud, 'id_usuario_fk.nombre_usuario', 'Sin nombre'),
+                    'cliente_nombre': safe_get(solicitud, 'id_usuario_fk.nombre_usuario', 'Sin nombre'),
+                    'email_cliente': safe_get(solicitud, 'id_usuario_fk.correo_usuario', 'Sin email'),
+                    'cliente_email': safe_get(solicitud, 'id_usuario_fk.correo_usuario', 'Sin email'),
+                    'telefono_cliente': safe_get(solicitud, 'id_usuario_fk.telefono_usuario', 'No proporcionado'),
+                    'cliente_telefono': safe_get(solicitud, 'id_usuario_fk.telefono_usuario', 'No proporcionado'),
+                    'sucursal_nombre': safe_get(servicio_obj, 'id_sucursal_fk.nombre_sucursal', 'Sin sucursal'),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
             
             # Procesar solicitudes de empresas
             for solicitud in solicitudes_empresa:
+                servicio_obj = safe_get(solicitud, 'id_servicio_sucursal_fk', None)
+                servicio_empresa_obj = safe_get(servicio_obj, 'id_servicio_fk', None)
+                name_sucursal = safe_get(servicio_obj, 'nombre_servicio_sucursal', None)
+                name_empresa = safe_get(servicio_empresa_obj, 'nombre_servicio_empresa', None)
+                # Prefer empresa-level name when present
+                resolved_name = name_empresa or name_sucursal or 'Servicio sin nombre'
+                logger.info(f"servicios_confirmados(empresa->sucursal empresa) - solicitud {getattr(solicitud, 'id_solicitud_servicio_empresa', '?')}: sucursal_obj={servicio_obj!r}, empresa_obj={servicio_empresa_obj!r}, name_sucursal={name_sucursal}, name_empresa={name_empresa}, resolved_name={resolved_name}")
                 servicios_confirmados.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
                     'id_solicitud': solicitud.id_solicitud_servicio_empresa,
                     'tipo_solicitud': 'empresa',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
-                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
-                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
-                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
-                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'nombre_servicio': resolved_name,
+                    'servicio_nombre': resolved_name,
+                    'precio_servicio': safe_get(servicio_obj, 'precio_servicio_sucursal', 0),
+                    'presupuesto': safe_get(solicitud, 'presupuesto_cotizacion', None),
+                    'descripcion_cotizacion': safe_get(solicitud, 'descripcion_cotizacion', None),
+                    'fecha_aceptacion': safe_get(solicitud, 'fecha_cotizacion', None),
+                    'imagenes': collect_service_images(safe_get(servicio_obj, 'id_servicio_fk', None)),
+                    'categoria_servicio': safe_get(servicio_obj, 'id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa', 'Sin categoría'),
+                    'tipo_cliente': 'empresa',
+                    'nombre_cliente': safe_get(solicitud, 'id_empresa_fk.nombre_empresa', 'Sin nombre'),
+                    'cliente_nombre': safe_get(solicitud, 'id_empresa_fk.nombre_empresa', 'Sin nombre'),
+                    'email_cliente': safe_get(solicitud, 'id_empresa_fk.correo_empresa', 'Sin email'),
+                    'cliente_email': safe_get(solicitud, 'id_empresa_fk.correo_empresa', 'Sin email'),
+                    'telefono_cliente': 'No disponible',
                     'cliente_telefono': 'No disponible',
+                    'sucursal_nombre': safe_get(servicio_obj, 'id_sucursal_fk.nombre_sucursal', 'Sin sucursal'),
+                    'ubicacion': safe_get(solicitud, 'direccion', None),
                 })
         
         # Ordenar por fecha de solicitud (más recientes primero)
-        servicios_confirmados.sort(key=lambda x: x['fecha_solicitud'], reverse=True)
+        # Algunos registros pueden tener fecha_solicitud nula o de tipo distinto; usar un key seguro
+        servicios_confirmados.sort(
+            key=lambda x: (
+                x.get('fecha_solicitud').timestamp()
+                if x.get('fecha_solicitud') and hasattr(x.get('fecha_solicitud'), 'timestamp')
+                else 0
+            ),
+            reverse=True
+        )
         
         # Obtener información del usuario para el template
         empresa_nombre = None
@@ -12435,7 +13238,22 @@ def servicios_ventas_confirmadas(request):
             empresa_nombre = current_user.nombre_empresa
         
         user_info = get_user_info_with_avatar(current_user, account_type, empresa_nombre)
-        
+        # Post-procesado: asegurar que cada entrada tenga 'nombre_servicio' útil
+        for s in servicios_confirmados:
+            if not s.get('nombre_servicio') or s.get('nombre_servicio') == 'Sin nombre':
+                resolved = resolve_service_name_from_solicitud(safe_get(s, 'solicitud_obj', s)) if False else None
+                # resolve_service_name_from_solicitud espera una solicitud model; we try candidates directly
+                if not resolved:
+                    # Try some direct fields that might be present in the dict
+                    for candidate in ('servicio_nombre', 'nombre_servicio', 'precio_servicio'):
+                        val = s.get(candidate)
+                        if val and val != 'Sin nombre':
+                            resolved = val
+                            break
+                if not resolved:
+                    resolved = 'Servicio sin nombre'
+                s['nombre_servicio'] = resolved
+
         context = {
             'user_info': user_info,
             'servicios_confirmados': servicios_confirmados,
@@ -12445,7 +13263,9 @@ def servicios_ventas_confirmadas(request):
         return render(request, 'ecommerce_app/servicios_ventas_confirmadas.html', context)
         
     except Exception as e:
+        import traceback
         logger.error(f"Error en servicios_ventas_confirmadas: {e}")
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         return render(request, 'ecommerce_app/error.html', {'error_message': 'Error al cargar servicios confirmados'})
 
 @require_login
@@ -12480,37 +13300,112 @@ def servicios_ventas_rechazadas(request):
             
             # Procesar solicitudes de usuarios
             for solicitud in solicitudes_usuario:
+                # Resolvers seguros para campos que pueden ser null
+                svc_user = solicitud.id_servicio_usuario_fk
+                svc_sucursal = solicitud.id_servicio_sucursal_fk
+                servicio_nombre = None
+                servicio_precio = None
+                categoria_servicio = None
+                sucursal_nombre = None
+                imagenes = []
+
+                if svc_user:
+                    # Preferir nombre_servicio_usuario y como fallback nombre_servicio_empresa
+                    servicio_nombre = getattr(svc_user, 'nombre_servicio_usuario', None) or getattr(svc_user, 'nombre_servicio_empresa', None)
+                    servicio_precio = getattr(svc_user, 'precio_servicio_usuario', None)
+                    categoria_servicio = getattr(getattr(svc_user, 'id_categoria_servicios_fk', None), 'nombre_categoria_serv_usuario', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_user)
+                elif svc_sucursal:
+                    # Para sucursal, intentar nombre en la sucursal primero; luego en el servicio empresa asociado
+                    servicio_nombre = getattr(svc_sucursal, 'nombre_servicio_sucursal', None)
+                    if not servicio_nombre:
+                        servicio_nombre = safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_empresa', None) or safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_usuario', None)
+                    servicio_precio = getattr(svc_sucursal, 'precio_servicio_sucursal', None)
+                    sucursal_nombre = getattr(getattr(svc_sucursal, 'id_sucursal_fk', None), 'nombre_sucursal', None)
+                    # intentar categoría via id_servicio_fk si existe
+                    categoria_servicio = safe_get(svc_sucursal, 'id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_sucursal)
+
+                cliente = solicitud.id_usuario_fk
                 servicios_rechazados.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
                     'id_solicitud': solicitud.id_solicitud_servicio_usuario,
                     'tipo_solicitud': 'usuario',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'ubicacion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
-                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
-                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
-                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                    'nombre_servicio': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_nombre': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_precio': servicio_precio,
+                    'categoria_servicio': categoria_servicio,
+                    'sucursal_nombre': sucursal_nombre,
+                    'cliente_nombre': getattr(cliente, 'nombre_usuario', None),
+                    'nombre_cliente': getattr(cliente, 'nombre_usuario', None),
+                    'cliente_email': getattr(cliente, 'correo_usuario', None),
+                    'email_cliente': getattr(cliente, 'correo_usuario', None),
+                    'cliente_telefono': getattr(cliente, 'telefono_usuario', None),
+                    'telefono_cliente': getattr(cliente, 'telefono_usuario', None),
+                    'imagenes': imagenes,
+                    'motivo_rechazo': solicitud.motivo_rechazo,
+                    'fecha_rechazo': solicitud.fecha_rechazo,
+                    'solicitud_obj': solicitud,
                 })
+                logger.debug(f"servicios_rechazados: appended usuario-solicitud id={solicitud.id_solicitud_servicio_usuario} nombre={servicio_nombre}")
             
             # Procesar solicitudes de empresas
             for solicitud in solicitudes_empresa:
+                svc_user = solicitud.id_servicio_usuario_fk
+                svc_sucursal = solicitud.id_servicio_sucursal_fk
+                servicio_nombre = None
+                servicio_precio = None
+                categoria_servicio = None
+                imagenes = []
+
+                if svc_user:
+                    servicio_nombre = getattr(svc_user, 'nombre_servicio_usuario', None) or getattr(svc_user, 'nombre_servicio_empresa', None)
+                    servicio_precio = getattr(svc_user, 'precio_servicio_usuario', None)
+                    categoria_servicio = getattr(getattr(svc_user, 'id_categoria_servicios_fk', None), 'nombre_categoria_serv_usuario', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_user)
+                elif svc_sucursal:
+                    servicio_nombre = getattr(svc_sucursal, 'nombre_servicio_sucursal', None)
+                    if not servicio_nombre:
+                        servicio_nombre = safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_empresa', None) or safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_usuario', None)
+                    servicio_precio = getattr(svc_sucursal, 'precio_servicio_sucursal', None)
+                    categoria_servicio = safe_get(svc_sucursal, 'id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_sucursal)
+
+                cliente = solicitud.id_empresa_fk
                 servicios_rechazados.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
                     'id_solicitud': solicitud.id_solicitud_servicio_empresa,
                     'tipo_solicitud': 'empresa',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'ubicacion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_usuario_fk.nombre_servicio_usuario,
-                    'servicio_precio': solicitud.id_servicio_usuario_fk.precio_servicio_usuario,
-                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
-                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'nombre_servicio': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_nombre': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_precio': servicio_precio,
+                    'categoria_servicio': categoria_servicio,
+                    'cliente_nombre': getattr(cliente, 'nombre_empresa', None),
+                    'nombre_cliente': getattr(cliente, 'nombre_empresa', None),
+                    'cliente_email': getattr(cliente, 'correo_empresa', None),
+                    'email_cliente': getattr(cliente, 'correo_empresa', None),
                     'cliente_telefono': 'No disponible',
+                    'telefono_cliente': 'No disponible',
+                    'imagenes': imagenes,
+                    'motivo_rechazo': solicitud.motivo_rechazo,
+                    'fecha_rechazo': solicitud.fecha_rechazo,
+                    'solicitud_obj': solicitud,
                 })
+                logger.debug(f"servicios_rechazados: appended empresa-solicitud id={solicitud.id_solicitud_servicio_empresa} nombre={servicio_nombre}")
         
         elif account_type == 'empresa':
             # Solicitudes rechazadas donde otros usuarios/empresas solicitan servicios de sucursales de esta empresa
@@ -12526,42 +13421,135 @@ def servicios_ventas_rechazadas(request):
             
             # Procesar solicitudes de usuarios
             for solicitud in solicitudes_usuario:
+                svc_sucursal = solicitud.id_servicio_sucursal_fk
+                svc_user = solicitud.id_servicio_usuario_fk
+                servicio_nombre = None
+                servicio_precio = None
+                categoria_servicio = None
+                sucursal_nombre = None
+                imagenes = []
+
+                if svc_sucursal:
+                    servicio_nombre = getattr(svc_sucursal, 'nombre_servicio_sucursal', None)
+                    if not servicio_nombre:
+                        servicio_nombre = safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_empresa', None) or safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_usuario', None)
+                    servicio_precio = getattr(svc_sucursal, 'precio_servicio_sucursal', None)
+                    sucursal_nombre = getattr(getattr(svc_sucursal, 'id_sucursal_fk', None), 'nombre_sucursal', None)
+                    categoria_servicio = safe_get(svc_sucursal, 'id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_sucursal)
+                elif svc_user:
+                    servicio_nombre = getattr(svc_user, 'nombre_servicio_usuario', None) or getattr(svc_user, 'nombre_servicio_empresa', None)
+                    servicio_precio = getattr(svc_user, 'precio_servicio_usuario', None)
+                    categoria_servicio = getattr(getattr(svc_user, 'id_categoria_servicios_fk', None), 'nombre_categoria_serv_usuario', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_user)
+
+                cliente = solicitud.id_usuario_fk
                 servicios_rechazados.append({
+                    'id': solicitud.id_solicitud_servicio_usuario,
                     'id_solicitud': solicitud.id_solicitud_servicio_usuario,
                     'tipo_solicitud': 'usuario',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'ubicacion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
-                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
-                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
-                    'cliente_nombre': solicitud.id_usuario_fk.nombre_usuario,
-                    'cliente_email': solicitud.id_usuario_fk.correo_usuario,
-                    'cliente_telefono': solicitud.id_usuario_fk.telefono_usuario,
+                    'nombre_servicio': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_nombre': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_precio': servicio_precio,
+                    'categoria_servicio': categoria_servicio,
+                    'sucursal_nombre': sucursal_nombre,
+                    'cliente_nombre': getattr(cliente, 'nombre_usuario', None),
+                    'nombre_cliente': getattr(cliente, 'nombre_usuario', None),
+                    'cliente_email': getattr(cliente, 'correo_usuario', None),
+                    'email_cliente': getattr(cliente, 'correo_usuario', None),
+                    'cliente_telefono': getattr(cliente, 'telefono_usuario', None),
+                    'telefono_cliente': getattr(cliente, 'telefono_usuario', None),
+                    'imagenes': imagenes,
+                    'motivo_rechazo': solicitud.motivo_rechazo,
+                    'fecha_rechazo': solicitud.fecha_rechazo,
+                    'solicitud_obj': solicitud,
                 })
+                logger.debug(f"servicios_rechazados: appended empresa-account usuario-solicitud id={solicitud.id_solicitud_servicio_usuario} nombre={servicio_nombre}")
             
             # Procesar solicitudes de empresas
             for solicitud in solicitudes_empresa:
+                svc_sucursal = solicitud.id_servicio_sucursal_fk
+                svc_user = solicitud.id_servicio_usuario_fk
+                servicio_nombre = None
+                servicio_precio = None
+                categoria_servicio = None
+                sucursal_nombre = None
+                imagenes = []
+
+                if svc_sucursal:
+                    servicio_nombre = getattr(svc_sucursal, 'nombre_servicio_sucursal', None)
+                    if not servicio_nombre:
+                        servicio_nombre = safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_empresa', None) or safe_get(svc_sucursal, 'id_servicio_fk.nombre_servicio_usuario', None)
+                    servicio_precio = getattr(svc_sucursal, 'precio_servicio_sucursal', None)
+                    sucursal_nombre = getattr(getattr(svc_sucursal, 'id_sucursal_fk', None), 'nombre_sucursal', None)
+                    categoria_servicio = safe_get(svc_sucursal, 'id_servicio_fk.id_categoria_servicios_fk.nombre_categoria_serv_empresa', None) or 'Sin categoría'
+                    imagenes = collect_service_images(svc_sucursal)
+                elif svc_user:
+                    servicio_nombre = getattr(svc_user, 'nombre_servicio_usuario', None) or getattr(svc_user, 'nombre_servicio_empresa', None)
+                    servicio_precio = getattr(svc_user, 'precio_servicio_usuario', None)
+                    categoria_servicio = getattr(getattr(svc_user, 'id_categoria_servicios_fk', None), 'nombre_categoria_serv_usuario', None)
+                    imagenes = collect_service_images(svc_user)
+
+                cliente = solicitud.id_empresa_fk
                 servicios_rechazados.append({
+                    'id': solicitud.id_solicitud_servicio_empresa,
                     'id_solicitud': solicitud.id_solicitud_servicio_empresa,
                     'tipo_solicitud': 'empresa',
                     'fecha_solicitud': solicitud.fecha_solicitud,
                     'fecha_requerida': solicitud.fecha_requerida,
                     'direccion': solicitud.direccion,
+                    'ubicacion': solicitud.direccion,
+                    'descripcion_solicitud': solicitud.descripcion_detallada,
                     'descripcion': solicitud.descripcion_detallada,
                     'estado': solicitud.estado,
-                    'servicio_nombre': solicitud.id_servicio_sucursal_fk.nombre_servicio_sucursal,
-                    'servicio_precio': solicitud.id_servicio_sucursal_fk.precio_servicio_sucursal,
-                    'sucursal_nombre': solicitud.id_servicio_sucursal_fk.id_sucursal_fk.nombre_sucursal,
-                    'cliente_nombre': solicitud.id_empresa_fk.nombre_empresa,
-                    'cliente_email': solicitud.id_empresa_fk.correo_empresa,
+                    'nombre_servicio': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_nombre': servicio_nombre or 'Servicio sin nombre',
+                    'servicio_precio': servicio_precio,
+                    'categoria_servicio': categoria_servicio,
+                    'sucursal_nombre': sucursal_nombre,
+                    'cliente_nombre': getattr(cliente, 'nombre_empresa', None),
+                    'nombre_cliente': getattr(cliente, 'nombre_empresa', None),
+                    'cliente_email': getattr(cliente, 'correo_empresa', None),
+                    'email_cliente': getattr(cliente, 'correo_empresa', None),
                     'cliente_telefono': 'No disponible',
+                    'telefono_cliente': 'No disponible',
+                    'imagenes': imagenes,
+                    'motivo_rechazo': solicitud.motivo_rechazo,
+                    'fecha_rechazo': solicitud.fecha_rechazo,
+                    'solicitud_obj': solicitud,
                 })
+                logger.debug(f"servicios_rechazados: appended empresa-account empresa-solicitud id={solicitud.id_solicitud_servicio_empresa} nombre={servicio_nombre}")
         
         # Ordenar por fecha de solicitud (más recientes primero)
         servicios_rechazados.sort(key=lambda x: x['fecha_solicitud'], reverse=True)
+        # Post-procesado: asegurar que cada entrada tenga 'nombre_servicio' útil (intentar resolver desde la solicitud)
+        for s in servicios_rechazados:
+            name_val = s.get('nombre_servicio')
+            if not name_val or name_val in ('Sin nombre', 'Servicio sin nombre'):
+                resolved = None
+                try:
+                    solicitud_obj = s.get('solicitud_obj')
+                    if solicitud_obj:
+                        resolved = resolve_service_name_strict(solicitud_obj)
+                except Exception:
+                    resolved = None
+                if not resolved:
+                    for candidate in ('servicio_nombre', 'nombre_servicio', 'servicio_precio'):
+                        val = s.get(candidate)
+                        if val and val != 'Sin nombre':
+                            resolved = val
+                            break
+                if not resolved:
+                    resolved = s.get('cliente_nombre') or s.get('nombre_cliente') or 'Servicio sin nombre'
+                s['nombre_servicio'] = resolved
+                s['servicio_nombre'] = resolved
         
         # Obtener información del usuario para el template
         empresa_nombre = None
@@ -12586,7 +13574,9 @@ def servicios_ventas_rechazadas(request):
         return render(request, 'ecommerce_app/servicios_ventas_rechazadas.html', context)
         
     except Exception as e:
+        import traceback
         logger.error(f"Error en servicios_ventas_rechazadas: {e}")
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         return render(request, 'ecommerce_app/error.html', {'error_message': 'Error al cargar servicios rechazados'})
 
 @require_POST

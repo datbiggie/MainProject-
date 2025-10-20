@@ -115,7 +115,11 @@
                           </div>
 
                           <div>
-                            <h6 class="mb-3" style="color: #2c3e50; font-weight: 600; font-size: 1em;"><span style="margin-right:10px;">✨</span>Crear Nuevos Atributos</h6>
+             <h6 class="mb-3" style="color: #2c3e50; font-weight: 600; font-size: 1em;"><span style="margin-right:10px;">✨</span>Crear Nuevos Atributos</h6>
+             <!-- Nota: Los controles 'Obligatorio' (label + checkbox) y el botón 'Eliminar' se muestran en línea en
+               pantallas anchas, y se apilan encima del campo 'Descripción' en pantallas pequeñas o cuando
+               el espacio horizontal no es suficiente. La lógica y clases están en
+               static/categoria_producto/js/main.js y static/categoria_producto/css/style.css -->
                             <div id="nuevos-atributos" style="margin-bottom:20px;"></div>
                             <button type="button" class="btn btn-outline-primary btn-agregar-atributo" onclick="agregarNuevoAtributo()">➕ Agregar Nuevo Atributo</button>
                           </div>

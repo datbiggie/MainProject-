@@ -122,133 +122,134 @@
 
         <!-- Services List -->
         {% if servicios_rechazados %}
+            <div class="accordion" id="accordionServicios">
             {% for servicio in servicios_rechazados %}
-            <div class="card sale-card mb-4">
-                <div class="card-header sale-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h6 class="mb-0">
+                <div class="accordion-item mb-3">
+                    <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                        <button class="accordion-button collapsed sale-header d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
+                            <div>
                                 <i class="fas fa-tools me-2"></i>
                                 Servicio #{{ servicio.id }}
-                            </h6>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge bg-danger">
-                                Rechazado
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Service Info -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <strong>Fecha de Solicitud:</strong><br>
-                            <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Servicio:</strong><br>
-                            <span class="text-danger fw-bold">{{ servicio.nombre_servicio }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Categoría:</strong><br>
-                            <span class="text-muted">{{ servicio.categoria_servicio }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Tipo de Cliente:</strong><br>
-                            <span class="badge bg-info">{{ servicio.tipo_cliente|capfirst }}</span>
-                        </div>
-                    </div>
+                                <span class="text-danger fw-bold ms-2">{{ servicio.nombre_servicio }}</span>
+                            </div>
+                            <div>
+                                <span class="badge status-badge bg-danger">Rechazado</span>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#accordionServicios">
+                        <div class="accordion-body">
+                            <!-- Service Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <strong>Fecha de Solicitud:</strong><br>
+                                    <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Servicio:</strong><br>
+                                    <span class="text-danger fw-bold">{{ servicio.nombre_servicio }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Categoría:</strong><br>
+                                    <span class="text-muted">{{ servicio.categoria_servicio }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Tipo de Cliente:</strong><br>
+                                    <span class="badge bg-info">{{ servicio.tipo_cliente|capfirst }}</span>
+                                </div>
+                            </div>
 
-                    <!-- Información del rechazo -->
-                    <div class="rechazo-info">
-                        <h6 class="mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Información del Rechazo</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Fecha de Rechazo:</strong><br>
-                                <span class="text-danger">{{ servicio.fecha_rechazo|date:"d/m/Y H:i"|default:"No especificada" }}</span>
+                            <!-- Información del rechazo -->
+                            <div class="rechazo-info">
+                                <h6 class="mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Información del Rechazo</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Fecha de Rechazo:</strong><br>
+                                        <span class="text-danger">{{ servicio.fecha_rechazo|date:"d/m/Y H:i"|default:"No especificada" }}</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Rechazado por:</strong><br>
+                                        <span class="text-muted">Proveedor del servicio</span>
+                                    </div>
+                                </div>
+                                {% if servicio.motivo_rechazo %}
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <strong>Motivo del Rechazo:</strong><br>
+                                        <div class="bg-white p-2 rounded mt-1">
+                                            <span class="text-danger">{{ servicio.motivo_rechazo }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
-                            <div class="col-md-6">
-                                <strong>Rechazado por:</strong><br>
-                                <span class="text-muted">Proveedor del servicio</span>
+
+                            <!-- Client Information -->
+                            <div class="client-info">
+                                <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>Nombre:</strong><br>
+                                        <span class="text-muted">{{ servicio.nombre_cliente|default:servicio.cliente_nombre }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Email:</strong><br>
+                                        <span class="text-muted">{{ servicio.email_cliente|default:servicio.cliente_email }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Teléfono:</strong><br>
+                                        <span class="text-muted">{{ servicio.telefono_cliente|default:servicio.cliente_telefono|default:"No proporcionado" }}</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        {% if servicio.motivo_rechazo %}
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <strong>Motivo del Rechazo:</strong><br>
-                                <div class="bg-white p-2 rounded mt-1">
-                                    <span class="text-danger">{{ servicio.motivo_rechazo }}</span>
+
+                            <!-- Service Details -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Descripción del Servicio Solicitado:</strong><br>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        <span class="text-muted">{{ servicio.descripcion_solicitud|default:"Sin descripción específica" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if servicio.ubicacion %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Ubicación del Servicio:</strong><br>
+                                    <span class="text-muted">{{ servicio.ubicacion }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Service Images -->
+                            {% if servicio.imagenes %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Imágenes del Servicio:</strong><br>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        {% for imagen in servicio.imagenes %}
+                                        <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" 
+                                             style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Status Display -->
+                            <div class="row mt-4">
+                                <div class="col-12 text-center">
+                                    <span class="badge bg-danger fs-6 p-3">
+                                        <i class="fas fa-times-circle me-2"></i>Solicitud Rechazada
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Client Information -->
-                    <div class="client-info">
-                        <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Nombre:</strong><br>
-                                <span class="text-muted">{{ servicio.nombre_cliente }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Email:</strong><br>
-                                <span class="text-muted">{{ servicio.email_cliente }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Teléfono:</strong><br>
-                                <span class="text-muted">{{ servicio.telefono_cliente|default:"No proporcionado" }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Service Details -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Descripción del Servicio Solicitado:</strong><br>
-                            <div class="bg-light p-3 rounded mt-2">
-                                <span class="text-muted">{{ servicio.descripcion_solicitud|default:"Sin descripción específica" }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if servicio.ubicacion %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Ubicación del Servicio:</strong><br>
-                            <span class="text-muted">{{ servicio.ubicacion }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Service Images -->
-                    {% if servicio.imagenes %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Imágenes del Servicio:</strong><br>
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                {% for imagen in servicio.imagenes %}
-                                <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" 
-                                     style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Status Display -->
-                    <div class="row mt-4">
-                        <div class="col-12 text-center">
-                            <span class="badge bg-danger fs-6 p-3">
-                                <i class="fas fa-times-circle me-2"></i>Solicitud Rechazada
-                            </span>
-                        </div>
                     </div>
                 </div>
-            </div>
             {% endfor %}
+            </div>
         {% else %}
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">
