@@ -1068,44 +1068,68 @@ html, body {
 
 /* ===== MODERN LOGIN PAGE STYLES ===== */
 
+
 .login-page {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #3498db 50%, #2980b9 75%, #1e3c72 100%);
-    background-size: 400% 400%;
-    animation: gradientShift 15s ease infinite;
+    background: linear-gradient(120deg, #0f2027 0%, #2c5364 40%, #1e3c72 60%, #00c6ff 100%);
+    background-size: 300% 300%;
+    animation: gradientShift 12s ease-in-out infinite;
     position: relative;
     overflow: hidden;
 }
 
+
 .login-page::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(52, 152, 219, 0.1) 50%, transparent 70%);
-    animation: rotate 20s linear infinite;
+    top: -40%;
+    right: -40%;
+    width: 180%;
+    height: 180%;
+    background: radial-gradient(circle, rgba(255,255,255,0.30) 0%, rgba(52, 152, 219, 0.25) 50%, transparent 80%);
+    animation: rotate 18s linear infinite;
+    filter: blur(2px);
+    opacity: 0.7;
 }
+
 
 .login-page::after {
     content: '';
     position: absolute;
-    bottom: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(30, 60, 114, 0.2) 0%, transparent 60%);
-    animation: rotate 25s linear infinite reverse;
+    bottom: -40%;
+    left: -40%;
+    width: 180%;
+    height: 180%;
+    background: radial-gradient(circle, rgba(0, 198, 255, 0.25) 0%, rgba(30, 60, 114, 0.35) 40%, transparent 80%);
+    animation: rotate 22s linear infinite reverse;
+    filter: blur(2px);
+    opacity: 0.7;
 }
 
 @keyframes rotate {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Destellos animados */
+.login-page .sparkle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.7;
+    background: radial-gradient(circle, #fff 0%, #00c6ff 60%, transparent 100%);
+    animation: sparkleMove 8s linear infinite;
+    filter: blur(1px);
+}
+
+@keyframes sparkleMove {
+    0% { opacity: 0.7; transform: scale(1) translateY(0) translateX(0); }
+    50% { opacity: 1; transform: scale(1.3) translateY(40px) translateX(40px); }
+    100% { opacity: 0.7; transform: scale(1) translateY(0) translateX(0); }
 }
 
 @keyframes gradientShift {
@@ -1114,16 +1138,19 @@ html, body {
     100% { background-position: 0% 50%; }
 }
 
+
 .login-container {
     background: white;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    padding: 50px 40px;
+    padding: 32px 20px 28px 20px;
     width: 100%;
-    max-width: 450px;
+    max-width: 440px;
     position: relative;
     z-index: 1;
     animation: slideUp 0.5s ease-out;
+    margin-top: 80px;
+    margin-bottom: 24px;
 }
 
 @keyframes slideUp {
@@ -1366,29 +1393,30 @@ html, body {
 /* Responsive Design */
 @media (max-width: 576px) {
     .login-container {
-        padding: 40px 25px;
-        max-width: 100%;
-        border-radius: 15px;
+        padding: 22px 8px 18px 8px;
+        max-width: 99vw;
+        border-radius: 13px;
+        margin-top: 70px;
     }
 
     .login-title {
-        font-size: 28px;
+        font-size: 24px;
     }
 
     .login-subtitle {
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .form-input {
-        padding: 12px 14px;
-        font-size: 14px;
+        padding: 10px 10px;
+        font-size: 13px;
     }
 
     .btn-primary,
     .btn-secondary,
     .btn-back {
-        padding: 12px;
-        font-size: 14px;
+        padding: 10px;
+        font-size: 13px;
     }
 }
 
