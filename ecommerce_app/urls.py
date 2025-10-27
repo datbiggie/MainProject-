@@ -128,6 +128,11 @@ urlpatterns = [
     path('reporte_productos/', views.reporte_productos, name='reporte_productos'),
     path('api/obtener_datos_reporte_productos/', views.api_obtener_datos_reporte_productos, name='api_obtener_datos_reporte_productos'),
 
+    # Password reset flow
+    path('recuperar_clave/', views.recuperar_clave, name='recuperar_clave'),
+    path('api/request_password_reset/', views.request_password_reset, name='request_password_reset'),
+    path('confirmar_recuperacion/', views.confirmar_recuperacion, name='confirmar_recuperacion'),
+
     # Rutas para editar perfiles
     path('perfil/usuario/editar/<int:usuario_id>/', views.editar_perfil_usuario, name='editar_perfil_usuario'),
     path('perfil/empresa/editar/<int:empresa_id>/', views.editar_perfil_empresa, name='editar_perfil_empresa'),

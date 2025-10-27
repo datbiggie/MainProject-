@@ -175,6 +175,7 @@ class producto_sucursal(models.Model):
     
     id_producto_sucursal = models.AutoField(primary_key=True)
     stock_producto_sucursal = models.PositiveIntegerField(default=0)
+    stock_reservado_sucursal = models.PositiveIntegerField(default=0)
     precio_producto_sucursal = models.DecimalField(max_digits=10, decimal_places=2)
     # Presentación del producto en la sucursal (unidad/paquete/bulto/...)
     UNIDAD_PRESENTACION_CHOICES = [
@@ -299,6 +300,7 @@ class producto_usuario(models.Model):
     descripcion_producto_usuario = models.TextField(blank=True, null=True)
     caracteristicas_generales_usuario = models.TextField(blank=True, null=True)
     stock_producto_usuario = models.PositiveIntegerField(default=0)
+    stock_reservado_usuario = models.PositiveIntegerField(default=0)
     precio_producto_usuario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     # Presentación del producto para usuarios (unidad/paquete/bulto/...)
     UNIDAD_PRESENTACION_CHOICES = [
@@ -732,6 +734,9 @@ class favorito_empresa_sucursal(models.Model):
     # Items que puede guardar una empresa como favoritos (solo de usuarios individuales)
     id_producto_usuario_fk = models.ForeignKey('producto_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_empresa')
     id_servicio_usuario_fk = models.ForeignKey('servicio_usuario', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_empresa')
+    # También permitir que las empresas guarden como favoritos productos/servicios de sucursales (otras empresas)
+    id_producto_sucursal_fk = models.ForeignKey('producto_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_empresa')
+    id_servicio_sucursal_fk = models.ForeignKey('servicio_sucursal', on_delete=models.CASCADE, null=True, blank=True, related_name='favoritos_empresa')
     
     fecha_agregado = models.DateTimeField(auto_now_add=True)
     
@@ -739,6 +744,8 @@ class favorito_empresa_sucursal(models.Model):
         unique_together = [
             ('id_empresa_fk', 'id_producto_usuario_fk'),
             ('id_empresa_fk', 'id_servicio_usuario_fk'),
+            ('id_empresa_fk', 'id_producto_sucursal_fk'),
+            ('id_empresa_fk', 'id_servicio_sucursal_fk'),
         ]
         db_table = 'favoritos_empresas'
         verbose_name = 'Favorito de Empresa'
@@ -748,16 +755,31 @@ class favorito_empresa_sucursal(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
         # Validar que solo uno de los items esté definido
-        items = [self.id_producto_usuario_fk, self.id_servicio_usuario_fk]
+        items = [
+            self.id_producto_usuario_fk,
+            self.id_servicio_usuario_fk,
+            self.id_producto_sucursal_fk,
+            self.id_servicio_sucursal_fk,
+        ]
         if sum(x is not None for x in items) != 1:
             raise ValidationError('Debe especificar exactamente un item como favorito')
     
     def __str__(self):
         if self.id_producto_usuario_fk:
             item = self.id_producto_usuario_fk.nombre_producto_usuario
-        else:
+        elif self.id_servicio_usuario_fk:
             item = self.id_servicio_usuario_fk.nombre_servicio_usuario
-        
+        elif self.id_producto_sucursal_fk:
+            try:
+                item = self.id_producto_sucursal_fk.id_producto_fk.nombre_producto_empresa
+            except Exception:
+                item = str(self.id_producto_sucursal_fk)
+        else:
+            try:
+                item = self.id_servicio_sucursal_fk.id_servicio_fk.nombre_servicio_empresa
+            except Exception:
+                item = str(self.id_servicio_sucursal_fk)
+
         return f'{self.id_empresa_fk.nombre_empresa} - {item}'
 
 

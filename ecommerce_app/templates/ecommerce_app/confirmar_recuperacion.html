@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirmar recuperación</title>
+    <link rel="stylesheet" href="{% static 'recuperacion/main.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<div class="recovery-card">
+    <div class="brand-circle">🔒</div>
+    <h2>Restablecer contraseña</h2>
+    <p>Introduce tu nueva contraseña abajo.</p>
+    <form id="confirmForm">
+        <input type="hidden" id="token" name="token" value="{{ token|default:'' }}">
+        <input id="password" type="password" placeholder="Nueva contraseña" required>
+        <input id="password2" type="password" placeholder="Confirmar contraseña" required>
+        <button id="btnConfirm" type="submit">Actualizar contraseña</button>
+    </form>
+</div>
+<script src="{% static 'recuperacion/confirm.js' %}"></script>
+</body>
+</html>

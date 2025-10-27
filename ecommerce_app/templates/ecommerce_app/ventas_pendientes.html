@@ -408,10 +408,10 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data && data.success) {
                             Swal.fire({
                                 title: '¡Éxito!',
-                                text: 'Venta confirmada exitosamente. La página se actualizará.',
+                                text: data.message || 'Venta confirmada exitosamente. La página se actualizará.',
                                 icon: 'success',
                                 confirmButtonColor: '#28a745'
                             }).then(() => {
@@ -419,9 +419,10 @@
                                 window.location.reload();
                             });
                         } else {
+                            const errMsg = (data && (data.message || data.error)) || 'Error desconocido';
                             Swal.fire({
                                 title: 'Error',
-                                text: 'Error al confirmar la venta: ' + (data.error || 'Error desconocido'),
+                                text: 'Error al confirmar la venta: ' + errMsg,
                                 icon: 'error',
                                 confirmButtonColor: '#dc3545'
                             });

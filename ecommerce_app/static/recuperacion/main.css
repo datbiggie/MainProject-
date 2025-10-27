@@ -1,0 +1,23 @@
+/* Modern, friendly styles for password recovery */
+:root{
+  --primary:#3b82f6; /* blue */
+  --primary-dark:#1e40af;
+  --muted:#6b7280;
+  --bg:#f8fafc;
+  --card-bg:#ffffff;
+}
+
+body{ background:var(--bg); font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+.recovery-card{ border-radius:12px; overflow:hidden; }
+.brand-circle{ width:76px; height:76px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); display:inline-flex; align-items:center; justify-content:center; }
+
+.form-control{ border-radius:10px; padding:0.9rem 1rem; }
+.btn-primary{ background:var(--primary); border:none; padding:0.8rem; border-radius:10px; }
+.btn-primary:hover{ background:var(--primary-dark); }
+
+/* responsive tweaks */
+@media (max-width:576px){ .brand-circle{ width:64px; height:64px; } }
+
+/* tiny helper for code entry step (if needed later) */
+.code-inputs{ display:flex; gap:8px; justify-content:center; }
+.code-inputs input{ width:56px; height:56px; text-align:center; font-size:1.25rem; border-radius:8px; }

@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextButton = getElement('nextButton');
     const backButton = getElement('backButton');
     const createAccountDropdown = getElement('createAccountDropdown');
+    // const forgotPasswordContainer = getElement('forgotPasswordContainer'); // Ya no se necesita
     const loginForm = getElement('loginForm');
     const title = document.querySelector('.login-title');
 
@@ -197,6 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             nextButton.type = 'submit';
                             createAccountDropdown.style.display = 'none';
                             backButton.style.display = 'flex';
+                            // El enlace de recuperación ya está siempre visible
                         }, 300);
                     }
                 } else {
@@ -238,6 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     nextButton.type = 'button';
                     createAccountDropdown.style.display = 'block';
                     backButton.style.display = 'none';
+                    // El enlace de recuperación permanece siempre visible
                     // Limpiar el campo de contraseña
                     if (passwordInput) {
                         passwordInput.value = '';

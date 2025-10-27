@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from .db import MYSQL
 import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -167,3 +171,18 @@ LOGGING = {
 
 # Login URL configuration
 LOGIN_URL = '/ecommerce/iniciar_sesion/'
+
+# Email configuration: use environment variables in production.
+# Default is the console backend to avoid attempting real SMTP connections during
+# local development which cause ConnectionRefusedError if no SMTP server is running.
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+try:
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+except Exception:
+    EMAIL_PORT = 587
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = str(os.environ.get('EMAIL_USE_TLS', 'True')).lower() in ('1', 'true', 'yes')
+EMAIL_USE_SSL = str(os.environ.get('EMAIL_USE_SSL', 'False')).lower() in ('1', 'true', 'yes')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@example.com')

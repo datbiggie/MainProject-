@@ -1,6 +1,6 @@
 import json
 import os
-from django.db.models import Q
+from django.db.models import Q, F
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
@@ -12,13 +12,21 @@ from .models import producto_empresa, servicio_empresa, producto_sucursal, servi
 def get_user_info_with_avatar(current_user, account_type, empresa_nombre=None):
     """Genera el diccionario user_info con el campo avatar_chatbot incluido"""
     if account_type == 'empresa':
+        # Las empresas almacenan el avatar en el campo `avatar_chatbot_empresa`.
+        avatar = None
+        try:
+            avatar = getattr(current_user, 'avatar_chatbot_empresa', None) or getattr(current_user, 'avatar_chatbot', None)
+        except Exception:
+            avatar = None
+        if not avatar:
+            avatar = 'avatars/Cartoon Style Robot.jpg'
         return {
             'id': current_user.id_empresa,
             'nombre': current_user.nombre_empresa,
             'email': current_user.correo_empresa,
             'tipo': current_user.rol_empresa,
             'is_authenticated': True,
-            'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
+            'avatar_chatbot': avatar
         }
     else:
         user_info = {
@@ -133,6 +141,11 @@ def api_sucursales_disponibles(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 from django.views.decorators.http import require_POST
+from django.core import signing
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.views.decorators.csrf import csrf_exempt
 
 # API para guardar producto o servicio en una sucursal
 @require_POST
@@ -281,6 +294,116 @@ def cambiar_foto_usuario(request):
     usuario_obj.foto_usuario = foto
     usuario_obj.save()
     return redirect('/ecommerce/perfil_usuario/')
+
+
+def recuperar_clave(request):
+    """Renderiza la página para solicitar recuperación (ingresar email)."""
+    return render(request, 'ecommerce_app/recuperar_clave.html')
+
+
+# ----- Password reset (request and confirm) -----
+@require_POST
+def request_password_reset(request):
+    """Recibe JSON {email} y, si existe usuario o empresa con ese email, envía un correo con token firmado.
+    Responde siempre {success: True} para no filtrar existencia de cuentas.
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        data = {}
+    email = data.get('email') or request.POST.get('email')
+    if not email:
+        return JsonResponse({'success': False, 'message': 'Email requerido'})
+
+    # Buscar usuario o empresa
+    user_obj = None
+    user_type = None
+    try:
+        from .models import usuario, empresa
+        user_obj = usuario.objects.filter(correo_usuario__iexact=email).first()
+        if user_obj:
+            user_type = 'usuario'
+        else:
+            user_obj = empresa.objects.filter(correo_empresa__iexact=email).first()
+            if user_obj:
+                user_type = 'empresa'
+    except Exception:
+        user_obj = None
+
+    # Generar token firmado con payload minimal: {type, id}
+    token = None
+    if user_obj and user_type:
+        payload = {'type': user_type, 'id': getattr(user_obj, 'id_usuario', None) or getattr(user_obj, 'id_empresa', None)}
+        token = signing.dumps(payload, salt='password-reset')
+
+        # Preparar link
+        base_url = getattr(settings, 'SITE_BASE_URL', '') or request.build_absolute_uri('/')[:-1]
+        reset_link = f"{base_url}/ecommerce/confirmar_recuperacion/?token={token}"
+
+        # Render email
+        subject = 'Recuperación de contraseña'
+        html_message = render_to_string('ecommerce_app/emails/password_reset.html', {'reset_link': reset_link, 'user': user_obj})
+        plain_message = strip_tags(html_message)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@example.com')
+        recipient_list = [email]
+
+        try:
+            send_mail(subject, plain_message, from_email, recipient_list, html_message=html_message, fail_silently=False)
+        except Exception as e:
+            # Log error but do not expose to client
+            try:
+                import logging
+                logging.exception('Error sending password reset email: %s', e)
+            except Exception:
+                pass
+
+    # Responder siempre genérico
+    return JsonResponse({'success': True, 'message': 'Si existe una cuenta asociada se ha enviado un correo con instrucciones.'})
+
+
+@require_http_methods(['GET', 'POST'])
+def confirmar_recuperacion(request):
+    """Página que muestra el formulario para introducir nueva contraseña.
+    Si GET y token presente -> mostrar formulario. Si POST -> validar token y cambiar contraseña.
+    """
+    if request.method == 'GET':
+        token = request.GET.get('token')
+        return render(request, 'ecommerce_app/confirmar_recuperacion.html', {'token': token})
+
+    # POST
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        data = {}
+    token = data.get('token') or request.POST.get('token')
+    new_password = data.get('password') or request.POST.get('password')
+    if not token or not new_password:
+        return JsonResponse({'success': False, 'message': 'Token y nueva contraseña requeridos'})
+
+    # Validar token
+    try:
+        payload = signing.loads(token, salt='password-reset', max_age=60 * 60 * 2)  # 2 horas
+    except signing.BadSignature:
+        return JsonResponse({'success': False, 'message': 'Token inválido o expirado'})
+
+    user_type = payload.get('type')
+    user_id = payload.get('id')
+    try:
+        from .models import usuario, empresa
+        from django.contrib.auth.hashers import make_password
+        hashed = make_password(new_password)
+        if user_type == 'usuario':
+            user_obj = usuario.objects.get(id_usuario=user_id)
+            user_obj.password_usuario = hashed
+            user_obj.save()
+        else:
+            user_obj = empresa.objects.get(id_empresa=user_id)
+            user_obj.password_empresa = hashed
+            user_obj.save()
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': 'No se pudo actualizar la contraseña'})
+
+    return JsonResponse({'success': True, 'message': 'Contraseña actualizada correctamente'})
 
 # Vista para eliminar servicio
 from django.views.decorators.csrf import csrf_exempt
@@ -4084,14 +4207,14 @@ def perfil_empresa(request):
                 # Un usuario/empresa autenticada viendo el perfil de otra empresa -> perfil público
                 user_info = get_user_info_with_avatar(current_user, account_type)
                 user_info['is_public_profile'] = True
-                # Guardar el avatar del perfil que se está viendo
-                user_info['avatar_chatbot'] = empresa_obj.avatar_chatbot if getattr(empresa_obj, 'avatar_chatbot', None) else None
+                # Guardar el avatar del perfil que se está viendo (campo correcto para empresa)
+                user_info['avatar_chatbot'] = getattr(empresa_obj, 'avatar_chatbot_empresa', None) or getattr(empresa_obj, 'avatar_chatbot', None)
             else:
                 # Para perfiles públicos sin autenticación
                 user_info = {
-                    'is_authenticated': False,
-                    'is_public_profile': True,
-                    'avatar_chatbot': empresa_obj.avatar_chatbot if getattr(empresa_obj, 'avatar_chatbot', None) else None
+                'is_authenticated': False,
+                'is_public_profile': True,
+                'avatar_chatbot': getattr(empresa_obj, 'avatar_chatbot_empresa', None) or getattr(empresa_obj, 'avatar_chatbot', None)
                 }
         except empresa.DoesNotExist:
             # Si no existe la empresa, redirigir o mostrar error
@@ -4116,7 +4239,8 @@ def perfil_empresa(request):
                 'email': current_user.correo_empresa,
                 'tipo': current_user.rol_empresa,
                 'is_authenticated': True,
-                'empresa_nombre': current_user.nombre_empresa
+                'empresa_nombre': current_user.nombre_empresa,
+                'avatar_chatbot': getattr(current_user, 'avatar_chatbot_empresa', None) or getattr(current_user, 'avatar_chatbot', None) or 'avatars/Cartoon Style Robot.jpg'
             }
         elif current_user:
             # Para usuarios autenticados, buscar empresa asociada
@@ -6198,8 +6322,8 @@ def perfil_productos(request):
                     'avatar_chatbot': getattr(current_user, 'avatar_chatbot', 'avatars/Cartoon Style Robot.jpg')
                 })
             
-            # Para el chatbot, usar el avatar por defecto cuando se ve perfil de empresa
-            user_info['avatar_chatbot'] = 'avatars/Cartoon Style Robot.jpg'
+            # Para el chatbot, usar el avatar de la empresa si está definido, si no fallback al avatar por defecto
+            user_info['avatar_chatbot'] = getattr(empresa_obj, 'avatar_chatbot_empresa', None) or getattr(empresa_obj, 'avatar_chatbot', None) or 'avatars/Cartoon Style Robot.jpg'
             
             return render(request, 'ecommerce_app/perfil_productos.html', {
                 'user_info': user_info,
@@ -7055,11 +7179,17 @@ def agregar_al_carrito(request):
                 'message': 'Tipo de producto no válido'
             }, status=400)
         
-        # Validar stock disponible
-        if cantidad > producto_info['stock']:
+        # Validar stock disponible (considerando stock reservado)
+        stock_disponible = 0
+        if producto_info['tipo'] == 'empresa':
+            stock_disponible = producto_info['objeto'].stock_producto_sucursal - producto_info['objeto'].stock_reservado_sucursal
+        else:
+            stock_disponible = producto_info['objeto'].stock_producto_usuario - producto_info['objeto'].stock_reservado_usuario
+            
+        if cantidad > stock_disponible:
             return JsonResponse({
                 'success': False,
-                'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({producto_info["stock"]} unidades)',
+                'message': f'La cantidad solicitada ({cantidad}) excede el stock disponible ({stock_disponible} unidades)',
                 'stock_insuficiente': True
             }, status=400)
         
@@ -7120,6 +7250,11 @@ def agregar_al_carrito(request):
                         detalle_existente.cantidad_deta_carrito_prod_empresa * producto_info['precio']
                     )
                     detalle_existente.save()
+                    
+                    # Incrementar stock reservado
+                    producto_usuario_obj = producto_info['objeto']
+                    producto_usuario_obj.stock_reservado_usuario += cantidad
+                    producto_usuario_obj.save()
                 else:
                     # Crear nuevo detalle
                     detalle_compra_producto_empresa.objects.create(
@@ -7130,6 +7265,11 @@ def agregar_al_carrito(request):
                         precio_original_deta_carrito_prod_empresa=producto_info['precio'],
                         subtotal_deta_carrito_prod_empresa=cantidad * producto_info['precio']
                     )
+                    
+                    # Incrementar stock reservado
+                    producto_sucursal_obj = producto_info['objeto']
+                    producto_sucursal_obj.stock_reservado_sucursal += cantidad
+                    producto_sucursal_obj.save()
             
             elif producto_info['tipo'] == 'usuario':
                 # Verificar si ya existe en el carrito
@@ -7164,6 +7304,11 @@ def agregar_al_carrito(request):
                         precio_original_deta_carrito_prod_empresa=producto_info['precio'],
                         subtotal_deta_carrito_prod_empresa=cantidad * producto_info['precio']
                     )
+                    
+                    # Incrementar stock reservado
+                    producto_usuario_obj = producto_info['objeto']
+                    producto_usuario_obj.stock_reservado_usuario += cantidad
+                    producto_usuario_obj.save()
             
             # Actualizar total del carrito
             recalcular_total_carrito(carrito, 'empresa')
@@ -10288,6 +10433,71 @@ def mis_solicitudes(request):
 
 
 @require_login
+def liberar_carritos_expirados():
+    """
+    Función para liberar el stock reservado de carritos expirados.
+    Esta función debe ejecutarse periódicamente mediante un cronjob o tarea programada.
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db import transaction
+    
+    # Definir tiempo de expiración (por ejemplo, 24 horas)
+    tiempo_expiracion = timezone.now() - timedelta(hours=24)
+    
+    # Procesar carritos de empresas expirados
+    carritos_empresa_expirados = carrito_compra_producto_empresa.objects.filter(
+        estatuscarrito_prod_empresa='activo',
+        fecha_carrito_prod_empresa__lt=tiempo_expiracion
+    )
+    
+    for carrito in carritos_empresa_expirados:
+        with transaction.atomic():
+            # Obtener todos los detalles del carrito
+            detalles = detalle_compra_producto_empresa.objects.filter(id_fk_carritocompra_empresa=carrito)
+            
+            # Liberar stock reservado para cada producto
+            for detalle in detalles:
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto = detalle.id_fk_producto_sucursal_empresa
+                    producto.stock_reservado_sucursal = max(0, producto.stock_reservado_sucursal - detalle.cantidad_deta_carrito_prod_empresa)
+                    producto.save()
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    producto.stock_reservado_usuario = max(0, producto.stock_reservado_usuario - detalle.cantidad_deta_carrito_prod_usuario)
+                    producto.save()
+            
+            # Marcar carrito como expirado
+            carrito.estatuscarrito_prod_empresa = 'expirado'
+            carrito.save()
+    
+    # Procesar carritos de usuarios expirados
+    carritos_usuario_expirados = carrito_compra_producto_usuario.objects.filter(
+        estatuscarrito_prod_usuario='activo',
+        fecha_carrito_prod_usuario__lt=tiempo_expiracion
+    )
+    
+    for carrito in carritos_usuario_expirados:
+        with transaction.atomic():
+            # Obtener todos los detalles del carrito
+            detalles = detalle_compra_producto_usuario.objects.filter(id_fk_carritocompra_usuario=carrito)
+            
+            # Liberar stock reservado para cada producto
+            for detalle in detalles:
+                if detalle.id_fk_producto_sucursal_empresa:
+                    producto = detalle.id_fk_producto_sucursal_empresa
+                    producto.stock_reservado_sucursal = max(0, producto.stock_reservado_sucursal - detalle.cantidad_deta_carrito_prod_usuario)
+                    producto.save()
+                elif detalle.idproducto_fk_usuario:
+                    producto = detalle.idproducto_fk_usuario
+                    producto.stock_reservado_usuario = max(0, producto.stock_reservado_usuario - detalle.cantidad_deta_carrito_prod_usuario)
+                    producto.save()
+            
+            # Marcar carrito como expirado
+            carrito.estatuscarrito_prod_usuario = 'expirado'
+            carrito.save()
+
+
 def confirmar_venta(request):
     """
     Vista para confirmar una venta cambiando el estado del pedido de 'pendiente' a 'confirmado'.
@@ -10366,17 +10576,81 @@ def confirmar_venta(request):
                 'message': f'El pedido ya está en estado: {pedido_encontrado.estado_pedido}'
             })
         
-        # Cambiar el estado a 'confirmado'
-        pedido_encontrado.estado_pedido = 'confirmado'
-        pedido_encontrado.save()
-        
+        # Realizar la actualización de stock y cambio de estado dentro de una transacción
+        try:
+            with transaction.atomic():
+                # Re-obtener y bloquear el pedido para evitar condiciones de carrera
+                if isinstance(pedido_encontrado, pedido_usuario) or hasattr(pedido_encontrado, 'id_pedido_usuario'):
+                    pedido = pedido_usuario.objects.select_for_update().get(pk=pedido_encontrado.pk)
+                    detalles = detalle_pedido_usuario.objects.select_for_update().filter(id_pedido_fk=pedido).select_related('id_fk_producto_sucursal_empresa', 'idproducto_fk_usuario')
+                elif isinstance(pedido_encontrado, pedido_empresa) or hasattr(pedido_encontrado, 'id_pedido_empresa'):
+                    pedido = pedido_empresa.objects.select_for_update().get(pk=pedido_encontrado.pk)
+                    detalles = detalle_pedido_empresa.objects.select_for_update().filter(id_pedido_fk=pedido).select_related('id_fk_producto_sucursal_empresa', 'idproducto_fk_usuario')
+                else:
+                    logger.error(f"Tipo de pedido no reconocido: {type(pedido_encontrado)}")
+                    return JsonResponse({'success': False, 'message': 'Tipo de pedido no reconocido', 'error': 'Tipo de pedido no reconocido'})
+
+                # Verificar estado nuevamente dentro de la transacción
+                if pedido.estado_pedido != 'pendiente':
+                    return JsonResponse({'success': False, 'message': f'El pedido ya está en estado: {pedido.estado_pedido}', 'error': 'Estado inválido'})
+
+                logger.info(f"Procesando pedido (bloqueado): {pedido.numero_pedido} - detalles: {detalles.count()}")
+
+                # Actualizar stock por cada detalle (bloqueando también los productos)
+                for detalle in detalles:
+                    cantidad = detalle.cantidad_detalle_pedido
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        prod_pk = detalle.id_fk_producto_sucursal_empresa.pk
+                        producto = producto_sucursal.objects.select_for_update().get(pk=prod_pk)
+
+                        logger.info(f"Actualizando stock de producto sucursal (bloqueado): {producto.id_producto_sucursal} - stock actual: {producto.stock_producto_sucursal} reservado: {producto.stock_reservado_sucursal} - restar: {cantidad}")
+
+                        # Validar stock disponible
+                        if producto.stock_producto_sucursal < cantidad:
+                            raise Exception(f"Stock insuficiente para producto sucursal {producto.id_producto_sucursal}")
+
+                        # Calcular valores en Python para evitar underflow en campos unsigned
+                        new_stock = producto.stock_producto_sucursal - cantidad
+                        new_reserved = max(0, producto.stock_reservado_sucursal - cantidad)
+
+                        producto.stock_producto_sucursal = new_stock
+                        producto.stock_reservado_sucursal = new_reserved
+                        producto.save(update_fields=['stock_producto_sucursal', 'stock_reservado_sucursal'])
+                        producto.refresh_from_db()
+
+                    elif detalle.idproducto_fk_usuario:
+                        prod_pk = detalle.idproducto_fk_usuario.pk
+                        producto = producto_usuario.objects.select_for_update().get(pk=prod_pk)
+
+                        logger.info(f"Actualizando stock de producto usuario (bloqueado): {producto.id_producto_usuario} - stock actual: {producto.stock_producto_usuario} reservado: {producto.stock_reservado_usuario} - restar: {cantidad}")
+
+                        if producto.stock_producto_usuario < cantidad:
+                            raise Exception(f"Stock insuficiente para producto usuario {producto.id_producto_usuario}")
+
+                        new_stock = producto.stock_producto_usuario - cantidad
+                        new_reserved = max(0, producto.stock_reservado_usuario - cantidad)
+
+                        producto.stock_producto_usuario = new_stock
+                        producto.stock_reservado_usuario = new_reserved
+                        producto.save(update_fields=['stock_producto_usuario', 'stock_reservado_usuario'])
+                        producto.refresh_from_db()
+
+                # Si todo va bien, cambiar estado a confirmado y guardar
+                pedido.estado_pedido = 'confirmado'
+                pedido.save(update_fields=['estado_pedido'])
+
+        except Exception as e:
+            # El with transaction.atomic() hará rollback automáticamente
+            logger.error(f"Error al actualizar stock en confirmar_venta: {str(e)}")
+            return JsonResponse({'success': False, 'message': f'Error al confirmar la venta: {str(e)}', 'error': str(e)})
+
         # Crear notificación automática para el comprador
-        notificar_pedido_confirmado(pedido_encontrado)
-        
+        notificar_pedido_confirmado(pedido)
+
         logger.info(f"Pedido {numero_pedido} confirmado por {account_type} {current_user}")
-        
+
         return JsonResponse({
-            'success': True, 
+            'success': True,
             'message': 'Venta confirmada exitosamente',
             'nuevo_estado': 'confirmado'
         })
@@ -10510,84 +10784,162 @@ def favoritos(request):
             'is_authenticated': False
         }
     
-    # Obtener los favoritos del usuario
+    # Obtener los favoritos del usuario o de la empresa según el tipo de cuenta
     favoritos = []
-    if current_user and account_type == 'usuario':
-        favoritos_query = favorito_usuario.objects.filter(id_usuario_fk=current_user)
-        
-        for favorito in favoritos_query:
-            item_data = None
-            
-            # Producto de usuario
-            if favorito.id_producto_usuario_fk:
-                producto = favorito.id_producto_usuario_fk
-                imagenes = imagen_producto_usuario.objects.filter(id_producto_fk=producto)
-                item_data = {
-                    'id': producto.id_producto_usuario,
-                    'nombre': producto.nombre_producto_usuario,
-                    'descripcion': producto.descripcion_producto_usuario,
-                    'precio': producto.precio_producto_usuario,
-                    'tipo': 'producto',
-                    'tipo_propietario': 'usuario',
-                    'propietario': producto.id_usuario_fk.nombre_usuario,
-                    'imagen': imagenes.first().ruta_imagen_producto_usuario.url if imagenes.exists() else None,
-                    'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_usuario if producto.id_categoria_prod_fk else 'Sin categoría'
-                }
-            
-            # Servicio de usuario
-            elif favorito.id_servicio_usuario_fk:
-                servicio = favorito.id_servicio_usuario_fk
-                imagenes = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio)
-                item_data = {
-                    'id': servicio.id_servicio_usuario,
-                    'nombre': servicio.nombre_servicio_usuario,
-                    'descripcion': servicio.descripcion_servicio_usuario,
-                    'precio': servicio.precio_servicio_usuario,
-                    'tipo': 'servicio',
-                    'tipo_propietario': 'usuario',
-                    'propietario': servicio.id_usuario_fk.nombre_usuario,
-                    'imagen': imagenes.first().ruta_imagen_servicio_usuario.url if imagenes.exists() else None,
-                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio.id_categoria_servicios_fk else 'Sin categoría'
-                }
-            
-            # Producto de sucursal
-            elif favorito.id_producto_sucursal_fk:
-                producto_suc = favorito.id_producto_sucursal_fk
-                producto = producto_suc.id_producto_fk
-                imagenes = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
-                item_data = {
-                    'id': producto_suc.id_producto_sucursal,
-                    'nombre': producto.nombre_producto_empresa,
-                    'descripcion': producto.descripcion_producto_empresa,
-                    'precio': producto_suc.precio_producto_sucursal,
-                    'tipo': 'producto',
-                    'tipo_propietario': 'empresa',
-                    'propietario': producto_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
-                    'sucursal': producto_suc.id_sucursal_fk.nombre_sucursal,
-                    'imagen': imagenes.first().ruta_imagen_producto_empresa.url if imagenes.exists() else None,
-                    'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_empresa if producto.id_categoria_prod_fk else 'Sin categoría'
-                }
-            
-            # Servicio de sucursal
-            elif favorito.id_servicio_sucursal_fk:
-                servicio_suc = favorito.id_servicio_sucursal_fk
-                servicio = servicio_suc.id_servicio_fk
-                imagenes = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
-                item_data = {
-                    'id': servicio_suc.id_servicio_sucursal,
-                    'nombre': servicio.nombre_servicio_empresa,
-                    'descripcion': servicio.descripcion_servicio_empresa,
-                    'precio': servicio_suc.precio_servicio_sucursal,
-                    'tipo': 'servicio',
-                    'tipo_propietario': 'empresa',
-                    'propietario': servicio_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
-                    'sucursal': servicio_suc.id_sucursal_fk.nombre_sucursal,
-                    'imagen': imagenes.first().ruta_imagen_servicio_empresa.url if imagenes.exists() else None,
-                    'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio.id_categoria_servicios_fk else 'Sin categoría'
-                }
-            
-            if item_data:
-                favoritos.append(item_data)
+    if current_user:
+        if account_type == 'usuario':
+            favoritos_query = favorito_usuario.objects.filter(id_usuario_fk=current_user)
+
+            for favorito in favoritos_query:
+                item_data = None
+
+                # Producto de usuario
+                if favorito.id_producto_usuario_fk:
+                    producto = favorito.id_producto_usuario_fk
+                    imagenes = imagen_producto_usuario.objects.filter(id_producto_fk=producto)
+                    item_data = {
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'descripcion': producto.descripcion_producto_usuario,
+                        'precio': producto.precio_producto_usuario,
+                        'tipo': 'producto',
+                        'tipo_propietario': 'usuario',
+                        'propietario': producto.id_usuario_fk.nombre_usuario,
+                        'imagen': imagenes.first().ruta_imagen_producto_usuario.url if imagenes.exists() else None,
+                        'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_usuario if producto.id_categoria_prod_fk else 'Sin categoría'
+                    }
+
+                # Servicio de usuario
+                elif favorito.id_servicio_usuario_fk:
+                    servicio = favorito.id_servicio_usuario_fk
+                    imagenes = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio)
+                    item_data = {
+                        'id': servicio.id_servicio_usuario,
+                        'nombre': servicio.nombre_servicio_usuario,
+                        'descripcion': servicio.descripcion_servicio_usuario,
+                        'precio': servicio.precio_servicio_usuario,
+                        'tipo': 'servicio',
+                        'tipo_propietario': 'usuario',
+                        'propietario': servicio.id_usuario_fk.nombre_usuario,
+                        'imagen': imagenes.first().ruta_imagen_servicio_usuario.url if imagenes.exists() else None,
+                        'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio.id_categoria_servicios_fk else 'Sin categoría'
+                    }
+
+                # Producto de sucursal
+                elif favorito.id_producto_sucursal_fk:
+                    producto_suc = favorito.id_producto_sucursal_fk
+                    producto = producto_suc.id_producto_fk
+                    imagenes = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                    item_data = {
+                        'id': producto_suc.id_producto_sucursal,
+                        'nombre': producto.nombre_producto_empresa,
+                        'descripcion': producto.descripcion_producto_empresa,
+                        'precio': producto_suc.precio_producto_sucursal,
+                        'tipo': 'producto',
+                        'tipo_propietario': 'empresa',
+                        'propietario': producto_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                        'sucursal': producto_suc.id_sucursal_fk.nombre_sucursal,
+                        'imagen': imagenes.first().ruta_imagen_producto_empresa.url if imagenes.exists() else None,
+                        'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_empresa if producto.id_categoria_prod_fk else 'Sin categoría'
+                    }
+
+                # Servicio de sucursal
+                elif favorito.id_servicio_sucursal_fk:
+                    servicio_suc = favorito.id_servicio_sucursal_fk
+                    servicio = servicio_suc.id_servicio_fk
+                    imagenes = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                    item_data = {
+                        'id': servicio_suc.id_servicio_sucursal,
+                        'nombre': servicio.nombre_servicio_empresa,
+                        'descripcion': servicio.descripcion_servicio_empresa,
+                        'precio': servicio_suc.precio_servicio_sucursal,
+                        'tipo': 'servicio',
+                        'tipo_propietario': 'empresa',
+                        'propietario': servicio_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                        'sucursal': servicio_suc.id_sucursal_fk.nombre_sucursal,
+                        'imagen': imagenes.first().ruta_imagen_servicio_empresa.url if imagenes.exists() else None,
+                        'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio.id_categoria_servicios_fk else 'Sin categoría'
+                    }
+
+                if item_data:
+                    favoritos.append(item_data)
+
+        elif account_type == 'empresa':
+            favoritos_query = favorito_empresa_sucursal.objects.filter(id_empresa_fk=current_user)
+
+            for favorito in favoritos_query:
+                item_data = None
+
+                # Producto de usuario
+                if favorito.id_producto_usuario_fk:
+                    producto = favorito.id_producto_usuario_fk
+                    imagenes = imagen_producto_usuario.objects.filter(id_producto_fk=producto)
+                    item_data = {
+                        'id': producto.id_producto_usuario,
+                        'nombre': producto.nombre_producto_usuario,
+                        'descripcion': producto.descripcion_producto_usuario,
+                        'precio': producto.precio_producto_usuario,
+                        'tipo': 'producto',
+                        'tipo_propietario': 'usuario',
+                        'propietario': producto.id_usuario_fk.nombre_usuario,
+                        'imagen': imagenes.first().ruta_imagen_producto_usuario.url if imagenes.exists() else None,
+                        'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_usuario if producto.id_categoria_prod_fk else 'Sin categoría'
+                    }
+
+                # Servicio de usuario
+                elif favorito.id_servicio_usuario_fk:
+                    servicio = favorito.id_servicio_usuario_fk
+                    imagenes = imagen_servicio_usuario.objects.filter(id_servicio_fk=servicio)
+                    item_data = {
+                        'id': servicio.id_servicio_usuario,
+                        'nombre': servicio.nombre_servicio_usuario,
+                        'descripcion': servicio.descripcion_servicio_usuario,
+                        'precio': servicio.precio_servicio_usuario,
+                        'tipo': 'servicio',
+                        'tipo_propietario': 'usuario',
+                        'propietario': servicio.id_usuario_fk.nombre_usuario,
+                        'imagen': imagenes.first().ruta_imagen_servicio_usuario.url if imagenes.exists() else None,
+                        'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario if servicio.id_categoria_servicios_fk else 'Sin categoría'
+                    }
+
+                # Producto de sucursal
+                elif favorito.id_producto_sucursal_fk:
+                    producto_suc = favorito.id_producto_sucursal_fk
+                    producto = producto_suc.id_producto_fk
+                    imagenes = imagen_producto_empresa.objects.filter(id_producto_fk=producto)
+                    item_data = {
+                        'id': producto_suc.id_producto_sucursal,
+                        'nombre': producto.nombre_producto_empresa,
+                        'descripcion': producto.descripcion_producto_empresa,
+                        'precio': producto_suc.precio_producto_sucursal,
+                        'tipo': 'producto',
+                        'tipo_propietario': 'empresa',
+                        'propietario': producto_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                        'sucursal': producto_suc.id_sucursal_fk.nombre_sucursal,
+                        'imagen': imagenes.first().ruta_imagen_producto_empresa.url if imagenes.exists() else None,
+                        'categoria': producto.id_categoria_prod_fk.nombre_categoria_prod_empresa if producto.id_categoria_prod_fk else 'Sin categoría'
+                    }
+
+                # Servicio de sucursal
+                elif favorito.id_servicio_sucursal_fk:
+                    servicio_suc = favorito.id_servicio_sucursal_fk
+                    servicio = servicio_suc.id_servicio_fk
+                    imagenes = imagen_servicio_empresa.objects.filter(id_servicio_fk=servicio)
+                    item_data = {
+                        'id': servicio_suc.id_servicio_sucursal,
+                        'nombre': servicio.nombre_servicio_empresa,
+                        'descripcion': servicio.descripcion_servicio_empresa,
+                        'precio': servicio_suc.precio_servicio_sucursal,
+                        'tipo': 'servicio',
+                        'tipo_propietario': 'empresa',
+                        'propietario': servicio_suc.id_sucursal_fk.id_empresa_fk.nombre_empresa,
+                        'sucursal': servicio_suc.id_sucursal_fk.nombre_sucursal,
+                        'imagen': imagenes.first().ruta_imagen_servicio_empresa.url if imagenes.exists() else None,
+                        'categoria': servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa if servicio.id_categoria_servicios_fk else 'Sin categoría'
+                    }
+
+                if item_data:
+                    favoritos.append(item_data)
     
     context = {
         'user_info': user_info,
@@ -10611,11 +10963,11 @@ def agregar_quitar_favorito(request):
         current_user = get_current_user(request)
         account_type = request.session.get('account_type', 'usuario')
         
-        # Solo usuarios (no empresas) pueden agregar favoritos
-        if account_type != 'usuario':
+        # Permitir que tanto usuarios individuales como empresas agreguen favoritos
+        if account_type not in ['usuario', 'empresa']:
             return JsonResponse({
                 'success': False,
-                'message': 'Solo los usuarios pueden agregar favoritos'
+                'message': 'Solo usuarios o empresas pueden agregar favoritos'
             })
         
         data = json.loads(request.body)
@@ -10629,70 +10981,84 @@ def agregar_quitar_favorito(request):
                 'message': 'Faltan datos requeridos'
             })
         
-        # Determinar el campo correcto según el tipo de propietario y tipo de item
-        favorito_data = {'id_usuario_fk': current_user}
-        
-        if tipo_propietario == 'usuario':
-            if tipo_item == 'producto':
-                # Verificar que el producto existe
-                try:
-                    producto = producto_usuario.objects.get(id_producto_usuario=item_id)
-                    favorito_data['id_producto_usuario_fk'] = producto
-                except producto_usuario.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto no encontrado'
-                    })
-            else:  # servicio
-                try:
-                    servicio = servicio_usuario.objects.get(id_servicio_usuario=item_id)
-                    favorito_data['id_servicio_usuario_fk'] = servicio
-                except servicio_usuario.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Servicio no encontrado'
-                    })
-        
-        elif tipo_propietario == 'empresa':
-            if tipo_item == 'producto':
-                # Para productos de empresa, debe ser de una sucursal específica
-                try:
-                    producto_suc = producto_sucursal.objects.get(id_producto_sucursal=item_id)
-                    favorito_data['id_producto_sucursal_fk'] = producto_suc
-                except producto_sucursal.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Producto de sucursal no encontrado'
-                    })
-            else:  # servicio
-                try:
-                    servicio_suc = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
-                    favorito_data['id_servicio_sucursal_fk'] = servicio_suc
-                except servicio_sucursal.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Servicio de sucursal no encontrado'
-                    })
-        
-        # Verificar si ya existe en favoritos
-        favorito_existente = favorito_usuario.objects.filter(**favorito_data).first()
-        
-        if favorito_existente:
-            # Si existe, lo eliminamos
-            favorito_existente.delete()
-            return JsonResponse({
-                'success': True,
-                'action': 'removed',
-                'message': 'Eliminado de favoritos'
-            })
-        else:
-            # Si no existe, lo agregamos
-            favorito_usuario.objects.create(**favorito_data)
-            return JsonResponse({
-                'success': True,
-                'action': 'added',
-                'message': 'Agregado a favoritos'
-            })
+        # Construir datos del favorito según el tipo de cuenta (usuario o empresa)
+        if account_type == 'usuario':
+            favorito_data = {'id_usuario_fk': current_user}
+
+            if tipo_propietario == 'usuario':
+                if tipo_item == 'producto':
+                    try:
+                        producto = producto_usuario.objects.get(id_producto_usuario=item_id)
+                        favorito_data['id_producto_usuario_fk'] = producto
+                    except producto_usuario.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Producto no encontrado'})
+                else:  # servicio
+                    try:
+                        servicio = servicio_usuario.objects.get(id_servicio_usuario=item_id)
+                        favorito_data['id_servicio_usuario_fk'] = servicio
+                    except servicio_usuario.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Servicio no encontrado'})
+
+            elif tipo_propietario == 'empresa':
+                if tipo_item == 'producto':
+                    try:
+                        producto_suc = producto_sucursal.objects.get(id_producto_sucursal=item_id)
+                        favorito_data['id_producto_sucursal_fk'] = producto_suc
+                    except producto_sucursal.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Producto de sucursal no encontrado'})
+                else:
+                    try:
+                        servicio_suc = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
+                        favorito_data['id_servicio_sucursal_fk'] = servicio_suc
+                    except servicio_sucursal.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Servicio de sucursal no encontrado'})
+
+            favorito_existente = favorito_usuario.objects.filter(**favorito_data).first()
+            if favorito_existente:
+                favorito_existente.delete()
+                return JsonResponse({'success': True, 'action': 'removed', 'message': 'Eliminado de favoritos'})
+            else:
+                favorito_usuario.objects.create(**favorito_data)
+                return JsonResponse({'success': True, 'action': 'added', 'message': 'Agregado a favoritos'})
+
+        else:  # account_type == 'empresa'
+            favorito_data = {'id_empresa_fk': current_user}
+
+            if tipo_propietario == 'usuario':
+                if tipo_item == 'producto':
+                    try:
+                        producto = producto_usuario.objects.get(id_producto_usuario=item_id)
+                        favorito_data['id_producto_usuario_fk'] = producto
+                    except producto_usuario.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Producto no encontrado'})
+                else:
+                    try:
+                        servicio = servicio_usuario.objects.get(id_servicio_usuario=item_id)
+                        favorito_data['id_servicio_usuario_fk'] = servicio
+                    except servicio_usuario.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Servicio no encontrado'})
+
+            elif tipo_propietario == 'empresa':
+                if tipo_item == 'producto':
+                    try:
+                        producto_suc = producto_sucursal.objects.get(id_producto_sucursal=item_id)
+                        favorito_data['id_producto_sucursal_fk'] = producto_suc
+                    except producto_sucursal.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Producto de sucursal no encontrado'})
+                else:
+                    try:
+                        servicio_suc = servicio_sucursal.objects.get(id_servicio_sucursal=item_id)
+                        favorito_data['id_servicio_sucursal_fk'] = servicio_suc
+                    except servicio_sucursal.DoesNotExist:
+                        return JsonResponse({'success': False, 'message': 'Servicio de sucursal no encontrado'})
+
+            favorito_existente = favorito_empresa_sucursal.objects.filter(**favorito_data).first()
+            if favorito_existente:
+                favorito_existente.delete()
+                return JsonResponse({'success': True, 'action': 'removed', 'message': 'Eliminado de favoritos'})
+            else:
+                favorito_empresa_sucursal.objects.create(**favorito_data)
+                return JsonResponse({'success': True, 'action': 'added', 'message': 'Agregado a favoritos'})
     
     except json.JSONDecodeError:
         return JsonResponse({
@@ -14747,10 +15113,12 @@ def api_obtener_datos_reporte_productos(request):
         # Obtener categorías de productos
         categorias_list = []
         if account_type == 'empresa':
-            categorias_obj = categoria_producto_empresa.objects.filter(id_empresa_fk=current_user)
+            # Incluir categorías propias de la empresa y las categóricas marcadas como genéricas (generico='s')
+            categorias_obj = categoria_producto_empresa.objects.filter(Q(id_empresa_fk=current_user) | Q(generico='s')).distinct()
             categorias_list = [{'id': c.id_categoria_prod_empresa, 'nombre': c.nombre_categoria_prod_empresa} for c in categorias_obj]
         else:
-            categorias_obj = categoria_producto_usuario.objects.filter(id_usuario_fk=current_user)
+            # Incluir categorías propias del usuario y las genéricas
+            categorias_obj = categoria_producto_usuario.objects.filter(Q(id_usuario_fk=current_user) | Q(generico='s')).distinct()
             categorias_list = [{'id': c.id_categoria_prod_usuario, 'nombre': c.nombre_categoria_prod_usuario} for c in categorias_obj]
         
         return JsonResponse({
