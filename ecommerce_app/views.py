@@ -2230,7 +2230,12 @@ def servicio_funcion(request):
             'tipo': current_user.rol_usuario,
             'is_authenticated': True
         }
-        categoria_servicio_all = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
+        # Para usuarios incluimos tanto las categorías genéricas definidas a nivel de empresa
+        # (generico='s') como las categorías propias del usuario.
+        empresa_genericas_qs = categoria_servicio_empresa.objects.filter(generico='s')
+        usuario_qs = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
+        # Combinar en una lista de instancias (la plantilla distingue por atributos de cada modelo)
+        categoria_servicio_all = list(empresa_genericas_qs) + list(usuario_qs)
 
     if request.method == 'POST':
         try:
