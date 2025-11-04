@@ -57,8 +57,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const metodoPagoSeleccionado = metodoPagoSelect?.value;
             
             if (!metodoPagoSeleccionado) {
-                alert('Por favor, seleccione un método de pago.');
-                metodoPagoSelect.focus();
+                // Usar SweetAlert en lugar de alert() para una mejor experiencia
+                Swal.fire({
+                    title: 'Método de pago requerido',
+                    text: 'Por favor, seleccione un método de pago.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#f59e0b'
+                }).then(() => {
+                    try { metodoPagoSelect.focus(); } catch(e) {}
+                });
                 return;
             }
             

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class GeminiService:
     def __init__(self):
         # TODO: Mover esto a variables de entorno en producción
-        genai.configure(api_key="AIzaSyC6ibe8a5vrglQR9DB76jshvMwG-ueF7PM")
+        genai.configure(api_key="AIzaSyDmoJ5mRRwBGsVyrGhzxybJYCWAlOD_q1E")
         
         # Configurar el modelo
         self.model = genai.GenerativeModel('gemini-2.5-flash')
@@ -44,7 +44,7 @@ class GeminiService:
             
             # Crear el prompt con contexto de e-commerce y datos de la BD
             prompt = f"""
-            Eres "EcommerceBot", un asistente de e-commerce. Responde de forma CONCISA y DIRECTA.
+            Eres "EcommerceBot", un asistente de e-commerce inteligente y asesor de compras. Responde de forma CONCISA y DIRECTA.
             {contexto_conversacion_texto}
             Información de la base de datos:
             {contexto_bd}
@@ -55,11 +55,40 @@ class GeminiService:
             - MANTÉN EL CONTEXTO de la conversación anterior
             - Si el usuario dice "otros", "más", "diferentes", etc., refiere a la categoría o tipo de productos mencionados anteriormente
             - Si encontraste productos en la base de datos, muestra SOLO esos productos específicos
-            - Respuesta máxima: 3-4 líneas por producto
+            - Respuesta máxima: 3-4 líneas por producto/servicio
             - Incluye: nombre, precio, vendedor/empresa, disponibilidad
             - NUNCA muestres coordenadas (latitud/longitud) al usuario - siempre calcula y muestra distancia en km
             - Para productos de usuario, menciona "entrega disponible" o la distancia si tienes coordenadas del usuario
             - Para productos/servicios de empresa, menciona la sucursal y distancia si es relevante
+            
+            MOSTRAR ATRIBUTOS EAV:
+            - SIEMPRE muestra los atributos EAV disponibles para cada producto
+            - Si hay atributos como 'marca', 'ram', 'almacenamiento', 'procesador', 'pantalla', 'color', etc., MUÉSTRALOS
+            - Formato: "Marca: HP, RAM: 8, Almacenamiento: 256GB SSD, Procesador: Intel Core i5"
+            - Si no hay atributos EAV, di "Especificaciones no disponibles"
+            - NUNCA digas "la información de RAM no está disponible" si hay atributos EAV
+            - Los atributos están en el campo 'atributos' de cada producto
+            - Si hay 'coincidencia_eav', 'coincidencia_patron' o 'coincidencia_logica', significa que el producto coincide con la búsqueda específica
+            
+            BÚSQUEDAS CON OPERADORES LÓGICOS:
+            - Si hay 'coincidencia_logica', el producto cumple TODOS los criterios especificados (operador AND)
+            - Prioriza productos con 'coincidencia_logica' ya que son coincidencias exactas múltiples
+            - Muestra claramente qué criterios cumple cada producto
+            - Ejemplo: "Cumple TODOS los criterios: marca: HP, ram: 8, precio: $899 (hasta $1000)"
+            
+            MANEJO DE RESULTADOS:
+            - Si encuentras productos O servicios, MUÉSTRALOS TODOS sin excepción
+            - NUNCA digas "No se encontraron productos" o "No se encontraron servicios" si hay resultados en la información de la BD
+            - Si hay productos/servicios con las características buscadas, enfócate en mostrarlos
+            - Prioriza productos que tengan 'coincidencia_eav', 'coincidencia_patron' o 'coincidencia_logica'
+            - Los servicios pueden aparecer en 'servicios_encontrados' incluso sin la palabra "servicio" en la consulta
+            
+            FUNCIONES DE ASESOR GENÉRICO:
+            - Si preguntan sobre ubicaciones, distancias o "cerca de mí", usa la información de distancia_km cuando esté disponible
+            - Si preguntan sobre envíos rápidos, menciona empresas con 'envio_rapido' y sus tiempos estimados
+            - Si preguntan sobre servicios específicos, prioriza los que tienen 'disponible_domicilio'
+            - Para consultas de marca + ubicación, enfócate en productos con menor distancia_km
+            - Si hay información de 'sucursales_con_distancia', ordena por proximidad
             
             ENLACES DIRECTOS:
             - SIEMPRE incluye un enlace directo para cada producto o servicio mostrado
@@ -150,47 +179,16 @@ class GeminiService:
                     informacion['solicitar_ubicacion'] = True
                     logger.info("Consulta de proximidad sin coordenadas - solicitando ubicación")
             elif es_consulta_producto:
-                logger.info(f"Consulta de productos detectada")
-                # Extraer términos de búsqueda (mejorado)
-                if es_continuacion and contexto_conversacion:
-                    # Si es una continuación, extraer términos del contexto anterior también
-                    terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario, contexto_conversacion)
+                logger.info(f"Ejecutando búsqueda universal de productos")
+                
+                # BÚSQUEDA UNIVERSAL DE PRODUCTOS - Usar el método mejorado del DatabaseService
+                productos_encontrados = self.db_service.buscar_productos(mensaje_usuario, limite=8)
+                
+                if productos_encontrados:
+                    informacion['productos_encontrados'] = productos_encontrados
+                    logger.info(f"Productos encontrados por búsqueda universal: {len(productos_encontrados)}")
                 else:
-                    terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario)
-                logger.info(f"Términos de búsqueda extraídos: '{terminos_busqueda}'")
-                if terminos_busqueda:
-                    # Buscar productos por nombre/descripción
-                    productos = self.db_service.buscar_productos(terminos_busqueda, limite=5)
-                    logger.info(f"Productos encontrados por nombre: {len(productos) if productos else 0}")
-                    
-                    # También buscar por categoría
-                    productos_categoria = self.db_service.obtener_productos_por_categoria(terminos_busqueda, limite=5)
-                    logger.info(f"Productos encontrados por categoría: {len(productos_categoria) if productos_categoria else 0}")
-                    
-                    # Detectar y buscar por atributos específicos
-                    atributos_detectados = self._detectar_atributos_en_mensaje(mensaje_usuario)
-                    productos_atributos = []
-                    if atributos_detectados:
-                        logger.info(f"Atributos detectados: {atributos_detectados}")
-                        productos_atributos = self.db_service.buscar_productos_por_atributos(atributos_detectados, limite=5)
-                        logger.info(f"Productos encontrados por atributos: {len(productos_atributos) if productos_atributos else 0}")
-                    
-                    # Combinar resultados evitando duplicados
-                    todos_productos = productos or []
-                    if productos_categoria:
-                        ids_existentes = {p['id'] for p in todos_productos}
-                        for prod_cat in productos_categoria:
-                            if prod_cat['id'] not in ids_existentes:
-                                todos_productos.append(prod_cat)
-                    
-                    if productos_atributos:
-                        ids_existentes = {p['id'] for p in todos_productos}
-                        for prod_attr in productos_atributos:
-                            if prod_attr['id'] not in ids_existentes:
-                                todos_productos.append(prod_attr)
-                    
-                    if todos_productos:
-                        informacion['productos_encontrados'] = todos_productos[:10]
+                    logger.info("No se encontraron productos en la búsqueda universal")
             
             # Detectar consultas sobre usuarios registrados
             palabras_usuario = ['usuario', 'usuarios', 'cliente', 'clientes', 'persona', 'personas', 
@@ -236,34 +234,127 @@ class GeminiService:
                         informacion['empresas_registradas'] = empresas_recientes
                         logger.info("Listando empresas registradas")
             
-            # Detectar consultas sobre servicios
-            if any(palabra in mensaje_lower for palabra in ['servicio', 'servicios']):
-                terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario)
-                if terminos_busqueda:
-                    # Buscar servicios por nombre/descripción
-                    servicios = self.db_service.buscar_servicios(terminos_busqueda, limite=5)
-                    
-                    # Buscar servicios por categoría
-                    servicios_categoria = self.db_service.obtener_servicios_por_categoria(terminos_busqueda, limite=5)
-                    
-                    # Combinar resultados evitando duplicados
-                    todos_servicios = servicios or []
-                    if servicios_categoria:
-                        ids_existentes = {s['id'] for s in todos_servicios}
-                        for serv_cat in servicios_categoria:
-                            if serv_cat['id'] not in ids_existentes:
-                                todos_servicios.append(serv_cat)
-                    
-                    if todos_servicios:
-                        informacion['servicios_encontrados'] = todos_servicios[:10]
+            # BÚSQUEDA UNIVERSAL DE SERVICIOS - SIEMPRE CONSULTAR LA BASE DE DATOS
+            # Esta búsqueda se ejecuta SIEMPRE, independientemente de palabras clave
+            logger.info("Ejecutando búsqueda universal de servicios")
             
-            # Detectar consultas sobre empresas
-            if any(palabra in mensaje_lower for palabra in ['empresa', 'tienda', 'vendedor']):
+            # 1. Búsqueda directa por el mensaje completo
+            servicios_directos = self.db_service.buscar_servicios(mensaje_usuario, limite=8)
+            
+            # 2. Búsqueda por términos extraídos
+            terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario)
+            servicios_por_terminos = []
+            if terminos_busqueda:
+                servicios_por_terminos = self.db_service.buscar_servicios(terminos_busqueda, limite=5)
+            
+            # 3. Búsqueda por categoría
+            servicios_categoria = self.db_service.obtener_servicios_por_categoria(mensaje_usuario, limite=5)
+            
+            # 4. Búsqueda con ubicación si se detecta
+            servicios_ubicacion = []
+            coordenadas = self._extraer_coordenadas(mensaje_usuario)
+            if coordenadas:
+                lat_usuario, lon_usuario = coordenadas
+                servicios_ubicacion = self.db_service.buscar_servicios_por_ubicacion_y_tipo(
+                    mensaje_usuario, lat_usuario, lon_usuario, radio_km=25, limite=8
+                )
+            
+            # Combinar todos los servicios encontrados evitando duplicados
+            todos_servicios = []
+            ids_servicios_encontrados = set()
+            
+            # Agregar servicios directos
+            for servicio in servicios_directos:
+                if servicio['id'] not in ids_servicios_encontrados:
+                    todos_servicios.append(servicio)
+                    ids_servicios_encontrados.add(servicio['id'])
+            
+            # Agregar servicios por términos
+            for servicio in servicios_por_terminos:
+                if servicio['id'] not in ids_servicios_encontrados:
+                    todos_servicios.append(servicio)
+                    ids_servicios_encontrados.add(servicio['id'])
+            
+            # Agregar servicios por categoría
+            for servicio in servicios_categoria:
+                if servicio['id'] not in ids_servicios_encontrados:
+                    todos_servicios.append(servicio)
+                    ids_servicios_encontrados.add(servicio['id'])
+            
+            # Agregar servicios por ubicación
+            for servicio in servicios_ubicacion:
+                if servicio['id'] not in ids_servicios_encontrados:
+                    todos_servicios.append(servicio)
+                    ids_servicios_encontrados.add(servicio['id'])
+            
+            # Si encontramos servicios, agregarlos a la información
+            if todos_servicios:
+                # Priorizar servicios por ubicación si existen
+                if servicios_ubicacion:
+                    informacion['servicios_por_ubicacion'] = servicios_ubicacion
+                else:
+                    informacion['servicios_encontrados'] = todos_servicios[:10]
+                
+                logger.info(f"Servicios encontrados por búsqueda universal: {len(todos_servicios)}")
+            
+            # DETECCIÓN ADICIONAL POR PALABRAS CLAVE (solo para logging y contexto)
+            es_consulta_servicio_explicita = any(palabra in mensaje_lower for palabra in ['servicio', 'servicios'])
+            if es_consulta_servicio_explicita:
+                logger.info("Consulta explícita de servicios detectada (contiene 'servicio')")
+            elif todos_servicios:
+                logger.info("Servicios encontrados por búsqueda universal (sin palabra 'servicio')")
+            
+            # Detectar consultas sobre empresas y envíos
+            if any(palabra in mensaje_lower for palabra in ['empresa', 'tienda', 'vendedor', 'envio', 'envío', 'delivery']):
                 terminos_busqueda = self._extraer_terminos_busqueda(mensaje_usuario)
-                if terminos_busqueda:
+                
+                # Detectar consultas sobre envío rápido
+                if any(palabra in mensaje_lower for palabra in ['envio rapido', 'envío rápido', 'rapido', 'rápido', 'express', 'inmediato']):
+                    ciudad_destino = self._extraer_ciudad_del_mensaje(mensaje_usuario)
+                    empresas_envio = self.db_service.obtener_empresas_con_envio_rapido(ciudad_destino, limite=8)
+                    if empresas_envio:
+                        informacion['empresas_envio_rapido'] = empresas_envio
+                elif terminos_busqueda:
                     empresas = self.db_service.buscar_empresas(terminos_busqueda, limite=5)
                     if empresas:
                         informacion['empresas_encontradas'] = empresas
+            
+            # Detectar consultas sobre distancia a tiendas específicas
+            if any(palabra in mensaje_lower for palabra in ['distancia', 'lejos', 'cerca']) and any(palabra in mensaje_lower for palabra in ['tienda', 'sucursal', 'local']):
+                coordenadas = self._extraer_coordenadas(mensaje_usuario)
+                empresa_mencionada = self._extraer_nombre_empresa_del_mensaje(mensaje_usuario)
+                
+                if coordenadas and empresa_mencionada:
+                    lat_usuario, lon_usuario = coordenadas
+                    distancias_sucursales = self.db_service.calcular_distancia_a_sucursal(
+                        lat_usuario, lon_usuario, empresa_mencionada, limite_sucursales=5
+                    )
+                    if distancias_sucursales:
+                        informacion['distancias_sucursales'] = distancias_sucursales
+                elif empresa_mencionada and not coordenadas:
+                    informacion['solicitar_ubicacion_para_distancia'] = True
+            
+            # Detectar consultas sobre productos de marca específica con ubicación
+            marcas_detectadas = self._detectar_marcas_en_mensaje(mensaje_usuario)
+            if marcas_detectadas:
+                coordenadas = self._extraer_coordenadas(mensaje_usuario)
+                for marca in marcas_detectadas:
+                    if coordenadas:
+                        lat_usuario, lon_usuario = coordenadas
+                        productos_marca = self.db_service.buscar_productos_por_marca_y_ubicacion(
+                            marca, lat_usuario, lon_usuario, radio_km=50, limite=8
+                        )
+                        if productos_marca:
+                            informacion['productos_marca_ubicacion'] = productos_marca
+                            informacion['marca_consultada'] = marca
+                    else:
+                        # Buscar productos de la marca sin filtro de ubicación
+                        productos_marca = self.db_service.buscar_productos_por_marca_y_ubicacion(
+                            marca, limite=8
+                        )
+                        if productos_marca:
+                            informacion['productos_marca'] = productos_marca
+                            informacion['marca_consultada'] = marca
             
             # Detectar consultas sobre categorías
             if any(palabra in mensaje_lower for palabra in ['categoria', 'categoría', 'tipo']):
@@ -601,3 +692,62 @@ class GeminiService:
                 break
         
         return atributos_detectados if atributos_detectados else None
+    
+    def _extraer_ciudad_del_mensaje(self, mensaje):
+        """Extrae el nombre de una ciudad del mensaje del usuario"""
+        import re
+        
+        # Patrones para detectar ciudades venezolanas comunes
+        ciudades_venezuela = [
+            'caracas', 'maracaibo', 'valencia', 'barquisimeto', 'maracay', 'ciudad guayana',
+            'san cristobal', 'maturin', 'barcelona', 'puerto la cruz', 'cumana', 'merida',
+            'cabimas', 'punto fijo', 'los teques', 'guarenas', 'petare', 'turmero',
+            'barinas', 'acarigua', 'araure', 'coro', 'guanare', 'carora', 'el tigre'
+        ]
+        
+        mensaje_lower = mensaje.lower()
+        
+        for ciudad in ciudades_venezuela:
+            if ciudad in mensaje_lower:
+                return ciudad.title()
+        
+        # Buscar patrones como "a [ciudad]" o "en [ciudad]"
+        patron_ciudad = r'(?:a|en|hacia|para)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
+        match = re.search(patron_ciudad, mensaje)
+        if match:
+            return match.group(1)
+        
+        return None
+    
+    def _extraer_nombre_empresa_del_mensaje(self, mensaje):
+        """Extrae el nombre de una empresa del mensaje del usuario"""
+        import re
+        
+        # Buscar patrones como "Tienda X", "empresa Y", nombres entre comillas
+        patrones = [
+            r'tienda\s+([A-Z][a-zA-Z\s]+)',
+            r'empresa\s+([A-Z][a-zA-Z\s]+)',
+            r'local\s+([A-Z][a-zA-Z\s]+)',
+            r'["\']([\w\s]+)["\']',  # Entre comillas
+            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b'  # Nombres propios
+        ]
+        
+        for patron in patrones:
+            match = re.search(patron, mensaje)
+            if match:
+                nombre = match.group(1).strip()
+                # Filtrar nombres muy comunes que no son empresas
+                if nombre.lower() not in ['tienda', 'empresa', 'local', 'sucursal', 'donde', 'cerca']:
+                    return nombre
+        
+        return None
+    
+    def _detectar_marcas_en_mensaje(self, mensaje):
+        """Detecta marcas mencionadas en el mensaje usando el servicio de inteligencia"""
+        try:
+            from .search_intelligence_service import SearchIntelligenceService
+            search_service = SearchIntelligenceService()
+            return search_service.extraer_marca_del_mensaje(mensaje)
+        except Exception as e:
+            logger.error(f"Error al detectar marcas: {e}")
+            return []

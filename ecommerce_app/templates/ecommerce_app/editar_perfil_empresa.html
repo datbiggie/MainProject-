@@ -312,6 +312,31 @@
         }
 
     </style>
+    <style>
+        /* Mejorar visibilidad de inputs en editar_perfil_empresa: texto negro y foco más pronunciado */
+        input.form-control, textarea.form-control, select.form-select {
+            color: #000 !important;
+            background-color: #fff !important;
+            opacity: 1 !important;
+            border: 1px solid #ced4da;
+            transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+        }
+        input.form-control::placeholder, textarea.form-control::placeholder {
+            color: #6c757d;
+            opacity: 1;
+        }
+        input.form-control:focus, textarea.form-control:focus, select.form-select:focus {
+            color: #000;
+            background-color: #fff;
+            border-color: rgba(59,130,246,0.9);
+            box-shadow: 0 0 0 .2rem rgba(59,130,246,0.12);
+            outline: none;
+        }
+        .form-control[disabled], .form-control:disabled { opacity: 0.95; color: #000; }
+        input[type="file"].form-control { background-color: #fff; }
+        /* Hacer el texto dentro de input-group-text más oscuro para contraste */
+        .input-group-text { color: #2d3748; }
+    </style>
 </head>
 <body>
 
@@ -349,7 +374,7 @@
                             </div>
                         {% endif %}
 
-                        <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        <form id="editarEmpresaForm" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                             {% csrf_token %}
 
                             <div class="accordion mb-4" id="empresaAccordion">
@@ -611,3 +636,62 @@
 
 </body>
 </html>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('editarEmpresaForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
+        const fd = new FormData(form);
+        try {
+            const resp = await fetch(window.location.href, {
+                method: 'POST',
+                body: fd,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const data = await resp.json();
+            if (data && data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: data.message || 'Guardado',
+                    timer: 1200,
+                    showConfirmButton: false
+                }).then(() => window.location.reload());
+
+                // Actualizar preview de logo si viene
+                if (data.logo_url) {
+                    const logoPreview = document.getElementById('logo-preview');
+                    if (logoPreview) {
+                        logoPreview.src = data.logo_url;
+                        logoPreview.classList.remove('d-none');
+                    }
+                }
+
+                // Actualizar avatar preview si viene
+                if (data.avatar_chatbot_empresa) {
+                    const avatarPreview = document.getElementById('avatarPreviewLarge');
+                    const selectedName = document.getElementById('selected_avatar_name');
+                    if (avatarPreview) avatarPreview.src = data.avatar_chatbot_empresa;
+                    if (selectedName) selectedName.textContent = data.avatar_chatbot_empresa.replace('avatars/', '').replace('.jpg','').replace('.png','').replace(/_/g,' ');
+                }
+            } else {
+                Swal.fire({icon: 'error', title: 'Error', text: (data && data.message) || 'Error al guardar'});
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire({icon: 'error', title: 'Error', text: 'Error de red o del servidor'});
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    });
+});
+</script>

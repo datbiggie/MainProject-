@@ -428,8 +428,9 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
 
     // Eliminar servicio por AJAX
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('btn-delete')) {
-            const btn = e.target.closest('.btn-delete');
+        // Aceptar clicks tanto sobre el botón como sobre elementos internos (p. ej. el icono)
+        if (e.target.classList.contains('btn-delete') || e.target.closest('.btn-delete')) {
+            const btn = e.target.classList.contains('btn-delete') ? e.target : e.target.closest('.btn-delete');
             const id = btn.getAttribute('data-id');
             const nombre = btn.getAttribute('data-nombre');
             

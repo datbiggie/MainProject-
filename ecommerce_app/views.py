@@ -1,11 +1,18 @@
 import json
 import os
+import logging
 from django.db.models import Q, F
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core import signing
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import producto_empresa, servicio_empresa, producto_sucursal, servicio_sucursal, sucursal, imagen_producto_empresa, imagen_servicio_empresa, categoria_servicio_usuario, categoria_servicio_empresa, imagen_producto_usuario, producto_usuario, categoria_producto_usuario, categoria_producto_empresa
 
 # Función auxiliar para generar user_info con avatar_chatbot
@@ -140,12 +147,6 @@ def api_sucursales_disponibles(request):
         return JsonResponse({'success': True, 'sucursales': sucursales})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
-from django.views.decorators.http import require_POST
-from django.core import signing
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.views.decorators.csrf import csrf_exempt
 
 # API para guardar producto o servicio en una sucursal
 @require_POST
@@ -311,6 +312,7 @@ def request_password_reset(request):
         data = json.loads(request.body.decode('utf-8') or '{}')
     except Exception:
         data = {}
+        
     email = data.get('email') or request.POST.get('email')
     if not email:
         return JsonResponse({'success': False, 'message': 'Email requerido'})
@@ -361,7 +363,10 @@ def request_password_reset(request):
     return JsonResponse({'success': True, 'message': 'Si existe una cuenta asociada se ha enviado un correo con instrucciones.'})
 
 
+logger = logging.getLogger(__name__)
+
 @require_http_methods(['GET', 'POST'])
+@csrf_exempt  # Añadir exemption para manejar CSRF manualmente
 def confirmar_recuperacion(request):
     """Página que muestra el formulario para introducir nueva contraseña.
     Si GET y token presente -> mostrar formulario. Si POST -> validar token y cambiar contraseña.
@@ -375,38 +380,77 @@ def confirmar_recuperacion(request):
         data = json.loads(request.body.decode('utf-8') or '{}')
     except Exception:
         data = {}
+    
     token = data.get('token') or request.POST.get('token')
     new_password = data.get('password') or request.POST.get('password')
-    if not token or not new_password:
-        return JsonResponse({'success': False, 'message': 'Token y nueva contraseña requeridos'})
+    
+    # Validación de entrada
+    if not token:
+        logger.warning("Intento de recuperación sin token")
+        return JsonResponse({'success': False, 'message': 'Token requerido'})
+    
+    if not new_password:
+        logger.warning("Intento de recuperación sin contraseña")
+        return JsonResponse({'success': False, 'message': 'Nueva contraseña requerida'})
+    
+    if len(new_password) < 6:
+        return JsonResponse({'success': False, 'message': 'La contraseña debe tener al menos 6 caracteres'})
 
     # Validar token
     try:
         payload = signing.loads(token, salt='password-reset', max_age=60 * 60 * 2)  # 2 horas
-    except signing.BadSignature:
+        logger.info(f"Token válido para payload: {payload}")
+    except signing.BadSignature as e:
+        logger.warning(f"Token inválido o expirado: {e}")
         return JsonResponse({'success': False, 'message': 'Token inválido o expirado'})
 
     user_type = payload.get('type')
     user_id = payload.get('id')
+    
+    if not user_type or not user_id:
+        logger.error(f"Payload incompleto: type={user_type}, id={user_id}")
+        return JsonResponse({'success': False, 'message': 'Token corrupto'})
+
     try:
         from .models import usuario, empresa
         from django.contrib.auth.hashers import make_password
+        
         hashed = make_password(new_password)
+        logger.info(f"Contraseña hasheada generada para {user_type} ID {user_id}")
+        
         if user_type == 'usuario':
-            user_obj = usuario.objects.get(id_usuario=user_id)
-            user_obj.password_usuario = hashed
-            user_obj.save()
+            try:
+                user_obj = usuario.objects.get(id_usuario=user_id)
+                logger.info(f"Usuario encontrado: {user_obj.nombre_usuario} ({user_obj.correo_usuario})")
+                user_obj.password_usuario = hashed
+                user_obj.save()
+                logger.info(f"Contraseña actualizada para usuario {user_obj.nombre_usuario}")
+            except usuario.DoesNotExist:
+                logger.error(f"Usuario con ID {user_id} no encontrado")
+                return JsonResponse({'success': False, 'message': 'Usuario no encontrado'})
+                
+        elif user_type == 'empresa':
+            try:
+                user_obj = empresa.objects.get(id_empresa=user_id)
+                logger.info(f"Empresa encontrada: {user_obj.nombre_empresa} ({user_obj.correo_empresa})")
+                user_obj.password_empresa = hashed
+                user_obj.save()
+                logger.info(f"Contraseña actualizada para empresa {user_obj.nombre_empresa}")
+            except empresa.DoesNotExist:
+                logger.error(f"Empresa con ID {user_id} no encontrada")
+                return JsonResponse({'success': False, 'message': 'Empresa no encontrada'})
         else:
-            user_obj = empresa.objects.get(id_empresa=user_id)
-            user_obj.password_empresa = hashed
-            user_obj.save()
+            logger.error(f"Tipo de usuario inválido: {user_type}")
+            return JsonResponse({'success': False, 'message': 'Tipo de usuario inválido'})
+            
     except Exception as e:
-        return JsonResponse({'success': False, 'message': 'No se pudo actualizar la contraseña'})
+        logger.exception(f"Error inesperado al actualizar contraseña: {e}")
+        return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'})
 
+    logger.info(f"Contraseña actualizada exitosamente para {user_type} ID {user_id}")
     return JsonResponse({'success': True, 'message': 'Contraseña actualizada correctamente'})
 
 # Vista para eliminar servicio
-from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 def eliminar_servicio(request):
     if request.method == 'POST':
@@ -2230,12 +2274,12 @@ def servicio_funcion(request):
             'tipo': current_user.rol_usuario,
             'is_authenticated': True
         }
-        # Para usuarios incluimos tanto las categorías genéricas definidas a nivel de empresa
-        # (generico='s') como las categorías propias del usuario.
-        empresa_genericas_qs = categoria_servicio_empresa.objects.filter(generico='s')
-        usuario_qs = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
-        # Combinar en una lista de instancias (la plantilla distingue por atributos de cada modelo)
-        categoria_servicio_all = list(empresa_genericas_qs) + list(usuario_qs)
+        # Para usuarios incluir tanto las categorías propias del usuario como
+        # las categorías genéricas que residan en la tabla de categorías de usuario
+        # (campo generico='s'). Usamos un único queryset para que la plantilla
+        # reciba objetos del mismo modelo `categoria_servicio_usuario`.
+        from django.db.models import Q as _Q
+        categoria_servicio_all = categoria_servicio_usuario.objects.filter(_Q(id_usuario_fk=current_user) | _Q(generico='s'))
 
     if request.method == 'POST':
         try:
@@ -13082,7 +13126,7 @@ def editar_perfil_usuario(request, usuario_id):
     # Verificar que el usuario autenticado corresponde al perfil que se intenta editar
     if not hasattr(current_user, 'id_usuario') or current_user.id_usuario != usuario_obj.id_usuario:
         logger.info(f"editar_perfil_usuario: intento de editar perfil ajeno. current_user.id: {getattr(current_user, 'id_usuario', None)}, target: {usuario_obj.id_usuario}")
-        return redirect('perfil_usuario', usuario_id=usuario_id)
+        return redirect('perfil_usuario')
 
     if request.method == 'POST':
         try:
@@ -13113,10 +13157,27 @@ def editar_perfil_usuario(request, usuario_id):
                 usuario_obj.foto_usuario = request.FILES['foto_usuario']
             
             usuario_obj.save()
-            
+
+            # Si la petición viene por AJAX, devolver JSON para que el frontend muestre un SweetAlert y no haga redirect
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                resp = {'success': True, 'message': 'Perfil actualizado correctamente.'}
+                try:
+                    if usuario_obj.foto_usuario and hasattr(usuario_obj.foto_usuario, 'url'):
+                        resp['foto_url'] = usuario_obj.foto_usuario.url
+                except Exception:
+                    pass
+                try:
+                    resp['avatar_chatbot'] = usuario_obj.avatar_chatbot or ''
+                except Exception:
+                    resp['avatar_chatbot'] = ''
+                return JsonResponse(resp)
+
             return redirect('perfil_usuario')
             
         except Exception as e:
+            # Si es AJAX, devolver JSON con error
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error al actualizar perfil: {str(e)}'})
             return render(request, 'ecommerce_app/editar_perfil_usuario.html',
                          {'usuario': usuario_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
             
@@ -13139,7 +13200,7 @@ def editar_perfil_empresa(request, empresa_id):
 
     current_user = get_current_user(request)
     if not current_user or not hasattr(current_user, 'id_empresa') or current_user.id_empresa != empresa_obj.id_empresa:
-        return redirect('perfil_empresa', empresa_id=empresa_id)
+        return redirect('perfil_empresa')
 
     if request.method == 'POST':
         try:
@@ -13176,10 +13237,26 @@ def editar_perfil_empresa(request, empresa_id):
                 empresa_obj.logo_empresa = request.FILES['logo_empresa']
             
             empresa_obj.save()
-            
+            # Si es AJAX, devolver JSON con datos de éxito y URLs relevantes
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                resp = {'success': True, 'message': 'Perfil de empresa actualizado correctamente.'}
+                try:
+                    if empresa_obj.logo_empresa and hasattr(empresa_obj.logo_empresa, 'url'):
+                        resp['logo_url'] = empresa_obj.logo_empresa.url
+                except Exception:
+                    pass
+                try:
+                    resp['avatar_chatbot_empresa'] = empresa_obj.avatar_chatbot_empresa or ''
+                except Exception:
+                    resp['avatar_chatbot_empresa'] = ''
+                return JsonResponse(resp)
+
             return redirect('perfil_empresa')
-            
+
         except Exception as e:
+            # Si es AJAX, devolver JSON con error
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error al actualizar perfil: {str(e)}'})
             return render(request, 'ecommerce_app/editar_perfil_empresa.html',
                          {'empresa': empresa_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
             
@@ -15164,7 +15241,7 @@ def editar_perfil_usuario(request, usuario_id):
     # Verificar que el usuario autenticado corresponda al perfil
     if not hasattr(current_user, 'id_usuario') or current_user.id_usuario != usuario_obj.id_usuario:
         logger.info(f"editar_perfil_usuario (lower): intento de editar perfil ajeno. current_user.id: {getattr(current_user, 'id_usuario', None)}, target: {usuario_obj.id_usuario}")
-        return redirect('perfil_usuario', usuario_id=usuario_id)
+        return redirect('perfil_usuario')
 
     # Construir user_info para la barra
     account_type = request.session.get('account_type', 'usuario')
@@ -15196,8 +15273,24 @@ def editar_perfil_usuario(request, usuario_id):
                 usuario_obj.foto_usuario = request.FILES['foto_usuario']
 
             usuario_obj.save()
-            return redirect('perfil_usuario', usuario_id=usuario_id)
+            # Si la petición viene por AJAX, devolver JSON para que el frontend muestre un SweetAlert y no haga redirect
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                resp = {'success': True, 'message': 'Perfil actualizado correctamente.'}
+                try:
+                    if usuario_obj.foto_usuario and hasattr(usuario_obj.foto_usuario, 'url'):
+                        resp['foto_url'] = usuario_obj.foto_usuario.url
+                except Exception:
+                    pass
+                try:
+                    resp['avatar_chatbot'] = usuario_obj.avatar_chatbot or ''
+                except Exception:
+                    resp['avatar_chatbot'] = ''
+                return JsonResponse(resp)
+
+            return redirect('perfil_usuario')
         except Exception as e:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error al actualizar perfil: {str(e)}'})
             return render(request, 'ecommerce_app/editar_perfil_usuario.html',
                           {'usuario': usuario_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
     else:
@@ -15257,8 +15350,25 @@ def editar_perfil_empresa(request, empresa_id):
                 empresa_obj.logo_empresa = request.FILES['logo_empresa']
 
             empresa_obj.save()
-            return redirect('perfil_empresa', empresa_id=empresa_id)
+            # Si es AJAX, devolver JSON con datos de éxito y URLs relevantes
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                resp = {'success': True, 'message': 'Perfil de empresa actualizado correctamente.'}
+                try:
+                    if empresa_obj.logo_empresa and hasattr(empresa_obj.logo_empresa, 'url'):
+                        resp['logo_url'] = empresa_obj.logo_empresa.url
+                except Exception:
+                    pass
+                try:
+                    resp['avatar_chatbot_empresa'] = empresa_obj.avatar_chatbot_empresa or ''
+                except Exception:
+                    resp['avatar_chatbot_empresa'] = ''
+                return JsonResponse(resp)
+
+            return redirect('perfil_empresa')
         except Exception as e:
+            # Si es AJAX, devolver JSON con error
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error al actualizar perfil: {str(e)}'})
             return render(request, 'ecommerce_app/editar_perfil_empresa.html',
                           {'empresa': empresa_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
     else:

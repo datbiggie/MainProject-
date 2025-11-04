@@ -544,6 +544,8 @@
 
 <!-- Metadatos para el sistema de notificaciones -->
 <meta name="user-authenticated" content="{% if user_info.is_authenticated %}true{% else %}false{% endif %}">
+<!-- Metadato con la cantidad de items en el carrito (usado por el script que inicializa el badge) -->
+<meta name="cart-count" content="{{ cart_count|default:0 }}">
 
 <!-- Estilos para el icono de notificaciones dinámico -->
 <style>

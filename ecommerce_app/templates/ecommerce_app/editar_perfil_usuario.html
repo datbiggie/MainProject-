@@ -92,6 +92,31 @@
         .accordion-button .fa-chevron-down { margin-left: auto; transition: transform 0.3s ease; }
         .accordion-button:not(.collapsed) .fa-chevron-down { transform: rotate(180deg); }
     </style>
+    <style>
+        /* Mejorar visibilidad de inputs: texto negro, fondo blanco y foco más evidente */
+        input.form-control, textarea.form-control, select.form-select {
+            color: #000 !important;
+            background-color: #fff !important;
+            opacity: 1 !important;
+            border: 1px solid #ced4da;
+            transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+        }
+        input.form-control::placeholder, textarea.form-control::placeholder {
+            color: #6c757d;
+            opacity: 1;
+        }
+        input.form-control:focus, textarea.form-control:focus, select.form-select:focus {
+            color: #000;
+            background-color: #fff;
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 .15rem rgba(13,110,253,0.15);
+            outline: none;
+        }
+        /* Hacer que inputs deshabilitados sigan siendo legibles */
+        .form-control[disabled], .form-control:disabled { opacity: 0.95; color: #000; }
+        /* Archivos y botones de input file más visibles */
+        input[type="file"].form-control { background-color: #fff; }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -126,7 +151,7 @@
                             <div class="alert alert-danger">{{ error }}</div>
                         {% endif %}
 
-                        <form method="post" enctype="multipart/form-data" novalidate>
+                        <form id="editarPerfilForm" method="post" enctype="multipart/form-data" novalidate>
                             {% csrf_token %}
 
                             <div class="accordion" id="userAccordion">
@@ -265,5 +290,64 @@
 
 
     {% include 'ecommerce_app/modal_avatars.html' %}
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('editarPerfilForm');
+        if (!form) return;
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            const fd = new FormData(form);
+            try {
+                const resp = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: fd,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message || 'Guardado',
+                        timer: 1200,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Recargar la página después de que se cierre el SweetAlert para ver los cambios
+                        window.location.reload();
+                    });
+                    // actualizar preview de foto si viene (esto se verá antes de la recarga)
+                    if (data.foto_url) {
+                        const preview = document.getElementById('previewImg');
+                        if (preview) preview.src = data.foto_url;
+                    }
+                    // actualizar avatar chatbot preview y hidden input (visible antes de la recarga)
+                    if (data.avatar_chatbot) {
+                        const avatarPreview = document.getElementById('avatarPreviewLarge');
+                        const avatarHidden = document.getElementById('avatar_chatbot');
+                        const selectedName = document.getElementById('selected_avatar_name');
+                        if (avatarPreview) avatarPreview.src = data.avatar_chatbot;
+                        if (avatarHidden) avatarHidden.value = data.avatar_chatbot;
+                        if (selectedName) selectedName.textContent = data.avatar_chatbot.replace('avatars/', '').replace('.jpg','').replace('.png','').replace(/_/g,' ');
+                    }
+                } else {
+                    Swal.fire({icon: 'error', title: 'Error', text: (data && data.message) || 'Error al guardar'});
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire({icon: 'error', title: 'Error', text: 'Error de red o del servidor'});
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        });
+    });
+    </script>
     </body>
     </html>

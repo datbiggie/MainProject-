@@ -11,6 +11,7 @@ from ecommerce_app.models import (
     sucursal, imagen_producto_empresa, imagen_producto_usuario,
     AtributoProducto, ValorAtributoProducto
 )
+from .search_intelligence_service import SearchIntelligenceService
 import logging
 import math
 
@@ -20,7 +21,7 @@ class DatabaseService:
     """Servicio para consultar información de la base de datos del ecommerce"""
     
     def __init__(self):
-        pass
+        self.search_intelligence = SearchIntelligenceService()
     
     def obtener_atributos_producto(self, producto_id, tipo_producto):
         """Obtiene los atributos EAV de un producto específico"""
@@ -40,10 +41,10 @@ class DatabaseService:
             
             for valor in valores:
                 atributo_nombre = valor.atributo.nombre
-                if valor.atributo.tipo_dato == 'texto':
+                if valor.atributo.tipo_dato == 'texto' or valor.atributo.tipo_dato == 'lista':
                     atributos[atributo_nombre] = valor.valor_texto
                 elif valor.atributo.tipo_dato == 'numero':
-                    atributos[atributo_nombre] = valor.valor_numerico
+                    atributos[atributo_nombre] = valor.valor_numero  # Corregido: era valor_numerico
                 elif valor.atributo.tipo_dato == 'decimal':
                     atributos[atributo_nombre] = float(valor.valor_decimal) if valor.valor_decimal else None
                 elif valor.atributo.tipo_dato == 'fecha':
@@ -185,32 +186,78 @@ class DatabaseService:
     # ===== MÉTODOS DE BÚSQUEDA DE PRODUCTOS =====
     
     def buscar_productos(self, termino_busqueda, limite=10):
-        """Busca productos por nombre o descripción"""
+        """Busca productos por nombre, descripción y atributos EAV con búsqueda inteligente"""
         try:
-            # Dividir términos de búsqueda para búsqueda más flexible
-            terminos = termino_busqueda.split()
+            # Expandir términos de búsqueda con sinónimos y variaciones
+            terminos_expandidos = self.search_intelligence.expandir_terminos_busqueda(termino_busqueda)
+            logger.info(f"Términos expandidos para '{termino_busqueda}': {terminos_expandidos}")
             
-            # Construir query para productos de usuario
+            # Detectar atributos específicos en el mensaje (marca, RAM, etc.)
+            deteccion_completa = self._detectar_atributos_en_mensaje(termino_busqueda)
+            atributos_detectados = deteccion_completa.get('atributos', {}) if deteccion_completa else {}
+            condiciones_precio = deteccion_completa.get('precio', {}) if deteccion_completa else {}
+            logger.info(f"Atributos detectados: {atributos_detectados}")
+            logger.info(f"Condiciones de precio: {condiciones_precio}")
+            
+            resultados = []
+            productos_encontrados = set()
+            
+            # 1. Búsqueda por nombre y descripción (método tradicional + patrones específicos)
             query_usuario = Q()
-            for termino in terminos:
+            query_empresa = Q()
+            
+            # Búsqueda por términos expandidos
+            for termino in terminos_expandidos:
                 query_usuario |= Q(nombre_producto_usuario__icontains=termino) | Q(descripcion_producto_usuario__icontains=termino)
+                query_empresa |= Q(nombre_producto_empresa__icontains=termino) | Q(descripcion_producto_empresa__icontains=termino)
+            
+            # Búsqueda adicional por patrones específicos detectados
+            if atributos_detectados:
+                for attr_name, attr_value in atributos_detectados.items():
+                    # Buscar también en nombre/descripción por si no está en EAV
+                    if attr_name == 'ram' or attr_name == 'memoria':
+                        # Patrones de RAM en nombre/descripción
+                        ram_patterns = [attr_value, attr_value.upper(), attr_value.replace('gb', ' GB'), 
+                                      attr_value.replace('gb', 'GB'), f"{attr_value} RAM", f"{attr_value} memoria"]
+                        for pattern in ram_patterns:
+                            query_usuario |= Q(nombre_producto_usuario__icontains=pattern) | Q(descripcion_producto_usuario__icontains=pattern)
+                            query_empresa |= Q(nombre_producto_empresa__icontains=pattern) | Q(descripcion_producto_empresa__icontains=pattern)
+                    
+                    elif attr_name == 'marca':
+                        # Patrones de marca
+                        marca_patterns = [attr_value, attr_value.upper(), attr_value.lower(), attr_value.title()]
+                        for pattern in marca_patterns:
+                            query_usuario |= Q(nombre_producto_usuario__icontains=pattern) | Q(descripcion_producto_usuario__icontains=pattern)
+                            query_empresa |= Q(nombre_producto_empresa__icontains=pattern) | Q(descripcion_producto_empresa__icontains=pattern)
             
             productos_usuario = producto_usuario.objects.filter(
                 query_usuario,
                 estatus_producto_usuario='Activo'
-            )[:limite//2]
-            
-            # Construir query para productos de empresa
-            query_empresa = Q()
-            for termino in terminos:
-                query_empresa |= Q(nombre_producto_empresa__icontains=termino) | Q(descripcion_producto_empresa__icontains=termino)
+            )
             
             productos_empresa = producto_empresa.objects.filter(
                 query_empresa
-            )[:limite//2]
+            )
             
-            resultados = []
+            # 2. Búsqueda por atributos EAV con operadores lógicos
+            productos_por_atributos = []
+            if atributos_detectados or condiciones_precio:
+                productos_por_atributos = self.buscar_productos_con_operadores_logicos(
+                    atributos_detectados, condiciones_precio, limite
+                )
+                logger.info(f"Productos encontrados por búsqueda lógica: {len(productos_por_atributos)}")
             
+            # 3. Búsqueda por términos en valores de atributos EAV
+            productos_por_valores_eav = self.buscar_productos_por_valores_eav(terminos_expandidos, limite)
+            logger.info(f"Productos encontrados por valores EAV: {len(productos_por_valores_eav)}")
+            
+            # 4. Búsqueda de respaldo por patrones específicos en nombre/descripción
+            productos_respaldo = []
+            if atributos_detectados and len(resultados) < 3:  # Solo si no hemos encontrado suficientes
+                productos_respaldo = self._buscar_por_patrones_especificos(atributos_detectados, limite)
+                logger.info(f"Productos encontrados por búsqueda de respaldo: {len(productos_respaldo)}")
+            
+            # Procesar productos de usuario encontrados por nombre/descripción
             for prod in productos_usuario:
                 # Obtener atributos EAV del producto
                 atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
@@ -229,6 +276,7 @@ class DatabaseService:
                     'atributos': atributos
                 }
                 resultados.append(resultado)
+                productos_encontrados.add(prod.id_producto_usuario)
             
             for prod in productos_empresa:
                 # Obtener información de sucursales
@@ -255,8 +303,31 @@ class DatabaseService:
                         'atributos': atributos
                     }
                     resultados.append(resultado)
+                    productos_encontrados.add(suc_prod.id_producto_sucursal)
             
-            return resultados[:limite]
+            # Combinar resultados de búsqueda EAV
+            for prod_attr in productos_por_atributos:
+                if prod_attr['id'] not in productos_encontrados:
+                    resultados.append(prod_attr)
+                    productos_encontrados.add(prod_attr['id'])
+            
+            for prod_eav in productos_por_valores_eav:
+                if prod_eav['id'] not in productos_encontrados:
+                    resultados.append(prod_eav)
+                    productos_encontrados.add(prod_eav['id'])
+            
+            # Combinar resultados de búsqueda de respaldo
+            for prod_resp in productos_respaldo:
+                if prod_resp['id'] not in productos_encontrados:
+                    resultados.append(prod_resp)
+                    productos_encontrados.add(prod_resp['id'])
+            
+            # Filtrar resultados por relevancia usando búsqueda inteligente
+            resultados_filtrados = self.search_intelligence.filtrar_resultados_por_relevancia(
+                resultados, termino_busqueda, limite
+            )
+            
+            return resultados_filtrados
             
         except Exception as e:
             logger.error(f"Error al buscar productos: {e}")
@@ -610,18 +681,30 @@ class DatabaseService:
     # ===== MÉTODOS DE SERVICIOS =====
     
     def buscar_servicios(self, termino_busqueda, limite=10):
-        """Busca servicios por nombre o descripción"""
+        """Busca servicios por nombre o descripción con búsqueda inteligente"""
         try:
+            # Expandir términos de búsqueda con sinónimos y variaciones
+            terminos_expandidos = self.search_intelligence.expandir_terminos_busqueda(termino_busqueda)
+            logger.info(f"Términos expandidos para servicios '{termino_busqueda}': {terminos_expandidos}")
+            
+            # Construir query para servicios de usuario con términos expandidos
+            query_usuario = Q()
+            for termino in terminos_expandidos:
+                query_usuario |= Q(nombre_servicio_usuario__icontains=termino) | Q(descripcion_servicio_usuario__icontains=termino)
+            
             servicios_usuario = servicio_usuario.objects.filter(
-                Q(nombre_servicio_usuario__icontains=termino_busqueda) |
-                Q(descripcion_servicio_usuario__icontains=termino_busqueda),
+                query_usuario,
                 estatus_servicio_usuario='Activo'
-            )[:limite//2]
+            )[:limite]
+            
+            # Construir query para servicios de empresa con términos expandidos
+            query_empresa = Q()
+            for termino in terminos_expandidos:
+                query_empresa |= Q(nombre_servicio_empresa__icontains=termino) | Q(descripcion_servicio_empresa__icontains=termino)
             
             servicios_empresa = servicio_empresa.objects.filter(
-                Q(nombre_servicio_empresa__icontains=termino_busqueda) |
-                Q(descripcion_servicio_empresa__icontains=termino_busqueda)
-            )[:limite//2]
+                query_empresa
+            )[:limite]
             
             resultados = []
             
@@ -655,7 +738,12 @@ class DatabaseService:
                         'longitud': float(suc_serv.id_sucursal_fk.longitud_sucursal) if suc_serv.id_sucursal_fk.longitud_sucursal else None
                     })
             
-            return resultados[:limite]
+            # Filtrar resultados por relevancia usando búsqueda inteligente
+            resultados_filtrados = self.search_intelligence.filtrar_resultados_por_relevancia(
+                resultados, termino_busqueda, limite
+            )
+            
+            return resultados_filtrados
             
         except Exception as e:
             logger.error(f"Error al buscar servicios: {e}")
@@ -942,3 +1030,976 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Error al formatear empresa: {e}")
             return None
+    
+    # ===== MÉTODOS DE ASESOR GENÉRICO =====
+    
+    def buscar_productos_por_marca_y_ubicacion(self, marca, lat_usuario=None, lon_usuario=None, radio_km=50, limite=10):
+        """Busca productos de una marca específica, opcionalmente cerca de una ubicación"""
+        try:
+            # Expandir términos de búsqueda para la marca
+            terminos_marca = self.search_intelligence.expandir_terminos_busqueda(marca)
+            
+            # Construir query para productos de usuario
+            query_usuario = Q()
+            for termino in terminos_marca:
+                query_usuario |= Q(nombre_producto_usuario__icontains=termino) | Q(descripcion_producto_usuario__icontains=termino)
+            
+            productos_usuario = producto_usuario.objects.filter(
+                query_usuario,
+                estatus_producto_usuario='Activo'
+            )
+            
+            # Construir query para productos de empresa
+            query_empresa = Q()
+            for termino in terminos_marca:
+                query_empresa |= Q(nombre_producto_empresa__icontains=termino) | Q(descripcion_producto_empresa__icontains=termino)
+            
+            productos_empresa = producto_empresa.objects.filter(query_empresa)
+            
+            resultados = []
+            
+            # Procesar productos de usuario
+            for prod in productos_usuario:
+                distancia = None
+                if lat_usuario and lon_usuario and prod.latitud_entrega_producto and prod.longitud_entrega_producto:
+                    distancia = self.calcular_distancia_haversine(
+                        lat_usuario, lon_usuario,
+                        float(prod.latitud_entrega_producto),
+                        float(prod.longitud_entrega_producto)
+                    )
+                    if distancia > radio_km:
+                        continue
+                
+                resultados.append({
+                    'tipo': 'producto_usuario',
+                    'id': prod.id_producto_usuario,
+                    'nombre': prod.nombre_producto_usuario,
+                    'descripcion': prod.descripcion_producto_usuario,
+                    'precio': float(prod.precio_producto_usuario),
+                    'vendedor': prod.id_usuario_fk.nombre_usuario,
+                    'distancia_km': round(distancia, 2) if distancia else None,
+                    'tiene_envio': True  # Los usuarios pueden hacer envíos
+                })
+            
+            # Procesar productos de empresa
+            for prod in productos_empresa:
+                sucursales = producto_sucursal.objects.filter(
+                    id_producto_fk=prod,
+                    estatus_producto_sucursal='Activo'
+                )
+                
+                for suc_prod in sucursales:
+                    distancia = None
+                    if lat_usuario and lon_usuario and suc_prod.id_sucursal_fk.latitud_sucursal and suc_prod.id_sucursal_fk.longitud_sucursal:
+                        distancia = self.calcular_distancia_haversine(
+                            lat_usuario, lon_usuario,
+                            float(suc_prod.id_sucursal_fk.latitud_sucursal),
+                            float(suc_prod.id_sucursal_fk.longitud_sucursal)
+                        )
+                        if distancia > radio_km:
+                            continue
+                    
+                    resultados.append({
+                        'tipo': 'producto_empresa',
+                        'id': suc_prod.id_producto_sucursal,
+                        'nombre': prod.nombre_producto_empresa,
+                        'descripcion': prod.descripcion_producto_empresa,
+                        'precio': float(suc_prod.precio_producto_sucursal),
+                        'vendedor': prod.id_empresa_fk.nombre_empresa,
+                        'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                        'direccion_sucursal': suc_prod.id_sucursal_fk.direccion_sucursal,
+                        'distancia_km': round(distancia, 2) if distancia else None,
+                        'tiene_envio': True  # Las empresas suelen tener envío
+                    })
+            
+            # Ordenar por distancia si hay ubicación
+            if lat_usuario and lon_usuario:
+                resultados.sort(key=lambda x: x['distancia_km'] if x['distancia_km'] is not None else float('inf'))
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error al buscar productos por marca y ubicación: {e}")
+            return []
+    
+    def obtener_empresas_con_envio_rapido(self, ciudad_destino=None, limite=10):
+        """Obtiene empresas que ofrecen envío rápido a una ciudad específica"""
+        try:
+            # Por ahora, asumimos que todas las empresas grandes ofrecen envío rápido
+            # En una implementación real, esto vendría de una tabla de configuración de envíos
+            
+            query = Q(tipo_empresa__in=['mediana', 'grande'])
+            
+            if ciudad_destino:
+                # Buscar empresas en la misma ciudad o estado
+                ciudad_normalizada = self.search_intelligence.normalizar_texto(ciudad_destino)
+                query &= (
+                    Q(estado_empresa__icontains=ciudad_destino) |
+                    Q(direccion_empresa__icontains=ciudad_destino)
+                )
+            
+            empresas = empresa.objects.filter(query)[:limite]
+            
+            resultados = []
+            for emp in empresas:
+                # Contar sucursales
+                sucursales_count = sucursal.objects.filter(id_empresa_fk=emp).count()
+                
+                resultados.append({
+                    'id': emp.id_empresa,
+                    'nombre': emp.nombre_empresa,
+                    'tipo_empresa': emp.tipo_empresa,
+                    'estado': emp.estado_empresa,
+                    'direccion': emp.direccion_empresa,
+                    'sucursales_count': sucursales_count,
+                    'envio_rapido': True,  # Asumimos que empresas medianas/grandes tienen envío rápido
+                    'tiempo_estimado': '24-48 horas' if emp.tipo_empresa == 'grande' else '2-3 días'
+                })
+            
+            return resultados
+            
+        except Exception as e:
+            logger.error(f"Error al obtener empresas con envío rápido: {e}")
+            return []
+    
+    def calcular_distancia_a_sucursal(self, lat_usuario, lon_usuario, empresa_nombre, limite_sucursales=5):
+        """Calcula la distancia desde la ubicación del usuario hasta las sucursales de una empresa"""
+        try:
+            # Buscar empresa por nombre
+            empresas = empresa.objects.filter(
+                nombre_empresa__icontains=empresa_nombre
+            )
+            
+            if not empresas.exists():
+                return []
+            
+            resultados = []
+            
+            for emp in empresas:
+                sucursales_empresa = sucursal.objects.filter(
+                    id_empresa_fk=emp,
+                    latitud_sucursal__isnull=False,
+                    longitud_sucursal__isnull=False
+                )
+                
+                sucursales_con_distancia = []
+                
+                for suc in sucursales_empresa:
+                    distancia = self.calcular_distancia_haversine(
+                        lat_usuario, lon_usuario,
+                        float(suc.latitud_sucursal),
+                        float(suc.longitud_sucursal)
+                    )
+                    
+                    sucursales_con_distancia.append({
+                        'nombre_sucursal': suc.nombre_sucursal,
+                        'direccion': suc.direccion_sucursal,
+                        'telefono': suc.telefono_sucursal,
+                        'estado': suc.estado_sucursal,
+                        'distancia_km': round(distancia, 2)
+                    })
+                
+                # Ordenar por distancia
+                sucursales_con_distancia.sort(key=lambda x: x['distancia_km'])
+                
+                resultados.append({
+                    'empresa': emp.nombre_empresa,
+                    'sucursales': sucursales_con_distancia[:limite_sucursales]
+                })
+            
+            return resultados
+            
+        except Exception as e:
+            logger.error(f"Error al calcular distancia a sucursales: {e}")
+            return []
+    
+    def buscar_servicios_por_ubicacion_y_tipo(self, tipo_servicio, lat_usuario=None, lon_usuario=None, radio_km=25, limite=10):
+        """Busca servicios de un tipo específico cerca de una ubicación"""
+        try:
+            # Expandir términos de búsqueda para el tipo de servicio
+            terminos_servicio = self.search_intelligence.expandir_terminos_busqueda(tipo_servicio)
+            
+            # Construir query para servicios de usuario
+            query_usuario = Q()
+            for termino in terminos_servicio:
+                query_usuario |= Q(nombre_servicio_usuario__icontains=termino) | Q(descripcion_servicio_usuario__icontains=termino)
+            
+            servicios_usuario = servicio_usuario.objects.filter(
+                query_usuario,
+                estatus_servicio_usuario='Activo'
+            )
+            
+            # Construir query para servicios de empresa
+            query_empresa = Q()
+            for termino in terminos_servicio:
+                query_empresa |= Q(nombre_servicio_empresa__icontains=termino) | Q(descripcion_servicio_empresa__icontains=termino)
+            
+            servicios_empresa = servicio_empresa.objects.filter(query_empresa)
+            
+            resultados = []
+            
+            # Procesar servicios de usuario (sin ubicación específica, pero disponibles)
+            for serv in servicios_usuario:
+                resultados.append({
+                    'tipo': 'servicio_usuario',
+                    'id': serv.id_servicio_usuario,
+                    'nombre': serv.nombre_servicio_usuario,
+                    'descripcion': serv.descripcion_servicio_usuario,
+                    'precio': float(serv.precio_servicio_usuario or 0),
+                    'proveedor': serv.id_usuario_fk.nombre_usuario,
+                    'contacto': serv.id_usuario_fk.correo_usuario,
+                    'distancia_km': None,  # Servicios de usuario no tienen ubicación fija
+                    'disponible_domicilio': True
+                })
+            
+            # Procesar servicios de empresa
+            for serv in servicios_empresa:
+                sucursales = servicio_sucursal.objects.filter(
+                    id_servicio_fk=serv,
+                    estatus_servicio_sucursal='Activo'
+                )
+                
+                for suc_serv in sucursales:
+                    distancia = None
+                    if lat_usuario and lon_usuario and suc_serv.id_sucursal_fk.latitud_sucursal and suc_serv.id_sucursal_fk.longitud_sucursal:
+                        distancia = self.calcular_distancia_haversine(
+                            lat_usuario, lon_usuario,
+                            float(suc_serv.id_sucursal_fk.latitud_sucursal),
+                            float(suc_serv.id_sucursal_fk.longitud_sucursal)
+                        )
+                        if distancia > radio_km:
+                            continue
+                    
+                    resultados.append({
+                        'tipo': 'servicio_empresa',
+                        'id': suc_serv.id_servicio_sucursal,
+                        'nombre': serv.nombre_servicio_empresa,
+                        'descripcion': serv.descripcion_servicio_empresa,
+                        'precio': float(suc_serv.precio_servicio_sucursal or 0),
+                        'proveedor': serv.id_empresa_fk.nombre_empresa,
+                        'sucursal': suc_serv.id_sucursal_fk.nombre_sucursal,
+                        'direccion_sucursal': suc_serv.id_sucursal_fk.direccion_sucursal,
+                        'telefono_sucursal': suc_serv.id_sucursal_fk.telefono_sucursal,
+                        'distancia_km': round(distancia, 2) if distancia else None,
+                        'disponible_domicilio': True
+                    })
+            
+            # Ordenar por distancia si hay ubicación
+            if lat_usuario and lon_usuario:
+                resultados.sort(key=lambda x: x['distancia_km'] if x['distancia_km'] is not None else float('inf'))
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error al buscar servicios por ubicación y tipo: {e}")
+            return []
+    
+    # ===== MÉTODOS DE BÚSQUEDA EAV =====
+    
+    def _detectar_atributos_en_mensaje(self, mensaje):
+        """Detecta atributos específicos mencionados en el mensaje del usuario para búsqueda EAV con operadores lógicos"""
+        mensaje_lower = mensaje.lower()
+        atributos_detectados = {}
+        condiciones_precio = {}
+        
+        # Mapeo de palabras clave a atributos EAV comunes (todo en minúsculas para comparación)
+        mapeo_atributos_eav = {
+            # Especificaciones técnicas
+            'ram': ['4gb', '8gb', '16gb', '32gb', '64gb', 'memoria ram', 'memoria'],
+            'almacenamiento': ['128gb', '256gb', '512gb', '1tb', '2tb', 'ssd', 'hdd', 'disco duro'],
+            'procesador': ['intel', 'amd', 'core i3', 'core i5', 'core i7', 'ryzen', 'i3', 'i5', 'i7', 'celeron', 'pentium'],
+            'pantalla': ['15 pulgadas', '17 pulgadas', '13 pulgadas', 'full hd', '4k', 'oled', 'hd', 'fhd'],
+            
+            # Marcas (agregar más variaciones)
+            'marca': ['hp', 'dell', 'lenovo', 'asus', 'acer', 'apple', 'samsung', 'lg', 'sony', 'huawei', 
+                     'hewlett packard', 'hewlett-packard', 'toshiba', 'msi', 'alienware', 'macbook'],
+            
+            # Colores
+            'color': ['negro', 'blanco', 'gris', 'plata', 'azul', 'rojo', 'verde', 'dorado', 'plateado', 'gris oscuro'],
+            
+            # Tallas (para ropa)
+            'talla': ['xs', 's', 'm', 'l', 'xl', 'xxl', 'pequeño', 'mediano', 'grande', 'extra grande'],
+            
+            # Materiales
+            'material': ['algodón', 'poliéster', 'cuero', 'metal', 'plástico', 'madera', 'acero', 'aluminio'],
+            
+            # Condición
+            'condicion': ['nuevo', 'usado', 'seminuevo', 'reacondicionado', 'refurbished', 'como nuevo'],
+            
+            # Características específicas
+            'conectividad': ['wifi', 'bluetooth', 'usb', 'hdmi', 'ethernet', 'wi-fi', 'usb-c', 'thunderbolt'],
+            'sistema_operativo': ['windows', 'macos', 'linux', 'android', 'ios', 'windows 10', 'windows 11', 'mac os'],
+        }
+        
+        # Buscar patrones específicos en el mensaje
+        for atributo, valores_posibles in mapeo_atributos_eav.items():
+            for valor in valores_posibles:
+                if valor in mensaje_lower:
+                    atributos_detectados[atributo] = valor
+                    break
+        
+        # Detectar patrones numéricos específicos y condiciones de precio
+        import re
+        
+        # RAM: "8gb", "16 gb", "8 gb de ram", "8GB RAM", "con 8gb", etc.
+        ram_patterns = [
+            r'(\d+)\s*gb(?:\s+(?:de\s+)?ram)?',
+            r'(\d+)\s*gb(?:\s+(?:de\s+)?memoria)',
+            r'memoria\s+(?:ram\s+)?(?:de\s+)?(\d+)\s*gb',
+            r'(?:con\s+)?(\d+)\s*gb(?:\s+de\s+)?(?:ram|memoria)',
+            r'(?:ram|memoria)\s+(?:de\s+)?(\d+)\s*gb',
+            r'(\d+)\s*gb\s+(?:ram|memoria)',
+            r'(\d+)\s*gb(?:\s+de\s+)?(?:ram|memoria|memory)',
+            r'(?:laptop|computadora|pc)\s+.*?(\d+)\s*gb'
+        ]
+        
+        for pattern in ram_patterns:
+            match = re.search(pattern, mensaje_lower)
+            if match:
+                ram_value = f"{match.group(1)}gb"
+                atributos_detectados['ram'] = ram_value
+                break
+        
+        # Almacenamiento: "256gb", "1tb"
+        storage_patterns = [
+            r'(\d+)\s*(gb|tb)(?:\s+(?:de\s+)?(?:almacenamiento|disco|ssd|hdd))?',
+            r'(?:almacenamiento|disco|ssd|hdd)\s+(?:de\s+)?(\d+)\s*(gb|tb)'
+        ]
+        
+        for pattern in storage_patterns:
+            match = re.search(pattern, mensaje_lower)
+            if match:
+                storage_value = f"{match.group(1)}{match.group(2)}"
+                atributos_detectados['almacenamiento'] = storage_value
+                break
+        
+        # Pantalla: "15 pulgadas", "17""
+        screen_patterns = [
+            r'(\d+)\s*(?:pulgadas?|"|\'\')(?:\s+(?:de\s+)?pantalla)?',
+            r'pantalla\s+(?:de\s+)?(\d+)\s*(?:pulgadas?|"|\'\')' 
+        ]
+        
+        for pattern in screen_patterns:
+            match = re.search(pattern, mensaje_lower)
+            if match:
+                screen_value = f"{match.group(1)} pulgadas"
+                atributos_detectados['pantalla'] = screen_value
+                break
+        
+        # Detectar condiciones de precio
+        precio_patterns = [
+            r'(?:precio\s+)?(?:menor|menos|bajo)\s+(?:de\s+|a\s+)?\$?(\d+(?:\.\d+)?)',  # menor a $1000
+            r'(?:precio\s+)?(?:mayor|mas|más|alto)\s+(?:de\s+|a\s+)?\$?(\d+(?:\.\d+)?)',  # mayor a $500
+            r'(?:precio\s+)?(?:entre|de)\s+\$?(\d+(?:\.\d+)?)\s+(?:y|a)\s+\$?(\d+(?:\.\d+)?)',  # entre $500 y $1000
+            r'(?:precio\s+)?(?:hasta|máximo|maximo)\s+\$?(\d+(?:\.\d+)?)',  # hasta $800
+            r'(?:precio\s+)?(?:desde|mínimo|minimo)\s+\$?(\d+(?:\.\d+)?)',  # desde $300
+            r'(?:precio\s+)?\$?(\d+(?:\.\d+)?)\s+(?:o\s+)?(?:menos|menor)',  # $500 o menos
+            r'(?:precio\s+)?\$?(\d+(?:\.\d+)?)\s+(?:o\s+)?(?:más|mas|mayor)',  # $800 o más
+        ]
+        
+        for i, pattern in enumerate(precio_patterns):
+            match = re.search(pattern, mensaje_lower)
+            if match:
+                if i == 0:  # menor a
+                    condiciones_precio['max'] = float(match.group(1))
+                elif i == 1:  # mayor a
+                    condiciones_precio['min'] = float(match.group(1))
+                elif i == 2:  # entre X y Y
+                    condiciones_precio['min'] = float(match.group(1))
+                    condiciones_precio['max'] = float(match.group(2))
+                elif i == 3:  # hasta
+                    condiciones_precio['max'] = float(match.group(1))
+                elif i == 4:  # desde
+                    condiciones_precio['min'] = float(match.group(1))
+                elif i == 5:  # X o menos
+                    condiciones_precio['max'] = float(match.group(1))
+                elif i == 6:  # X o más
+                    condiciones_precio['min'] = float(match.group(1))
+                break
+        
+        # Combinar resultados
+        resultado = {}
+        if atributos_detectados:
+            resultado['atributos'] = atributos_detectados
+        if condiciones_precio:
+            resultado['precio'] = condiciones_precio
+        
+        return resultado if resultado else None
+    
+    def buscar_productos_por_atributos_eav(self, atributos_detectados, limite=10):
+        """Busca productos que coincidan con atributos EAV específicos"""
+        try:
+            resultados = []
+            productos_encontrados = set()
+            
+            for nombre_atributo, valor_buscado in atributos_detectados.items():
+                # Buscar atributos que coincidan con el nombre (flexible con mayúsculas/minúsculas)
+                atributos_query = AtributoProducto.objects.filter(
+                    Q(nombre__icontains=nombre_atributo) |
+                    Q(descripcion__icontains=nombre_atributo) |
+                    Q(nombre__iexact=nombre_atributo) |  # Coincidencia exacta sin importar mayúsculas
+                    Q(nombre__icontains=nombre_atributo.replace('_', ' ')) |  # Reemplazar _ con espacios
+                    Q(nombre__icontains=nombre_atributo.replace(' ', '_'))    # Reemplazar espacios con _
+                )
+                
+                for atributo in atributos_query:
+                    # Buscar valores que coincidan según el tipo de dato
+                    valores_query = Q()
+                    
+                    if atributo.tipo_dato == 'texto':
+                        # Búsqueda flexible de texto (mayúsculas/minúsculas, variaciones)
+                        valores_query = (
+                            Q(valor_texto__icontains=valor_buscado) |
+                            Q(valor_texto__iexact=valor_buscado) |  # Coincidencia exacta sin mayúsculas
+                            Q(valor_texto__icontains=valor_buscado.upper()) |  # Mayúsculas
+                            Q(valor_texto__icontains=valor_buscado.lower()) |  # Minúsculas
+                            Q(valor_texto__icontains=valor_buscado.title())    # Título
+                        )
+                    elif atributo.tipo_dato == 'numero':
+                        try:
+                            # Extraer número del valor buscado (ej: "8gb" -> 8)
+                            import re
+                            numero_match = re.search(r'(\d+)', str(valor_buscado))
+                            if numero_match:
+                                numero = int(numero_match.group(1))
+                                valores_query = Q(valor_numero=numero)
+                                logger.info(f"Buscando atributo '{atributo.nombre}' con valor numérico: {numero}")
+                            else:
+                                continue
+                        except ValueError:
+                            continue
+                    elif atributo.tipo_dato == 'decimal':
+                        try:
+                            import re
+                            numero_match = re.search(r'(\d+(?:\.\d+)?)', str(valor_buscado))
+                            if numero_match:
+                                decimal_val = float(numero_match.group(1))
+                                valores_query = Q(valor_decimal=decimal_val)
+                        except ValueError:
+                            continue
+                    elif atributo.tipo_dato == 'booleano':
+                        bool_val = str(valor_buscado).lower() in ['true', '1', 'sí', 'si', 'verdadero', 'yes']
+                        valores_query = Q(valor_booleano=bool_val)
+                    
+                    # Obtener productos que tienen este atributo con el valor buscado
+                    valores = ValorAtributoProducto.objects.filter(
+                        atributo=atributo
+                    ).filter(valores_query)
+                    
+                    for valor in valores:
+                        # Agregar productos de usuario
+                        if valor.producto_usuario_id and valor.producto_usuario_id not in productos_encontrados:
+                            try:
+                                prod = producto_usuario.objects.get(
+                                    id_producto_usuario=valor.producto_usuario_id,
+                                    estatus_producto_usuario='Activo'
+                                )
+                                atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                                
+                                resultados.append({
+                                    'tipo': 'producto_usuario',
+                                    'id': prod.id_producto_usuario,
+                                    'nombre': prod.nombre_producto_usuario,
+                                    'descripcion': prod.descripcion_producto_usuario,
+                                    'precio': float(prod.precio_producto_usuario),
+                                    'stock': prod.stock_producto_usuario,
+                                    'vendedor': prod.id_usuario_fk.nombre_usuario,
+                                    'condicion': prod.condicion_producto_usuario,
+                                    'atributos': atributos,
+                                    'coincidencia_eav': f"{atributo.nombre}: {valor_buscado}"
+                                })
+                                productos_encontrados.add(valor.producto_usuario_id)
+                            except producto_usuario.DoesNotExist:
+                                continue
+                        
+                        # Agregar productos de empresa
+                        if valor.producto_empresa_id and valor.producto_empresa_id not in productos_encontrados:
+                            try:
+                                prod = producto_empresa.objects.get(id_producto_empresa=valor.producto_empresa_id)
+                                atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                                
+                                # Obtener sucursales activas
+                                sucursales = producto_sucursal.objects.filter(
+                                    id_producto_fk=prod,
+                                    estatus_producto_sucursal='Activo'
+                                )
+                                
+                                for suc_prod in sucursales:
+                                    resultados.append({
+                                        'tipo': 'producto_empresa',
+                                        'id': suc_prod.id_producto_sucursal,
+                                        'nombre': prod.nombre_producto_empresa,
+                                        'descripcion': prod.descripcion_producto_empresa,
+                                        'precio': float(suc_prod.precio_producto_sucursal),
+                                        'stock': suc_prod.stock_producto_sucursal,
+                                        'vendedor': prod.id_empresa_fk.nombre_empresa,
+                                        'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                                        'condicion': suc_prod.condicion_producto_sucursal,
+                                        'atributos': atributos,
+                                        'coincidencia_eav': f"{atributo.nombre}: {valor_buscado}"
+                                    })
+                                
+                                productos_encontrados.add(valor.producto_empresa_id)
+                            except producto_empresa.DoesNotExist:
+                                continue
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error al buscar productos por atributos EAV: {e}")
+            return []
+    
+    def buscar_productos_por_valores_eav(self, terminos_expandidos, limite=10):
+        """Busca productos cuyos valores de atributos EAV coincidan con los términos de búsqueda"""
+        try:
+            resultados = []
+            productos_encontrados = set()
+            
+            for termino in terminos_expandidos:
+                if len(termino) < 2:  # Ignorar términos muy cortos
+                    continue
+                
+                # Buscar en valores de texto (flexible con mayúsculas/minúsculas)
+                valores_texto = ValorAtributoProducto.objects.filter(
+                    Q(valor_texto__icontains=termino) |
+                    Q(valor_texto__iexact=termino) |
+                    Q(valor_texto__icontains=termino.upper()) |
+                    Q(valor_texto__icontains=termino.lower()) |
+                    Q(valor_texto__icontains=termino.title())
+                ).select_related('atributo')
+                
+                for valor in valores_texto:
+                    # Procesar productos de usuario
+                    if valor.producto_usuario_id and valor.producto_usuario_id not in productos_encontrados:
+                        try:
+                            prod = producto_usuario.objects.get(
+                                id_producto_usuario=valor.producto_usuario_id,
+                                estatus_producto_usuario='Activo'
+                            )
+                            atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                            
+                            resultados.append({
+                                'tipo': 'producto_usuario',
+                                'id': prod.id_producto_usuario,
+                                'nombre': prod.nombre_producto_usuario,
+                                'descripcion': prod.descripcion_producto_usuario,
+                                'precio': float(prod.precio_producto_usuario),
+                                'stock': prod.stock_producto_usuario,
+                                'vendedor': prod.id_usuario_fk.nombre_usuario,
+                                'condicion': prod.condicion_producto_usuario,
+                                'atributos': atributos,
+                                'coincidencia_eav': f"{valor.atributo.nombre}: {valor.valor_texto}"
+                            })
+                            productos_encontrados.add(valor.producto_usuario_id)
+                        except producto_usuario.DoesNotExist:
+                            continue
+                    
+                    # Procesar productos de empresa
+                    if valor.producto_empresa_id and valor.producto_empresa_id not in productos_encontrados:
+                        try:
+                            prod = producto_empresa.objects.get(id_producto_empresa=valor.producto_empresa_id)
+                            atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                            
+                            sucursales = producto_sucursal.objects.filter(
+                                id_producto_fk=prod,
+                                estatus_producto_sucursal='Activo'
+                            )
+                            
+                            for suc_prod in sucursales:
+                                resultados.append({
+                                    'tipo': 'producto_empresa',
+                                    'id': suc_prod.id_producto_sucursal,
+                                    'nombre': prod.nombre_producto_empresa,
+                                    'descripcion': prod.descripcion_producto_empresa,
+                                    'precio': float(suc_prod.precio_producto_sucursal),
+                                    'stock': suc_prod.stock_producto_sucursal,
+                                    'vendedor': prod.id_empresa_fk.nombre_empresa,
+                                    'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                                    'condicion': suc_prod.condicion_producto_sucursal,
+                                    'atributos': atributos,
+                                    'coincidencia_eav': f"{valor.atributo.nombre}: {valor.valor_texto}"
+                                })
+                            
+                            productos_encontrados.add(valor.producto_empresa_id)
+                        except producto_empresa.DoesNotExist:
+                            continue
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error al buscar productos por valores EAV: {e}")
+            return []
+    
+    def _buscar_por_patrones_especificos(self, atributos_detectados, limite=10):
+        """Búsqueda de respaldo por patrones específicos en nombre y descripción"""
+        try:
+            resultados = []
+            productos_encontrados = set()
+            
+            for attr_name, attr_value in atributos_detectados.items():
+                if attr_name == 'ram':
+                    # Patrones específicos para RAM
+                    ram_patterns = [
+                        attr_value,  # "8gb"
+                        attr_value.upper(),  # "8GB"
+                        attr_value.replace('gb', ' GB'),  # "8 GB"
+                        f"{attr_value} RAM",  # "8gb RAM"
+                        f"{attr_value} de RAM",  # "8gb de RAM"
+                        f"RAM {attr_value}",  # "RAM 8gb"
+                        f"memoria {attr_value}",  # "memoria 8gb"
+                        f"{attr_value} memoria",  # "8gb memoria"
+                        f"con {attr_value}",  # "con 8gb"
+                        f"{attr_value.replace('gb', '')}GB",  # "8GB"
+                        f"{attr_value.replace('gb', '')} GB"  # "8 GB"
+                    ]
+                    
+                    # Buscar en productos de usuario
+                    for pattern in ram_patterns:
+                        productos_usuario = producto_usuario.objects.filter(
+                            Q(nombre_producto_usuario__icontains=pattern) |
+                            Q(descripcion_producto_usuario__icontains=pattern),
+                            estatus_producto_usuario='Activo'
+                        )
+                        
+                        for prod in productos_usuario:
+                            if prod.id_producto_usuario not in productos_encontrados:
+                                atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                                
+                                resultados.append({
+                                    'tipo': 'producto_usuario',
+                                    'id': prod.id_producto_usuario,
+                                    'nombre': prod.nombre_producto_usuario,
+                                    'descripcion': prod.descripcion_producto_usuario,
+                                    'precio': float(prod.precio_producto_usuario),
+                                    'stock': prod.stock_producto_usuario,
+                                    'vendedor': prod.id_usuario_fk.nombre_usuario,
+                                    'condicion': prod.condicion_producto_usuario,
+                                    'atributos': atributos,
+                                    'coincidencia_patron': f"RAM: {pattern} encontrado en {prod.nombre_producto_usuario}"
+                                })
+                                productos_encontrados.add(prod.id_producto_usuario)
+                    
+                    # Buscar en productos de empresa
+                    for pattern in ram_patterns:
+                        productos_empresa = producto_empresa.objects.filter(
+                            Q(nombre_producto_empresa__icontains=pattern) |
+                            Q(descripcion_producto_empresa__icontains=pattern)
+                        )
+                        
+                        for prod in productos_empresa:
+                            if prod.id_producto_empresa not in productos_encontrados:
+                                atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                                
+                                # Obtener sucursales activas
+                                sucursales = producto_sucursal.objects.filter(
+                                    id_producto_fk=prod,
+                                    estatus_producto_sucursal='Activo'
+                                )
+                                
+                                for suc_prod in sucursales:
+                                    resultados.append({
+                                        'tipo': 'producto_empresa',
+                                        'id': suc_prod.id_producto_sucursal,
+                                        'nombre': prod.nombre_producto_empresa,
+                                        'descripcion': prod.descripcion_producto_empresa,
+                                        'precio': float(suc_prod.precio_producto_sucursal),
+                                        'stock': suc_prod.stock_producto_sucursal,
+                                        'vendedor': prod.id_empresa_fk.nombre_empresa,
+                                        'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                                        'condicion': suc_prod.condicion_producto_sucursal,
+                                        'atributos': atributos,
+                                        'coincidencia_patron': f"RAM: {pattern} encontrado en {prod.nombre_producto_empresa}"
+                                    })
+                                
+                                productos_encontrados.add(prod.id_producto_empresa)
+                
+                elif attr_name == 'marca':
+                    # Patrones específicos para marca
+                    marca_patterns = [
+                        attr_value,
+                        attr_value.upper(),
+                        attr_value.lower(),
+                        attr_value.title(),
+                        f"laptop {attr_value}",
+                        f"{attr_value} laptop",
+                        f"computadora {attr_value}",
+                        f"{attr_value} computadora"
+                    ]
+                    
+                    # Similar lógica para marcas...
+                    # (Implementar si es necesario)
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error en búsqueda de respaldo por patrones: {e}")
+            return []
+    
+    def buscar_productos_con_operadores_logicos(self, atributos_detectados, condiciones_precio, limite=10):
+        """Busca productos usando operadores lógicos AND para múltiples atributos y condiciones de precio"""
+        try:
+            resultados = []
+            productos_encontrados = set()
+            
+            logger.info(f"Búsqueda con operadores lógicos - Atributos: {atributos_detectados}, Precio: {condiciones_precio}")
+            
+            # Si no hay atributos EAV, solo aplicar filtros de precio
+            if not atributos_detectados:
+                return self._aplicar_filtros_precio_solamente(condiciones_precio, limite)
+            
+            # Obtener productos que cumplan TODOS los atributos (operador AND)
+            productos_candidatos_usuario = set()
+            productos_candidatos_empresa = set()
+            
+            # Para cada atributo, encontrar productos que lo cumplan
+            for i, (nombre_atributo, valor_buscado) in enumerate(atributos_detectados.items()):
+                logger.info(f"Procesando atributo {i+1}/{len(atributos_detectados)}: {nombre_atributo} = {valor_buscado}")
+                
+                # Buscar atributos que coincidan con el nombre
+                atributos_query = AtributoProducto.objects.filter(
+                    Q(nombre__icontains=nombre_atributo) |
+                    Q(descripcion__icontains=nombre_atributo) |
+                    Q(nombre__iexact=nombre_atributo) |
+                    Q(nombre__icontains=nombre_atributo.replace('_', ' ')) |
+                    Q(nombre__icontains=nombre_atributo.replace(' ', '_'))
+                )
+                
+                productos_este_atributo_usuario = set()
+                productos_este_atributo_empresa = set()
+                
+                for atributo in atributos_query:
+                    # Construir query según el tipo de dato
+                    valores_query = Q()
+                    
+                    if atributo.tipo_dato == 'texto' or atributo.tipo_dato == 'lista':
+                        valores_query = (
+                            Q(valor_texto__icontains=valor_buscado) |
+                            Q(valor_texto__iexact=valor_buscado) |
+                            Q(valor_texto__icontains=valor_buscado.upper()) |
+                            Q(valor_texto__icontains=valor_buscado.lower()) |
+                            Q(valor_texto__icontains=valor_buscado.title())
+                        )
+                    elif atributo.tipo_dato == 'numero':
+                        import re
+                        numero_match = re.search(r'(\d+)', str(valor_buscado))
+                        if numero_match:
+                            numero = int(numero_match.group(1))
+                            valores_query = Q(valor_numero=numero)
+                        else:
+                            continue
+                    elif atributo.tipo_dato == 'decimal':
+                        import re
+                        numero_match = re.search(r'(\d+(?:\.\d+)?)', str(valor_buscado))
+                        if numero_match:
+                            decimal_val = float(numero_match.group(1))
+                            valores_query = Q(valor_decimal=decimal_val)
+                        else:
+                            continue
+                    elif atributo.tipo_dato == 'booleano':
+                        bool_val = str(valor_buscado).lower() in ['true', '1', 'sí', 'si', 'verdadero', 'yes']
+                        valores_query = Q(valor_booleano=bool_val)
+                    
+                    # Obtener valores que coincidan
+                    valores = ValorAtributoProducto.objects.filter(
+                        atributo=atributo
+                    ).filter(valores_query)
+                    
+                    for valor in valores:
+                        if valor.producto_usuario_id:
+                            productos_este_atributo_usuario.add(valor.producto_usuario_id)
+                        if valor.producto_empresa_id:
+                            productos_este_atributo_empresa.add(valor.producto_empresa_id)
+                
+                logger.info(f"Atributo '{nombre_atributo}': {len(productos_este_atributo_usuario)} productos usuario, {len(productos_este_atributo_empresa)} productos empresa")
+                
+                # En la primera iteración, inicializar los candidatos
+                if i == 0:
+                    productos_candidatos_usuario = productos_este_atributo_usuario
+                    productos_candidatos_empresa = productos_este_atributo_empresa
+                else:
+                    # Intersección (AND lógico) - solo productos que cumplan TODOS los atributos
+                    productos_candidatos_usuario &= productos_este_atributo_usuario
+                    productos_candidatos_empresa &= productos_este_atributo_empresa
+                
+                logger.info(f"Después del AND: {len(productos_candidatos_usuario)} productos usuario, {len(productos_candidatos_empresa)} productos empresa")
+            
+            # Procesar productos de usuario que cumplen TODOS los atributos
+            for producto_id in productos_candidatos_usuario:
+                try:
+                    prod = producto_usuario.objects.get(
+                        id_producto_usuario=producto_id,
+                        estatus_producto_usuario='Activo'
+                    )
+                    
+                    # Aplicar filtros de precio si existen
+                    if condiciones_precio:
+                        precio = float(prod.precio_producto_usuario)
+                        if not self._cumple_condiciones_precio(precio, condiciones_precio):
+                            continue
+                    
+                    atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                    
+                    # Crear descripción de coincidencias
+                    coincidencias = []
+                    for attr_name, attr_value in atributos_detectados.items():
+                        if attr_name in atributos:
+                            coincidencias.append(f"{attr_name}: {atributos[attr_name]}")
+                    
+                    if condiciones_precio:
+                        precio_desc = self._describir_condicion_precio(condiciones_precio)
+                        coincidencias.append(f"Precio: ${prod.precio_producto_usuario} ({precio_desc})")
+                    
+                    resultados.append({
+                        'tipo': 'producto_usuario',
+                        'id': prod.id_producto_usuario,
+                        'nombre': prod.nombre_producto_usuario,
+                        'descripcion': prod.descripcion_producto_usuario,
+                        'precio': float(prod.precio_producto_usuario),
+                        'stock': prod.stock_producto_usuario,
+                        'vendedor': prod.id_usuario_fk.nombre_usuario,
+                        'condicion': prod.condicion_producto_usuario,
+                        'atributos': atributos,
+                        'coincidencia_logica': f"Cumple TODOS los criterios: {', '.join(coincidencias)}"
+                    })
+                    productos_encontrados.add(producto_id)
+                    
+                except producto_usuario.DoesNotExist:
+                    continue
+            
+            # Procesar productos de empresa que cumplen TODOS los atributos
+            for producto_id in productos_candidatos_empresa:
+                try:
+                    prod = producto_empresa.objects.get(id_producto_empresa=producto_id)
+                    atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                    
+                    # Obtener sucursales activas
+                    sucursales = producto_sucursal.objects.filter(
+                        id_producto_fk=prod,
+                        estatus_producto_sucursal='Activo'
+                    )
+                    
+                    for suc_prod in sucursales:
+                        # Aplicar filtros de precio si existen
+                        if condiciones_precio:
+                            precio = float(suc_prod.precio_producto_sucursal)
+                            if not self._cumple_condiciones_precio(precio, condiciones_precio):
+                                continue
+                        
+                        # Crear descripción de coincidencias
+                        coincidencias = []
+                        for attr_name, attr_value in atributos_detectados.items():
+                            if attr_name in atributos:
+                                coincidencias.append(f"{attr_name}: {atributos[attr_name]}")
+                        
+                        if condiciones_precio:
+                            precio_desc = self._describir_condicion_precio(condiciones_precio)
+                            coincidencias.append(f"Precio: ${suc_prod.precio_producto_sucursal} ({precio_desc})")
+                        
+                        resultados.append({
+                            'tipo': 'producto_empresa',
+                            'id': suc_prod.id_producto_sucursal,
+                            'nombre': prod.nombre_producto_empresa,
+                            'descripcion': prod.descripcion_producto_empresa,
+                            'precio': float(suc_prod.precio_producto_sucursal),
+                            'stock': suc_prod.stock_producto_sucursal,
+                            'vendedor': prod.id_empresa_fk.nombre_empresa,
+                            'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                            'condicion': suc_prod.condicion_producto_sucursal,
+                            'atributos': atributos,
+                            'coincidencia_logica': f"Cumple TODOS los criterios: {', '.join(coincidencias)}"
+                        })
+                    
+                    productos_encontrados.add(producto_id)
+                    
+                except producto_empresa.DoesNotExist:
+                    continue
+            
+            logger.info(f"Búsqueda lógica completada: {len(resultados)} productos encontrados")
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error en búsqueda con operadores lógicos: {e}")
+            return []
+    
+    def _cumple_condiciones_precio(self, precio, condiciones_precio):
+        """Verifica si un precio cumple las condiciones especificadas"""
+        if 'min' in condiciones_precio and precio < condiciones_precio['min']:
+            return False
+        if 'max' in condiciones_precio and precio > condiciones_precio['max']:
+            return False
+        return True
+    
+    def _describir_condicion_precio(self, condiciones_precio):
+        """Crea una descripción textual de las condiciones de precio"""
+        if 'min' in condiciones_precio and 'max' in condiciones_precio:
+            return f"entre ${condiciones_precio['min']} y ${condiciones_precio['max']}"
+        elif 'min' in condiciones_precio:
+            return f"desde ${condiciones_precio['min']}"
+        elif 'max' in condiciones_precio:
+            return f"hasta ${condiciones_precio['max']}"
+        return "precio válido"
+    
+    def _aplicar_filtros_precio_solamente(self, condiciones_precio, limite=10):
+        """Aplica solo filtros de precio cuando no hay atributos EAV"""
+        try:
+            resultados = []
+            
+            # Construir query de precio para productos de usuario
+            query_precio_usuario = Q(estatus_producto_usuario='Activo')
+            if 'min' in condiciones_precio:
+                query_precio_usuario &= Q(precio_producto_usuario__gte=condiciones_precio['min'])
+            if 'max' in condiciones_precio:
+                query_precio_usuario &= Q(precio_producto_usuario__lte=condiciones_precio['max'])
+            
+            productos_usuario = producto_usuario.objects.filter(query_precio_usuario)[:limite]
+            
+            for prod in productos_usuario:
+                atributos = self.obtener_atributos_producto(prod.id_producto_usuario, 'producto_usuario')
+                precio_desc = self._describir_condicion_precio(condiciones_precio)
+                
+                resultados.append({
+                    'tipo': 'producto_usuario',
+                    'id': prod.id_producto_usuario,
+                    'nombre': prod.nombre_producto_usuario,
+                    'descripcion': prod.descripcion_producto_usuario,
+                    'precio': float(prod.precio_producto_usuario),
+                    'stock': prod.stock_producto_usuario,
+                    'vendedor': prod.id_usuario_fk.nombre_usuario,
+                    'condicion': prod.condicion_producto_usuario,
+                    'atributos': atributos,
+                    'coincidencia_logica': f"Precio: ${prod.precio_producto_usuario} ({precio_desc})"
+                })
+            
+            # Construir query de precio para productos de empresa
+            query_precio_empresa = Q(estatus_producto_sucursal='Activo')
+            if 'min' in condiciones_precio:
+                query_precio_empresa &= Q(precio_producto_sucursal__gte=condiciones_precio['min'])
+            if 'max' in condiciones_precio:
+                query_precio_empresa &= Q(precio_producto_sucursal__lte=condiciones_precio['max'])
+            
+            productos_empresa = producto_sucursal.objects.filter(query_precio_empresa).select_related('id_producto_fk')[:limite]
+            
+            for suc_prod in productos_empresa:
+                prod = suc_prod.id_producto_fk
+                atributos = self.obtener_atributos_producto(prod.id_producto_empresa, 'producto_empresa')
+                precio_desc = self._describir_condicion_precio(condiciones_precio)
+                
+                resultados.append({
+                    'tipo': 'producto_empresa',
+                    'id': suc_prod.id_producto_sucursal,
+                    'nombre': prod.nombre_producto_empresa,
+                    'descripcion': prod.descripcion_producto_empresa,
+                    'precio': float(suc_prod.precio_producto_sucursal),
+                    'stock': suc_prod.stock_producto_sucursal,
+                    'vendedor': prod.id_empresa_fk.nombre_empresa,
+                    'sucursal': suc_prod.id_sucursal_fk.nombre_sucursal,
+                    'condicion': suc_prod.condicion_producto_sucursal,
+                    'atributos': atributos,
+                    'coincidencia_logica': f"Precio: ${suc_prod.precio_producto_sucursal} ({precio_desc})"
+                })
+            
+            return resultados[:limite]
+            
+        except Exception as e:
+            logger.error(f"Error en filtros de precio solamente: {e}")
+            return []

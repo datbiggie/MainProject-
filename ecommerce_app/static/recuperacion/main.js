@@ -5,8 +5,14 @@ document.addEventListener('DOMContentLoaded', function(){
   const form = document.getElementById('recoverForm');
   const btn = document.getElementById('btnSendCode');
 
+  if (!form || !btn) {
+    console.error('Error: No se encontraron los elementos del formulario');
+    return;
+  }
+
   form.addEventListener('submit', async function(e){
     e.preventDefault();
+    
     // Validación básica HTML5
     if (!form.checkValidity()){
       form.classList.add('was-validated');
@@ -16,6 +22,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const email = document.getElementById('email').value.trim();
     if (!email) return;
 
+    // Obtener CSRF token
+    const csrfToken = getCookie('csrftoken');
+
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
 
@@ -24,29 +33,41 @@ document.addEventListener('DOMContentLoaded', function(){
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
+          'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({ email })
       });
 
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      }
+
       const data = await resp.json();
+      
       if (data.success){
         // Mostrar mensaje y redirigir a la pantalla para ingresar código / nueva password
         Swal.fire({
           icon: 'success',
-          title: 'Código enviado',
-          text: 'Si existe una cuenta asociada a ese correo, hemos enviado un código a su bandeja de entrada.',
-          confirmButtonText: 'Aceptar'
+          title: 'Email enviado',
+          text: 'Si existe una cuenta asociada a ese correo, hemos enviado un enlace de recuperación. Revisa tu bandeja de entrada y haz clic en el enlace para restablecer tu contraseña.',
+          confirmButtonText: 'Ir a Iniciar Sesión'
         }).then(()=>{
-          // Redirigir a la página de confirmar (puede ser la misma o otra ruta)
-          window.location.href = '/ecommerce/confirmar_recuperacion/';
+          // Redirigir a iniciar sesión para que el usuario pueda usar el link del email
+          window.location.href = '/ecommerce/iniciar_sesion/';
         });
       } else {
-        Swal.fire({ icon: 'info', title: 'Hecho', text: 'Si existe una cuenta asociada a ese correo, hemos enviado un código a su bandeja de entrada.'});
+        Swal.fire({ 
+          icon: 'info', 
+          title: 'Hecho', 
+          text: 'Si existe una cuenta asociada a ese correo, hemos enviado un enlace de recuperación. Revisa tu bandeja de entrada.',
+          confirmButtonText: 'Aceptar'
+        }).then(()=>{
+          window.location.href = '/ecommerce/iniciar_sesion/';
+        });
       }
 
     }catch(err){
-      console.error(err);
+      console.error('Error en petición AJAX:', err);
       Swal.fire({ icon: 'error', title: 'Error', text: 'Ocurrió un error al enviar el correo. Intenta de nuevo.' });
     }finally{
       btn.disabled = false;

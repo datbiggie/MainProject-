@@ -20,6 +20,150 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Estilos para tarjetas de categorías */
+      .category-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+        min-height: 320px; /* Altura fija para todas las tarjetas */
+      }
+      
+      .category-card .card-body {
+        flex: 1 0 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        text-align: center;
+        padding: 1.25rem;
+      }
+      
+      .category-card .card-body h5 {
+        color: #000 !important;
+        width: 100%;
+        margin-bottom: 0.5rem;
+        min-height: 2.5rem; /* Altura fija para el título */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .category-card .card-body p {
+        color: #000 !important;
+        width: 100%;
+        margin-bottom: 0;
+        min-height: 1.5rem; /* Altura fija para la descripción */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .category-card .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      
+      .category-card .card-text {
+        flex-grow: 1;
+      }
+      
+      /* Estilos generales para tarjetas de productos */
+      .product-card {
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        background: #fff;
+      }
+      
+      .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      .product-card .card-img-top {
+        object-fit: contain;
+        height: 180px;
+        transition: transform 0.3s ease;
+      }
+      
+      .product-card:hover .card-img-top {
+        transform: scale(1.05);
+      }
+      
+      .product-card .card-title {
+        color: #333;
+        font-weight: 500;
+        min-height: 40px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .product-card .rating {
+        color: #ffc107;
+        font-size: 0.8rem;
+      }
+      
+      .product-card .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.35em 0.6em;
+      }
+      
+      .product-card .btn-outline-primary {
+        border-color: #0d6efd;
+        color: #0d6efd;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+      
+      .product-card .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: white;
+      }
+      
+      .section-title {
+        position: relative;
+        display: inline-block;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+      
+      .section-title:after {
+        content: '';
+        position: absolute;
+        width: 50%;
+        height: 3px;
+        bottom: -8px;
+        left: 0;
+        background: #0d6efd;
+        border-radius: 3px;
+      }
+      
+      .btn-blue {
+        background-color: #0d6efd;
+        color: white;
+        border: none;
+        padding: 0.375rem 1.5rem;
+        transition: all 0.3s ease;
+      }
+      
+      .btn-blue:hover {
+        background-color: #0b5ed7;
+        color: white;
+        transform: translateY(-2px);
+      }
+    </style>
   </head>
     <body>
 
@@ -54,222 +198,284 @@
       <div class="swiper-button-next hero-swiper-next"></div>
     </section>
 <!-- Sección de cards inspirada en la imagen proporcionada -->
-<section class="py-4 bg-light">
-  <div class="container-lg">
-    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-6 g-3 justify-content-center">
-      <div class="col">
-        <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
-          <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
-            <svg width="56" height="56"><use xlink:href="#user"></use></svg>
-          </div>
-          <div class="card-body p-0">
-            <h5 class="fw-bold mb-2">Ingresa a tu cuenta</h5>
-            <p class="mb-3 small">Aprovecha grandes ofertas y compra todo lo que necesitas.</p>
-            <a href="{% url 'iniciar_sesion' %}" class="btn btn-sm btn-primary-soft w-100">Entrar</a>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
-          <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
-            <svg width="56" height="56"><use xlink:href="#package"></use></svg>
-          </div>
-          <div class="card-body p-0 d-flex flex-column justify-content-start">
-            <h5 class="fw-bold mb-2">Empresas</h5>
-            <p class="small mb-0">Encuentra los negocios que más te gustan.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
-          <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
-            <svg width="56" height="56"><use xlink:href="#quality"></use></svg>
-          </div>
-          <div class="card-body p-0 d-flex flex-column justify-content-start">
-            <h5 class="fw-bold mb-2">Productos Recientes</h5>
-            <p class="small mb-0">Productos pensados para ti, al alcance de un clic.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
-          <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
-            <svg width="56" height="56"><use xlink:href="#delivery"></use></svg>
-          </div>
-          <div class="card-body p-0 d-flex flex-column justify-content-start">
-            <h5 class="fw-bold mb-2">Servicios Recientes</h5>
-            <p class="small mb-0">Explora los servicios más nuevos.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
-          <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
-            <svg width="56" height="56"><use xlink:href="#category"></use></svg>
-          </div>
-          <div class="card-body p-0 d-flex flex-column justify-content-start">
-            <h5 class="fw-bold mb-2"> Categorías Productos</h5>
-            <p class="small mb-0">Descubre lo último en categorías de productos.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 shadow-sm border-0 rounded-4 text-center p-3 card-info-hero">
-          <div class="mb-3 d-flex justify-content-center align-items-center" style="height:64px;">
-            <svg width="56" height="56"><use xlink:href="#secure"></use></svg>
-          </div>
-          <div class="card-body p-0 d-flex flex-column justify-content-start">
-            <h5 class="fw-bold mb-2">Categoría Servicios</h5>
-            <p class="small mb-0">Accede a las categorías de servicios más actualizadas.</p>
+<section class="py-5 bg-light">
+  <div class="container-lg px-3 px-md-4 px-lg-5">
+    <div class="row mb-4 mx-0">
+      <div class="col-12 px-0">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="section-title mb-0 ps-1">Explora nuestras categorías</h2>
+          <div class="d-none d-md-flex gap-2">
+            <button class="btn btn-outline-primary rounded-circle p-2 swiper-categories-prev">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="btn btn-outline-primary rounded-circle p-2 swiper-categories-next">
+              <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
     </div>
+    
+    <div class="position-relative">
+      <div class="swiper categories-swiper">
+        <div class="swiper-wrapper">
+          <!-- Categoría 1 -->
+          <div class="swiper-slide">
+            <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden category-card" style="min-height: 320px;">
+              <div class="position-relative">
+                <img src="{% static 'index/images/category-thumb-1.jpg' %}" class="card-img-top" alt="Alimentos Básicos" style="height: 180px; object-fit: cover;">
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge bg-success">+50 productos</span>
+                </div>
+              </div>
+              <div class="card-body text-center p-3">
+                <h5 class="card-title mb-2">Alimentos Básicos</h5>
+                <p class="small text-muted mb-0">Arroz, frijoles, azúcar y más</p>
+                <a href="#" class="stretched-link"></a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Categoría 2 -->
+          <div class="swiper-slide">
+            <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden category-card" style="min-height: 320px;">
+              <div class="position-relative">
+                <img src="{% static 'index/images/category-thumb-2.jpg' %}" class="card-img-top" alt="Lácteos y Huevos" style="height: 180px; object-fit: cover;">
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge bg-success">+30 productos</span>
+                </div>
+              </div>
+              <div class="card-body text-center p-3">
+                <h5 class="card-title mb-2">Lácteos y Huevos</h5>
+                <p class="small text-muted mb-0">Leche, queso, mantequilla y más</p>
+                <a href="#" class="stretched-link"></a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Categoría 3 -->
+          <div class="swiper-slide">
+            <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden category-card" style="min-height: 320px;">
+              <div class="position-relative">
+                <img src="{% static 'index/images/category-thumb-3.jpg' %}" class="card-img-top" alt="Frutas y Verduras" style="height: 180px; object-fit: cover;">
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge bg-success">+40 productos</span>
+                </div>
+              </div>
+              <div class="card-body text-center p-3">
+                <h5 class="card-title mb-2">Frutas y Verduras</h5>
+                <p class="small text-muted mb-0">Frescas y de temporada</p>
+                <a href="#" class="stretched-link"></a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Categoría 4 -->
+          <div class="swiper-slide">
+            <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden category-card" style="min-height: 320px;">
+              <div class="position-relative">
+                <img src="{% static 'index/images/category-thumb-4.jpg' %}" class="card-img-top" alt="Carnes y Pescados" style="height: 180px; object-fit: cover;">
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge bg-success">+35 productos</span>
+                </div>
+              </div>
+              <div class="card-body text-center p-3">
+                <h5 class="card-title mb-2">Carnes y Pescados</h5>
+                <p class="small text-muted mb-0">Frescos y de calidad</p>
+                <a href="#" class="stretched-link"></a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Categoría 5 -->
+          <div class="swiper-slide">
+            <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden category-card" style="min-height: 320px;">
+              <div class="position-relative">
+                <img src="{% static 'index/images/category-thumb-5.jpg' %}" class="card-img-top" alt="Bebidas" style="height: 180px; object-fit: cover;">
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge bg-success">+25 productos</span>
+                </div>
+              </div>
+              <div class="card-body text-center p-3">
+                <h5 class="card-title mb-2">Bebidas</h5>
+                <p class="small text-muted mb-0">Refrescos, jugos y más</p>
+                <a href="#" class="stretched-link"></a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Categoría 6 -->
+          <div class="swiper-slide">
+            <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden category-card" style="min-height: 320px;">
+              <div class="position-relative">
+                <img src="{% static 'index/images/category-thumb-6.jpg' %}" class="card-img-top" alt="Limpieza del Hogar" style="height: 180px; object-fit: cover;">
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge bg-success">+45 productos</span>
+                </div>
+              </div>
+              <div class="card-body text-center p-3">
+                <h5 class="card-title mb-2">Limpieza del Hogar</h5>
+                <p class="small text-muted mb-0">Productos de limpieza</p>
+                <a href="#" class="stretched-link"></a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Scrollbar -->
+        <div class="swiper-scrollbar mt-4 d-none d-md-block"></div>
+        
+        <!-- Navegación para móviles -->
+        <div class="swiper-pagination d-md-none mt-3"></div>
+      </div>
+      
+      <!-- Flechas de navegación -->
+      <div class="swiper-button-prev d-none d-md-flex"></div>
+      <div class="swiper-button-next d-none d-md-flex"></div>
+    </div>
+    
+    <div class="text-center mt-4">
+      <a href="#" class="btn btn-outline-primary">Ver todas las categorías</a>
+    </div>
   </div>
 </section>
-    <section class="py-5 overflow-hidden">
+  
+
+    <section class="py-5 bg-light">
       <div class="container-lg">
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="section-header d-flex flex-wrap justify-content-between mb-5">
-              <h2 class="section-title">Categoría</h2>
-
-              <div class="d-flex align-items-center">
-                <a href="#" class="btn btn-blue me-2">View All</a>
-                <div class="swiper-buttons">
-                  <button class="swiper-prev category-carousel-prev btn btn-yellow">❮</button>
-                  <button class="swiper-next category-carousel-next btn btn-yellow">❯</button>
-                </div>
-              </div>
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+              <h2 class="section-title mb-0">Productos más vendidos</h2>
+              <a href="#" class="btn btn-blue rounded-1 px-4">Ver todo</a>
             </div>
-            
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="category-carousel swiper">
-              <div class="swiper-wrapper">
-                <a href="category.html" class="nav-link swiper-slide text-center">
-                  <img src="{% static 'index/images/category-thumb-1.jpg' %}" class="rounded-circle" alt="Categoría Thumbnail">
-                  <h4 class="fs-6 mt-3 fw-normal category-title">Frutas y Vegetales</h4>
-                </a>
-
-                
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="pb-5">
-      <div class="container-lg">
-
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="section-header d-flex flex-wrap justify-content-between my-4">
-              
-              <h2 class="section-title">Productos más vendidos</h2>
-
-              <div class="d-flex align-items-center">
-                <a href="#" class="btn btn-blue rounded-1">View All</a>
-              </div>
-            </div>
-            
           </div>
         </div>
         
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="product-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
-                  
-              <div class="col">
-                <div class="product-item">
-                  <figure>
-                    <a href="index.html" title="Product Title">
-                      <img src="{% static 'index/images/product-thumb-1.png' %}" alt="Product Thumbnail" class="tab-image">
-                    </a>
-                  </figure>
-                  <div class="d-flex flex-column text-center">
-                    <h3 class="fs-6 fw-normal">Whole Wheat Sandwich Bread</h3>
-                    <div>
-                      <div class="rating-container" data-product-id="1">
-                        <div class="stars-container">
-                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
-                        </div>
-                        <span class="rating-text">(222)</span>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                      <del>$24.00</del>
-                      <span class="text-dark fw-semibold">$18.00</span>
-                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                    </div>
-                    <div class="button-area p-3 pt-0">
-                      <div class="row g-1 mt-2">
-                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
-                      </div>
-                    </div>
-                  </div>
+        <div class="row g-4">
+          <!-- Producto 1 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-1.png' %}" class="card-img-top p-3" alt="Producto 1">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-20%</span>
                 </div>
-                
               </div>
-
-           
-              <div class="product-item">
-                <figure>
-                  <a href="index.html" title="Product Title">
-                    <img src="{% static 'index/images/product-thumb-1.png' %}" alt="Product Thumbnail" class="tab-image">
-                  </a>
-                </figure>
-                <div class="d-flex flex-column text-center">
-                  <h3 class="fs-6 fw-normal">Whole Wheat Sandwich Bread</h3>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Pan Integral de Trigo</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(1,245)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
                   <div>
-                    <div class="rating-container" data-product-id="1">
-                      <div class="stars-container">
-                        <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                        <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                        <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                        <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                        <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
-                      </div>
-                      <span class="rating-text">(222)</span>
-                    </div>
+                    <span class="text-decoration-line-through text-muted me-2">$3.99</span>
+                    <span class="fw-bold text-dark">$2.99</span>
                   </div>
-                  <div class="d-flex justify-content-center align-items-center gap-2">
-                    <del>$24.00</del>
-                    <span class="text-dark fw-semibold">$18.00</span>
-                    <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                  </div>
-                  <div class="button-area p-3 pt-0">
-                    <div class="row g-1 mt-2">
-                      <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                      <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                      <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
-                    </div>
-                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
                 </div>
               </div>
-          
-
-         
-        
-              
             </div>
-            <!-- / product-grid -->
-
-
+          </div>
+          
+          <!-- Producto 2 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-2.png' %}" class="card-img-top p-3" alt="Producto 2">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-success">Nuevo</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Leche Entera Fresca</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <small class="text-muted ms-1">(2,187)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <span class="fw-bold text-dark">$1.29</span>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 3 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-3.png' %}" class="card-img-top p-3" alt="Producto 3">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-30%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Huevos Blancos Grandes</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(3,456)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$4.99</span>
+                    <span class="fw-bold text-dark">$3.49</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 4 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-4.png' %}" class="card-img-top p-3" alt="Producto 4">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-33%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Manzanas Rojas (1kg)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(1,876)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$2.99</span>
+                    <span class="fw-bold text-dark">$1.99</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -320,74 +526,144 @@
       </div>
     </section>
 
-    <section id="featured-products" class="products-carousel">
-      <div class="container-lg overflow-hidden py-5">
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="section-header d-flex flex-wrap justify-content-between my-4">
-              
-              <h2 class="section-title">Productos destacados</h2>
-
-              <div class="d-flex align-items-center">
-                <a href="#" class="btn btn-blue me-2">View All</a>
-                <div class="swiper-buttons">
-                  <button class="swiper-prev products-carousel-prev btn btn-primary">❮</button>
-                  <button class="swiper-next products-carousel-next btn btn-primary">❯</button>
-                </div>  
-              </div>
+    <section id="featured-products" class="py-5 bg-white">
+      <div class="container-lg">
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+              <h2 class="section-title mb-0">Productos destacados</h2>
+              <a href="#" class="btn btn-blue rounded-1 px-4">Ver todo</a>
             </div>
-            
           </div>
         </div>
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="swiper">
-              <div class="swiper-wrapper">
-                                
-                <div class="product-item swiper-slide">
-                  <figure>
-                    <a href="index.html" title="Product Title">
-                      <img src="{% static 'index/images/product-thumb-10.png' %}" alt="Product Thumbnail" class="tab-image">
-                    </a>
-                  </figure>
-                  <div class="d-flex flex-column text-center">
-                    <h3 class="fs-6 fw-normal">Greek Style Plain Yogurt</h3>
-                    <div>
-                      <div class="rating-container" data-product-id="2">
-                        <div class="stars-container">
-                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
-                        </div>
-                        <span class="rating-text">(222)</span>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                      <del>$24.00</del>
-                      <span class="text-dark fw-semibold">$18.00</span>
-                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                    </div>
-                    <div class="button-area p-3 pt-0">
-                      <div class="row g-1 mt-2">
-                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btlogo4n-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
-                      </div>
-                    </div>
-                  </div>
+        
+        <div class="row g-4">
+          <!-- Producto 1 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-5.png' %}" class="card-img-top p-3" alt="Aceite de Oliva">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-21%</span>
                 </div>
-
-               
-
-                  
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Aceite de Oliva Extra Virgen (500ml)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(2,876)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$6.99</span>
+                    <span class="fw-bold text-dark">$5.49</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
               </div>
             </div>
-            <!-- / products-carousel -->
-
+          </div>
+          
+          <!-- Producto 2 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-6.png' %}" class="card-img-top p-3" alt="Yogur Natural">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-success">Nuevo</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Yogur Natural (1kg)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(1,542)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$3.49</span>
+                    <span class="fw-bold text-dark">$2.99</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 3 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-7.png' %}" class="card-img-top p-3" alt="Atún en Lata">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-28%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Atún en Lata (170g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <small class="text-muted ms-1">(2,345)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$2.49</span>
+                    <span class="fw-bold text-dark">$1.79</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 4 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-8.png' %}" class="card-img-top p-3" alt="Pasta Spaghetti">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-23%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Pasta Spaghetti (500g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(1,876)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$1.29</span>
+                    <span class="fw-bold text-dark">$0.99</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -400,68 +676,145 @@
       </div>
     </section>
 
-    <section id="popular-products" class="products-carousel">
-      <div class="container-lg overflow-hidden py-5">
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="section-header d-flex justify-content-between my-4">
-              
-              <h2 class="section-title">Productos más populares</h2>
-
-              <div class="d-flex align-items-center">
-                <a href="#" class="btn btn-blue me-2">View All</a>
-                <div class="swiper-buttons">
-                  <button class="swiper-prev products-carousel-prev btn btn-primary">❮</button>
-                  <button class="swiper-next products-carousel-next btn btn-primary">❯</button>
+    <section id="popular-products" class="py-5 bg-light">
+      <div class="container-lg">
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+              <h2 class="section-title mb-0">Productos más populares</h2>
+              <a href="#" class="btn btn-blue rounded-1 px-4">Ver todo</a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row g-4">
+          <!-- Producto 1 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-9.png' %}" class="card-img-top p-3" alt="Galletas de Avena">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-20%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Galletas de Avena (300g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(2,654)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$3.49</span>
+                    <span class="fw-bold text-dark">$2.79</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
                 </div>
               </div>
             </div>
-            
+          </div>
+          
+          <!-- Producto 2 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-10.png' %}" class="card-img-top p-3" alt="Café Molido">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-19%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Café Molido (500g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <small class="text-muted ms-1">(3,210)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$7.99</span>
+                    <span class="fw-bold text-dark">$6.49</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 3 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-11.png' %}" class="card-img-top p-3" alt="Miel Pura">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-success">Nuevo</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Miel Pura de Abeja (500g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(1,987)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <span class="fw-bold text-dark">$8.99</span>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 4 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-12.png' %}" class="card-img-top p-3" alt="Frutos Secos">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-15%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Mezcla de Frutos Secos (250g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(2,543)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$5.99</span>
+                    <span class="fw-bold text-dark">$5.09</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="swiper">
-              <div class="swiper-wrapper">
-                                
-                <div class="product-item swiper-slide">
-                  <figure>
-                    <a href="index.html" title="Product Title">
-                      <img src="{% static 'index/images/product-thumb-15.png' %}" alt="Product Thumbnail" class="tab-image">
-                    </a>
-                  </figure>
-                  <div class="d-flex flex-column text-center">
-                    <h3 class="fs-6 fw-normal">Sandwich Bread</h3>
-                    <div>
-                      <div class="rating-container" data-product-id="3">
-                        <div class="stars-container">
-                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
-                        </div>
-                        <span class="rating-text">(222)</span>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                      <del>$24.00</del>
-                      <span class="text-dark fw-semibold">$18.00</span>
-                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                    </div>
-                    <div class="button-area p-3 pt-0">
-                      <div class="row g-1 mt-2">
-                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-      
-              </div>
+      </div>
+    </section>
             </div>
             <!-- / products-carousel -->
 
@@ -470,74 +823,141 @@
       </div>
     </section>
 
-    <section id="latest-products" class="products-carousel">
-      <div class="container-lg overflow-hidden pb-5">
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="section-header d-flex justify-content-between my-4">
-              
-              <h2 class="section-title">Recién llegados</h2>
-
-              <div class="d-flex align-items-center">
-                <a href="#" class="btn btn-blue me-2">View All</a>
-                <div class="swiper-buttons">
-                  <button class="swiper-prev products-carousel-prev btn btn-primary">❮</button>
-                  <button class="swiper-next products-carousel-next btn btn-primary">❯</button>
-                </div>  
-              </div>
+    <section id="latest-products" class="py-5 bg-white">
+      <div class="container-lg">
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+              <h2 class="section-title mb-0">Recién llegados</h2>
+              <a href="#" class="btn btn-blue rounded-1 px-4">Ver todo</a>
             </div>
-            
           </div>
         </div>
-        <div class="row">
-          <div class="col-md-12">
-
-            <div class="swiper">
-              <div class="swiper-wrapper">
-                
-                <div class="product-item swiper-slide">
-                  <figure>
-                    <a href="index.html" title="Product Title">
-                      <img src="{% static 'index/images/product-thumb-20.png' %}" alt="Product Thumbnail" class="tab-image">
-                    </a>
-                  </figure>
-                  <div class="d-flex flex-column text-center">
-                    <h3 class="fs-6 fw-normal">Sunstar Fresh Melon Juice</h3>
-                    <div>
-                      <div class="rating-container" data-product-id="4">
-                        <div class="stars-container">
-                          <svg width="18" height="18" class="star" data-rating="1"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="2"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="3"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="4"><use xlink:href="#star-full"></use></svg>
-                          <svg width="18" height="18" class="star" data-rating="5"><use xlink:href="#star-full"></use></svg>
-                        </div>
-                        <span class="rating-text">(222)</span>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                      <del>$24.00</del>
-                      <span class="text-dark fw-semibold">$18.00</span>
-                      <span class="badge border border-dark-subtle rounded-0 fw-normal px-1 fs-7 lh-1 text-body-tertiary">10% OFF</span>
-                    </div>
-                    <div class="button-area p-3 pt-0">
-                      <div class="row g-1 mt-2">
-                        <div class="col-3"><input type="number" name="quantity" class="form-control border-dark-subtle input-number quantity" value="1"></div>
-                        <div class="col-7"><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart</a></div>
-                        <div class="col-2"><a href="#" class="btn btn-outline-dark rounded-1 p-2 fs-6"><svg width="18" height="18"><use xlink:href="#heart"></use></svg></a></div>
-                      </div>
-                    </div>
-                  </div>
+        
+        <div class="row g-4">
+          <!-- Producto 1 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-13.png' %}" class="card-img-top p-3" alt="Chocolate Negro">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-success">Nuevo</span>
                 </div>
-
-              
-               
-                  
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Chocolate Negro 70% Cacao (100g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(1,543)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$3.99</span>
+                    <span class="fw-bold text-dark">$3.29</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
               </div>
             </div>
-            <!-- / products-carousel -->
-
+          </div>
+          
+          <!-- Producto 2 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-14.png' %}" class="card-img-top p-3" alt="Té Verde">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-25%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Té Verde en Hojas (100g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(987)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$5.49</span>
+                    <span class="fw-bold text-dark">$4.11</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 3 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-15.png' %}" class="card-img-top p-3" alt="Mermelada de Fresa">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-success">Nuevo</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Mermelada de Fresa (320g)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star-half-alt text-warning"></i>
+                  <small class="text-muted ms-1">(1,210)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <span class="fw-bold text-dark">$3.49</span>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Producto 4 -->
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100 border-0 shadow-sm">
+              <div class="position-relative">
+                <img src="{% static 'index/images/product-thumb-16.png' %}" class="card-img-top p-3" alt="Vinagre de Manzana">
+                <div class="position-absolute top-0 end-0 p-2">
+                  <span class="badge bg-danger">-15%</span>
+                </div>
+              </div>
+              <div class="card-body p-3 d-flex flex-column">
+                <h5 class="card-title fs-6 fw-normal mb-2">Vinagre de Manzana Orgánico (500ml)</h5>
+                <div class="rating mb-2">
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="fas fa-star text-warning"></i>
+                  <i class="far fa-star text-warning"></i>
+                  <small class="text-muted ms-1">(2,156)</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <div>
+                    <span class="text-decoration-line-through text-muted me-2">$4.99</span>
+                    <span class="fw-bold text-dark">$4.24</span>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle">
+                    <i class="fas fa-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -757,5 +1177,65 @@
 
 
     <script src="{% static 'index/js/rating-system.js' %}"></script>
+    
+    <script>
+      // Inicializar Swiper para categorías
+      document.addEventListener('DOMContentLoaded', function() {
+        // Configuración del carrusel de categorías
+        const categoriesSwiper = new Swiper('.categories-swiper', {
+          slidesPerView: 1,
+          spaceBetween: 20,
+          loop: true,
+          autoplay: {
+            delay: 3000,
+            disableOnInteraction: false,
+          },
+          pagination: {
+            el: '.categories-swiper .swiper-pagination',
+            clickable: true,
+          },
+          navigation: {
+            nextEl: '.swiper-categories-next',
+            prevEl: '.swiper-categories-prev',
+          },
+          scrollbar: {
+            el: '.categories-swiper .swiper-scrollbar',
+            draggable: true,
+          },
+          breakpoints: {
+            576: {
+              slidesPerView: 2,
+            },
+            768: {
+              slidesPerView: 3,
+            },
+            992: {
+              slidesPerView: 4,
+            },
+            1200: {
+              slidesPerView: 5,
+            },
+            1400: {
+              slidesPerView: 6,
+            }
+          }
+        });
+        
+        // Efecto hover para las tarjetas de categoría
+        const categoryCards = document.querySelectorAll('.category-card');
+        categoryCards.forEach(card => {
+          card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'all 0.3s ease';
+            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+          });
+          
+          card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)';
+          });
+        });
+      });
+    </script>
   </body>
 </html>

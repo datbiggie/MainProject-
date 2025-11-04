@@ -74,6 +74,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Context processor personalizado para exponer el contador del carrito
+                'ecommerce_app.context_processors.cart_count',
             ],
         },
     },
