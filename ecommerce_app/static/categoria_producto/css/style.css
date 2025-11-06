@@ -33,35 +33,23 @@ body {
   background-color: #fff;
   line-height: 1.9;
   color: #8c8c8c;
-  position: relative; }
-  body:before {
-    z-index: -1;
-    position: absolute;
-    height: 50vh;
-    content: "";
-    top: 0;
-    left: 0;
-    right: 0;
-    background: #1769aa;
-     }
-body {
+  position: relative;
+}
+body:before {
+  z-index: -1;
+  position: absolute;
+  height: 50vh;
+  content: "";
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #1769aa;
+}
+
+/* Etiquetas de label en negrita (separado para evitar nesting inválido) */
 label {
   font-weight: bold;
 }
-  font-family: "Roboto", sans-serif;
-  background-color: #fff;
-  line-height: 1.9;
-
-  position: relative; }
-  body:before {
-    z-index: -1;
-    position: absolute;
-    height: 50vh;
-    content: "";
-    top: 0;
-    left: 0;
-    right: 0;
-    }
 
 h1, h2, h3, h4, h5, h6,
 .h1, .h2, .h3, .h4, .h5, .h6 {
@@ -83,7 +71,9 @@ a {
 
 .heading {
   font-size: 2.5rem;
-  font-weight: 900; }
+  /* Reducido de 900 a 700 para evitar tipografía excesivamente negrita */
+  font-weight: 700;
+}
 
 .form-control {
   border: none;
@@ -579,3 +569,27 @@ input[disabled], textarea[disabled] {
 }
 
 /* Fin estilos acordeón */
+
+/* ------------------ Overrides para reducir peso de fuente en páginas de categoría ------------------ */
+/* Muchas reglas e inline-styles usan font-weight:600/700/900 — aquí normalizamos el contenido principal */
+.content, .content p, .content li, .content a, .content span, .content label, .content .form-control, .content .info-text {
+  font-weight: 400 !important;
+}
+
+/* Encabezados dentro de .content con peso moderado pero no excesivo */
+.content h1, .content h2, .content h3, .content h4, .content .accordion-title {
+  font-weight: 600 !important;
+}
+
+/* Botones mantener semibold para accesibilidad */
+.content .btn {
+  font-weight: 600 !important;
+}
+
+/* Select2 choices y títulos de bloques moderados */
+.select2-result-atributo__title, .atributo-seleccionado {
+  font-weight: 600 !important;
+}
+
+/* Nota: si prefieres un look aún más fino usa 500 en vez de 400 arriba. */
+

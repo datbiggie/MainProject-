@@ -74,14 +74,16 @@
         <ul class="navbar-nav justify-content-end menu-list list-unstyled d-flex flex-column gap-2 mb-0">
           <li class="nav-item">
             <a href="{% url 'index' %}" class="nav-link d-flex align-items-center gap-3">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#home"></use></svg>
+              <!-- Icono home inline (no depender de <use> que puede faltar) -->
+              <svg class="icon icon-home" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
               <span>Inicio</span>
             </a>
           </li>
           <!-- Mis Sucursales Accordion (offcanvas) -->
           <li class="nav-item">
             <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasSucursalesCollapse" aria-expanded="false" aria-controls="offcanvasSucursalesCollapse" style="box-shadow:none;">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#location"></use></svg>
+              <!-- Icono location inline -->
+              <svg class="icon icon-location" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg>
               <span>Mis Sucursales</span>
               <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
             </button>
@@ -96,7 +98,7 @@
           <!-- Mis Categorías Accordion (offcanvas) -->
           <li class="nav-item">
             <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasCategoriasCollapse" aria-expanded="false" aria-controls="offcanvasCategoriasCollapse" style="box-shadow:none;">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#category"></use></svg>
+              <img src="{% static 'barra_superior_index/images/categoria.png' %}" alt="Mis Categorías" class="icon icon-categoria" width="28" height="28" />
               <span>Mis Categorías</span>
               <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
             </button>
@@ -131,8 +133,8 @@
           </li>
           
           <li class="nav-item">
-            <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasProductosCollapse" aria-expanded="false" aria-controls="offcanvasProductosCollapse" style="box-shadow:none;">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#box"></use></svg>
+            <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasProductosCollapse" aria-expanded="false" aria-controls="#offcanvasProductosCollapse" style="box-shadow:none;">
+              <img src="{% static 'barra_superior_index/images/caja.png' %}" alt="Mis Productos" class="icon icon-caja" width="28" height="28" />
               <span>Mis Productos</span>
               <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
             </button>
@@ -145,7 +147,9 @@
           </li>
           <li class="nav-item">
             <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasServiciosCollapse" aria-expanded="false" aria-controls="offcanvasServiciosCollapse" style="box-shadow:none;">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
+              <svg class="icon icon-service mis-servicios-link mis-servicios-offcanvas" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z"/>
+              </svg>
               <span>Mis Servicios</span>
               <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
             </button>
@@ -156,33 +160,33 @@
               </ul>
             </div>
           </li>
-          <li class="nav-item">
+          <!-- <li class="nav-item">
             <a href="#" class="nav-link d-flex align-items-center gap-3">
               <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#business"></use></svg>
               <span>Empresa Registrada</span>
             </a>
-          </li>
-          <li class="nav-item">
+          </li> -->
+          <!-- <li class="nav-item">
             <a href="#" class="nav-link d-flex align-items-center gap-3">
               <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#location"></use></svg>
               <span>Ubica tus productos y servicios</span>
             </a>
-          </li>
+          </li> -->
           <li class="nav-item">
             <a href="{% url 'favoritos' %}" class="nav-link d-flex align-items-center gap-3">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
+              <svg class="icon icon-heart" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
               <span>Mis Favoritos</span>
             </a>
           </li>
           <li class="nav-item">
             {% if user_info.is_authenticated %}
               <a href="{% url 'carrito' %}" class="nav-link d-flex align-items-center gap-3">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
+                <svg class="icon icon-cart" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
                 <span>Mi Carrito</span>
               </a>
             {% else %}
               <a href="#" class="nav-link d-flex align-items-center gap-3" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
+                <svg class="icon icon-cart" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cart"></use></svg>
                 <span>Mi Carrito</span>
               </a>
             {% endif %}
@@ -190,7 +194,7 @@
           <li class="nav-item">
             {% if user_info.is_authenticated %}
               <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasPedidosCollapse" aria-expanded="false" aria-controls="offcanvasPedidosCollapse" style="box-shadow:none;">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#package"></use></svg>
+                <svg class="icon icon-package" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#package"></use></svg>
                 <span>Mis Pedidos</span>
                 <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
               </button>
@@ -203,9 +207,9 @@
                   <li><a class="nav-link no-blue-effect" href="{% url 'mis_pedidos' %}">Todos Pedidos</a></li>
                 </ul>
               </div>
-            {% else %}
+              {% else %}
               <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver tus pedidos')">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#package"></use></svg>
+                <svg class="icon icon-package" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#package"></use></svg>
                 <span>Mis Pedidos</span>
               </a>
             {% endif %}
@@ -214,7 +218,7 @@
           <li class="nav-item">
             {% if user_info.is_authenticated %}
               <a href="{% url 'mis_solicitudes' %}" class="nav-link d-flex align-items-center gap-3">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
+                <svg class="icon icon-service" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#service"></use></svg>
                 <span>Mis Solicitudes (servicio)</span>
               </a>
             {% else %}
@@ -226,11 +230,11 @@
           </li>
           <li class="nav-item">
             {% if user_info.is_authenticated %}
-              <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasVentasCollapse" aria-expanded="false" aria-controls="offcanvasVentasCollapse" style="box-shadow:none;">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
-                <span>Mis Ventas (Productos)</span>
-                <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
-              </button>
+                <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasVentasCollapse" aria-expanded="false" aria-controls="#offcanvasVentasCollapse" style="box-shadow:none;">
+                  <img src="{% static 'barra_superior_index/images/ventasproductos.png' %}" alt="Mis Ventas (Productos)" class="icon icon-punto-de-venta" width="28" height="28" />
+                    <span>Mis Ventas (Productos)</span>
+                  <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
+                </button>
               <div class="collapse ps-5" id="offcanvasVentasCollapse">
                 <ul class="list-unstyled mb-0">
                   <li><a class="nav-link no-blue-effect" href="{% url 'ventas_pendientes' %}">Pendientes</a></li>
@@ -240,15 +244,15 @@
               </div>
             {% else %}
               <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver tus ventas')">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
+                <img src="{% static 'barra_superior_index/images/ventasproductos.png' %}" alt="Mis Ventas (Productos)" class="icon icon-punto-de-venta" width="28" height="28" />
                 <span>Mis Ventas (Productos)</span>
               </a>
             {% endif %}
           </li>
           <li class="nav-item">
             {% if user_info.is_authenticated %}
-              <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasServiciosVentasCollapse" aria-expanded="false" aria-controls="offcanvasServiciosVentasCollapse" style="box-shadow:none;">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
+              <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasServiciosVentasCollapse" aria-expanded="false" aria-controls="#offcanvasServiciosVentasCollapse" style="box-shadow:none;">
+                <img src="{% static 'barra_superior_index/images/sale.png' %}" alt="Mis Ventas (Servicios)" class="icon icon-venta-servicio" width="28" height="28" />
                 <span>Mis Ventas (Servicios)</span>
                 <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
               </button>
@@ -262,7 +266,7 @@
               </div>
             {% else %}
               <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver tus ventas de servicios')">
-                <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#chart"></use></svg>
+                <img src="{% static 'barra_superior_index/images/sale.png' %}" alt="Mis Ventas (Servicios)" class="icon icon-venta-servicio" width="28" height="28" />
                 <span>Mis Ventas (Servicios)</span>
               </a>
             {% endif %}
@@ -270,9 +274,7 @@
           <li class="nav-item">
             {% if user_info.is_authenticated %}
               <button class="nav-link d-flex align-items-center gap-3 w-100 text-start border-0 bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#offcanvasReportesCollapse" aria-expanded="false" aria-controls="offcanvasReportesCollapse" style="box-shadow:none;">
-                <svg width="24" height="24" viewBox="0 0 24 24">
-                  <path fill="currentColor" d="M3 13h2v8H3zm4-6h2v14H7zm4-6h2v20h-2zm4 2h2v18h-2zm4 5h2v13h-2z"/>
-                </svg>
+                <img src="{% static 'barra_superior_index/images/reporte.png' %}" alt="Reportes" class="icon icon-reporte" width="28" height="28" />
                 <span>Reportes</span>
                 <svg width="16" height="16" class="ms-auto" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 6l6 6l6-6"/></svg>
               </button>
@@ -284,16 +286,14 @@
               </div>
             {% else %}
               <a href="#" class="nav-link d-flex align-items-center gap-3" onclick="alert('Debes iniciar sesión para ver los reportes')">
-                <svg width="24" height="24" viewBox="0 0 24 24">
-                  <path fill="currentColor" d="M3 13h2v8H3zm4-6h2v14H7zm4-6h2v20h-2zm4 2h2v18h-2zm4 5h2v13h-2z"/>
-                </svg>
+                <img src="{% static 'barra_superior_index/images/reporte.png' %}" alt="Reportes" class="icon icon-reporte" width="28" height="28" />
                 <span>Reportes</span>
               </a>
             {% endif %}
           </li>
           <li class="nav-item">
-            <a href="#" class="nav-link d-flex align-items-center gap-3">
-              <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#user"></use></svg>
+              <a href="#" class="nav-link d-flex align-items-center gap-3">
+              <svg class="icon icon-user" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#user"></use></svg>
               <span>Mi cuenta / Perfil</span>
             </a>
           </li>
@@ -326,7 +326,7 @@
               <div class="col-11 col-md-11">
                 <form id="search-form" class="text-center" action="/ecommerce/busquedad/" method="get">
                   <div class="d-flex align-items-center" style="gap: 0.5rem;">
-                    <input type="text" name="query" class="form-control border-0 rounded-pill ps-2" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar" style="font-size:1.1rem; min-width:220px; max-width:100%; height:40px; color:#000;">
+                    <input type="text" name="query"  placeholder="¿Qué necesitas buscar?" aria-label="Buscar" style="font-size:1.1rem; min-width:220px; max-width:100%; height:40px; color:#000;">
                     <button class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" type="submit" style="height:40px; width:40px; padding:0; background-color: #0d6efd;">
                       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M21.71 20.29L18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 7-7a7 7 0 0 1-7 7Z"/></svg>
                     </button>
@@ -338,15 +338,22 @@
           </div>
 
           <div class="col-lg-4">
-            <ul class="navbar-nav list-unstyled d-flex flex-row gap-3 gap-lg-5 justify-content-center flex-wrap align-items-center mb-0 fw-bold text-uppercase text-dark py-0 my-0">
+            <ul class="navbar-nav list-unstyled d-flex flex-row gap-3 gap-lg-5 justify-content-center flex-wrap align-items-center mb-0 fw-normal text-uppercase text-dark py-0 my-0">
               <li class="nav-item active">
-                <a href="{% url 'index' %}" class="nav-link">Inicio</a>
+                <a href="{% url 'index' %}" class="nav-link d-flex align-items-center">
+                  <span>Inicio</span>
+                </a>
               </li>
               <li class="nav-item active">
-                <a href="{% url 'busquedad' %}?tipo=productos" class="nav-link">Productos</a>
+                <a href="{% url 'busquedad' %}?tipo=productos" class="nav-link d-flex align-items-center">
+                  <span>Productos</span>
+                </a>
               </li>
               <li class="nav-item active">
-                <a href="{% url 'busquedad' %}?tipo=servicios" class="nav-link" id="serviciosBtn">Servicios</a>
+                <a href="{% url 'busquedad' %}?tipo=servicios" class="nav-link d-flex align-items-center" id="serviciosBtn">
+                  <!-- Usamos el símbolo service definido en el <defs> (si está disponible) -->
+                  <span>Servicios</span>
+                </a>
               </li>
               
              
@@ -398,8 +405,10 @@
               </li>
               <li>
                 {% if user_info.is_authenticated %}
-                  <a href="{% url 'gestion_servicio' %}" class="p-2 mx-1" title="Mis Solicitudes">
-                    <svg width="24" height="24"><use xlink:href="#service"></use></svg>
+                  <a href="{% url 'gestion_servicio' %}" class="p-2 mx-1 mis-servicios-link" title="Mis Solicitudes">
+                    <svg class="mis-servicios-link" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path fill="currentColor" d="M10,2H14A2,2 0 0,1 16,4V6H20A2,2 0 0,1 22,8V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V8A2,2 0 0,1 4,6H8V4A2,2 0 0,1 10,2M14,6V4H10V6H14Z"/>
+                    </svg>
                   </a>
                 {% else %}
                   <a href="#" class="p-2 mx-1" onclick="alert('Debes iniciar sesión para ver tus solicitudes')" title="Mis Solicitudes">
@@ -433,7 +442,6 @@
                     <span class="badge bg-success">{{ user_info.empresa_nombre }}</span>
                   </p>
                 {% else %}
-                  <p class="mb-0"><strong>Empresa asociada:</strong> <span class="text-muted">Sin empresa</span></p>
                   {% endif %}
               </div>
               <style>
@@ -549,6 +557,185 @@
 
 <!-- Estilos para el icono de notificaciones dinámico -->
 <style>
+/* Color y tamaño para iconos dentro del offcanvas (barra de hamburguesa) */
+#offcanvasNavbar .menu-list .nav-link svg,
+#offcanvasNavbar .menu-list button.nav-link svg {
+  color: #0d6efd; /* color principal (bootstrap primary) */
+  fill: currentColor; /* asegura que los paths usen currentColor */
+  width: 20px;
+  height: 20px;
+}
+
+#offcanvasNavbar .menu-list .nav-link:hover svg,
+#offcanvasNavbar .menu-list button.nav-link:hover svg,
+#offcanvasNavbar .menu-list .nav-link:hover img.icon-punto-de-venta,
+#offcanvasNavbar .menu-list button.nav-link:hover img.icon-punto-de-venta,
+#offcanvasNavbar .menu-list .nav-link:hover img.icon-venta-servicio,
+#offcanvasNavbar .menu-list button.nav-link:hover img.icon-venta-servicio,
+#offcanvasNavbar .menu-list .nav-link:hover img.icon-reporte,
+#offcanvasNavbar .menu-list button.nav-link:hover img.icon-reporte,
+#offcanvasNavbar .menu-list .nav-link:hover img.icon-caja,
+#offcanvasNavbar .menu-list button.nav-link:hover img.icon-caja,
+#offcanvasNavbar .menu-list .nav-link:hover img.icon-categoria,
+#offcanvasNavbar .menu-list button.nav-link:hover img.icon-categoria {
+  color: #0b5ed7; /* color hover */
+  transform: scale(1.05);
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+
+/* Per-icon semantic colors for offcanvas (home/location/box/service) */
+/* Per-icon semantic colors for offcanvas (home/location/box/service)
+   Use more specific selectors and !important so these colors apply by default
+   (they override the generic svg rule that sets blue). */
+#offcanvasNavbar .menu-list .nav-link svg.icon-home,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-home,
+#offcanvasNavbar .menu-list svg.icon-home {
+  color: #000000 !important; /* Inicio - negro */
+  fill: #000000 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-location,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-location,
+#offcanvasNavbar .menu-list svg.icon-location {
+  color: #dc3545 !important; /* Mis Sucursales - rojo */
+  fill: #dc3545 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-box,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-box,
+#offcanvasNavbar .menu-list svg.icon-box {
+  color: #0d6efd !important; /* Mis Productos - azul (primary) */
+  fill: #0d6efd !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-service,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-service,
+#offcanvasNavbar .menu-list svg.icon-service {
+  color: #6c757d !important; /* Servicios - gris */
+  fill: #6c757d !important;
+}
+
+/* Additional offcanvas icons: favoritos, carrito, pedidos, reportes, usuario */
+#offcanvasNavbar .menu-list .nav-link svg.icon-heart,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-heart,
+#offcanvasNavbar .menu-list svg.icon-heart {
+  color: #dc3545 !important; /* Favoritos - rojo */
+  fill: #dc3545 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-cart,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-cart,
+#offcanvasNavbar .menu-list svg.icon-cart {
+  color: #198754 !important; /* Carrito - success/verde */
+  fill: #198754 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-package,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-package,
+#offcanvasNavbar .menu-list svg.icon-package {
+  color: #fd7e14 !important; /* Pedidos - naranja (warning) */
+  fill: #fd7e14 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-chart,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-chart,
+#offcanvasNavbar .menu-list svg.icon-chart {
+  color: #0d6efd !important; /* Reportes/Ventas - azul */
+  fill: #0d6efd !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-shopping-bag,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-shopping-bag,
+#offcanvasNavbar .menu-list svg.icon-shopping-bag {
+  color: #fd7e14 !important; /* Productos - naranja (same as package) */
+  fill: #fd7e14 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-delivery,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-delivery,
+#offcanvasNavbar .menu-list svg.icon-delivery {
+  color: #0d6efd !important; /* Servicios - azul (same as chart) */
+  fill: #0d6efd !important;
+}
+#offcanvasNavbar .menu-list .nav-link img.icon-punto-de-venta,
+#offcanvasNavbar .menu-list button.nav-link img.icon-punto-de-venta,
+#offcanvasNavbar .menu-list img.icon-punto-de-venta,
+#offcanvasNavbar .menu-list .nav-link img.icon-venta-servicio,
+#offcanvasNavbar .menu-list button.nav-link img.icon-venta-servicio,
+#offcanvasNavbar .menu-list img.icon-venta-servicio,
+#offcanvasNavbar .menu-list .nav-link img.icon-reporte,
+#offcanvasNavbar .menu-list button.nav-link img.icon-reporte,
+#offcanvasNavbar .menu-list img.icon-reporte,
+#offcanvasNavbar .menu-list .nav-link img.icon-caja,
+#offcanvasNavbar .menu-list button.nav-link img.icon-caja,
+#offcanvasNavbar .menu-list img.icon-caja,
+#offcanvasNavbar .menu-list .nav-link img.icon-categoria,
+#offcanvasNavbar .menu-list button.nav-link img.icon-categoria,
+#offcanvasNavbar .menu-list img.icon-categoria {
+  width: 28px !important;
+  height: 28px !important;
+  object-fit: contain;
+  display: inline-block;
+}
+#offcanvasNavbar .menu-list .nav-link svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list button.nav-link svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list svg.mis-servicios-offcanvas {
+  color: #20c997 !important; /* Mis Servicios (offcanvas) - teal */
+  fill: #20c997 !important;
+}
+
+/* Preserve hover color for the offcanvas mis-servicios icon */
+#offcanvasNavbar .menu-list .nav-link:hover svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.mis-servicios-offcanvas {
+  color: #20c997 !important;
+  fill: #20c997 !important;
+}
+#offcanvasNavbar .menu-list .nav-link svg.icon-user,
+#offcanvasNavbar .menu-list button.nav-link svg.icon-user,
+#offcanvasNavbar .menu-list svg.icon-user {
+  color: #6c757d !important; /* Usuario - gris */
+  fill: #6c757d !important;
+}
+
+/* Preserve per-icon color on hover (override generic hover) */
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-home,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-home { color: #000000 !important; fill: #000000 !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-location,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-location { color: #dc3545 !important; fill: #dc3545 !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-box,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-box { color: #0d6efd !important; fill: #0d6efd !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-service,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-service { color: #6c757d !important; fill: #6c757d !important; }
+/* Hover preservation for additional icons */
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-heart,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-heart { color: #dc3545 !important; fill: #dc3545 !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-cart,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-cart { color: #198754 !important; fill: #198754 !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-package,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-package { color: #fd7e14 !important; fill: #fd7e14 !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-chart,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-chart { color: #0d6efd !important; fill: #0d6efd !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-shopping-bag,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-shopping-bag { color: #fd7e14 !important; fill: #fd7e14 !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-delivery,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-delivery { color: #0d6efd !important; fill: #0d6efd !important; }
+#offcanvasNavbar .menu-list .nav-link:hover svg.icon-user,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.icon-user { color: #6c757d !important; fill: #6c757d !important; }
+
+/* High-specificity override to ensure the offcanvas 'Mis Servicios' icon keeps its color
+   on hover/focus/active even if more generic rules (e.g. svg.icon-service:hover) appear
+   later in the stylesheet. This is placed here (after the generic hover rules) and
+   uses !important to guarantee precedence. */
+#offcanvasNavbar .menu-list .nav-link:hover svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list button.nav-link:hover svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list .nav-link:focus svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list button.nav-link:focus svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list .nav-link:active svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list button.nav-link:active svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list .nav-link svg.mis-servicios-offcanvas,
+#offcanvasNavbar .menu-list button.nav-link svg.mis-servicios-offcanvas {
+  color: #20c997 !important; /* teal */
+  fill: #20c997 !important;
+  stroke: #20c997 !important;
+}
+
+/* Mejorar contraste en tamaños pequeños y asegurar que los iconos heredien color */
+#offcanvasNavbar .menu-list .nav-link span {
+  color: inherit;
+}
+
 @keyframes bellShake {
   0%, 100% { transform: rotate(0deg); }
   10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
@@ -660,6 +847,30 @@ a[title="Mis Notificaciones"]:hover svg {
   90% { transform: rotate(0deg) scale(1); }
 }
 
+/* Estilos para el menú deslizante */
+/* Estilos para el menú deslizante */
+#offcanvasNavbar .nav-link,
+#offcanvasNavbar .nav-link span,
+#offcanvasNavbar .menu-list .nav-link,
+#offcanvasNavbar .menu-list .nav-link span {
+  /* Reducido de 800 a 600 para evitar texto demasiado pesado */
+  font-weight: 600 !important;
+  /* Ajuste ligero del tamaño para que no se vea grande en pantallas pequeñas */
+  font-size: 0.95rem;
+  font-family: 'Nunito', sans-serif !important;
+}
+
+/* Forzar peso normal (no negrita) en los enlaces de la barra superior (Inicio / Productos / Servicios) */
+header .navbar-nav.list-unstyled.d-flex.flex-row .nav-link,
+header .navbar-nav.list-unstyled.d-flex.flex-row .nav-link span,
+header .navbar-nav.list-unstyled.d-flex.flex-row li.nav-item > a.nav-link {
+  font-weight: 800 !important;
+  font-family: 'Nunito', sans-serif !important;
+  /* Reducir un poco el tamaño y el padding para que se vean más pequeños junto al input de búsqueda */
+  font-size: 0.85rem !important;
+  padding: 0.15rem 0.4rem !important;
+}
+
 /* Efecto de ondas alrededor del icono */
 .notification-active::before {
   content: '';
@@ -700,6 +911,24 @@ a[title="Mis Notificaciones"]:hover svg {
     height: 60px;
     opacity: 0;
   }
+}
+
+/* Color específico para el icono 'Mis Servicios' en la barra hamburguesa (offcanvas) */
+.mis-servicios-link,
+.mis-servicios-link svg,
+.mis-servicios-link svg use,
+.mis-servicios-link svg path {
+  color: #198754 !important; /* verde - success */
+  fill: #198754 !important;
+  stroke: #198754 !important;
+}
+
+/* Preservar el color en hover */
+.mis-servicios-link:hover,
+.mis-servicios-link:hover svg,
+#offcanvasNavbar .menu-list .nav-link:hover .mis-servicios-link {
+  color: #198754 !important;
+  fill: #198754 !important;
 }
 </style>
 

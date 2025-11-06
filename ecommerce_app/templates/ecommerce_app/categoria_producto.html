@@ -169,6 +169,21 @@
     
   <!-- El JavaScript específico para este template fue movido a
      static/categoria_producto/js/main.js -->
+    <!-- Último recurso: anular pesos de fuente si siguen viéndose muy negritas -->
+    <style>
+      /* Normalizamos el peso de la mayoría del contenido a 400 para evitar apariencia muy negrita */
+      body, .container, .content, .form, .card, .card-body, .accordion-body, .glass-card, .category-card, .category-content, .form-control, label, p, span, a, li {
+        font-weight: 400 !important;
+      }
+      /* Mantener encabezados y títulos legibles (semibold) */
+      body h1, body h2, body h3, body h4, body h5, body h6, .accordion-title, .category-title {
+        font-weight: 600 !important;
+      }
+      /* Asegurar que la navegación siga siendo semibold para visibilidad */
+      .navbar .nav-link, .offcanvas .nav-link, .navbar-nav .nav-link {
+        font-weight: 600 !important;
+      }
+    </style>
 
   </body>
 </html>

@@ -84,9 +84,30 @@
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
       }
       
-      .product-card .card-img-top {
-        object-fit: contain;
+      /* Responsive image utilities used across the page */
+      .hero-img {
+        width: 100%;
+        height: 60vh; /* large hero height */
+        object-fit: cover;
+        display: block;
+      }
+
+      .category-thumb {
+        width: 100%;
         height: 180px;
+        object-fit: cover;
+        display: block;
+      }
+
+      .product-thumb {
+        width: 100%;
+        height: 180px;
+        object-fit: contain;
+        display: block;
+      }
+
+      /* Keep hover transform for product images */
+      .product-thumb {
         transition: transform 0.3s ease;
       }
       
@@ -99,7 +120,7 @@
         font-weight: 500;
         min-height: 40px;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+
         -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -162,6 +183,43 @@
         background-color: #0b5ed7;
         color: white;
         transform: translateY(-2px);
+      }
+
+      /* Footer logo responsive */
+      .footer-menu img {
+        max-width: 160px;
+        height: auto;
+      }
+
+      /* Media queries: adjust sizes on small screens */
+      @media (max-width: 767.98px) {
+        .hero-img {
+          height: 40vh;
+        }
+        .category-thumb {
+          height: 140px;
+        }
+        .product-thumb {
+          height: 120px;
+        }
+        .category-card {
+          min-height: 260px;
+        }
+      }
+
+      @media (max-width: 479.98px) {
+        .hero-img {
+          height: 30vh;
+        }
+        .category-thumb {
+          height: 120px;
+        }
+        .product-thumb {
+          height: 100px;
+        }
+        .section-title:after {
+          width: 35%;
+        }
       }
     </style>
   </head>
@@ -992,27 +1050,28 @@
     <section class="py-4">
       <div class="container-lg">
         <h2 class="my-4">La gente también está buscando</h2>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
-        <a href="#" class="btn btn-blue me-2 mb-2">prueba</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Laptop</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Celular</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Tablet</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Televisor</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Auriculares</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Cámara</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Smartwatch</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Consola</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Router</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Monitor</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Teclado</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Mouse</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Impresora</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Camiseta</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Zapatos</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Pantalones</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Reloj</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Bolso</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Servicio Técnico</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Envíos Express</a>
+        <a href="#" class="btn btn-blue me-2 mb-2">Mantenimiento PC</a>
+
       </div>
     </section>
 

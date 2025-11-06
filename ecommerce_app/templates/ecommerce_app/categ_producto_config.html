@@ -1,5 +1,5 @@
 {% load static %}
-    {% include 'ecommerce_app/barra_superior_operaciones.html' %}
+{% include 'ecommerce_app/barra_superior_operaciones.html' %}
 
 <!DOCTYPE html>
 <html class="no-js" lang="zxx">
@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="{% static 'categ_producto_config/css/modern-design.css' %}" />
     <link rel="stylesheet" href="{% static 'categ_producto_config/css/custom-styles.css' %}">
     </head>
-<body>
+<body class="categ-config">
     
     <!-- Encabezado Principal -->
     <div class="container-fluid">
@@ -270,6 +270,27 @@
     <script src="{% static 'categ_producto_config/js/main.js' %}?v=9"></script>
     <script src="{% static 'categ_producto_config/js/modal.js' %}?v=2"></script>
     <script src="{% static 'categ_producto_config/js/filtrado.js' %}"></script>
+</body>
+
+<!-- Último recurso: anular pesos de fuente si siguen viéndose muy negritas -->
+<style>
+    /* Muy específico para esta página: todo en 400 por defecto */
+    body.categ-config, body.categ-config .container, body.categ-config .glass-card, body.categ-config .stats-container, body.categ-config .category-grid, body.categ-config .category-card, body.categ-config .category-content, body.categ-config .modern-input, body.categ-config .modern-btn, body.categ-config label, body.categ-config p, body.categ-config span, body.categ-config a, body.categ-config li {
+        font-weight: 400 !important;
+    }
+
+    /* Encabezados y títulos importantes en semibold */
+    body.categ-config h1, body.categ-config h2, body.categ-config h3, body.categ-config .category-title, body.categ-config .stats-number, body.categ-config .stats-label {
+        font-weight: 600 !important;
+    }
+
+    /* Navegación localmente semibold (no tocar global nav) */
+    body.categ-config .navbar .nav-link, body.categ-config .offcanvas .nav-link, body.categ-config .navbar-nav .nav-link {
+        font-weight: 600 !important;
+    }
+
+    /* Si aún algo aparece tachado, copia aquí la regla activa que DevTools muestra (archivo:linea y selector) */
+</style>
 
 </body>
 

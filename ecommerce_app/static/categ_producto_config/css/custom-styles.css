@@ -115,7 +115,8 @@ body::after {
 
 .stats-number {
     font-size: 1.95rem;
-    font-weight: 700;
+    /* Reducido de 700 a 600 para evitar apariencia excesivamente negrita */
+    font-weight: 600;
     color: #0b57d0; /* color principal */
     letter-spacing: -0.5px;
     margin: 0;
@@ -172,3 +173,23 @@ body::after {
 
 /* Reducir margen superior si la barra superior es fija */
 .container-fluid { padding-top: 1rem; }
+
+/* ------------------ Overrides para reducir peso de fuente en configuración de categorías ------------------ */
+/* Normalizamos el peso de fuente en los contenedores principales para evitar texto demasiado negrita */
+/* NOTA: excluimos .stats-number/.stats-label aquí para evitar conflicto con reglas de título */
+.glass-card, .category-grid, .category-card, .category-content, .category-meta, .category-title, .category-type, .category-actions {
+    font-weight: 400 !important;
+}
+
+/* Encabezados y títulos con peso moderado para accesibilidad (estadísticas y títulos) */
+.category-title, .stats-number, .stats-label, .glass-card h1, .glass-card h2 {
+    font-weight: 600 !important;
+}
+
+/* Mantener botones semibold */
+.modern-btn, .action-btn {
+    font-weight: 600 !important;
+}
+
+/* Si aún ves texto muy pesado, podemos bajar los valores a 500 o aplicar selectores más específicos */
+
