@@ -266,6 +266,145 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Sección: Métodos de Pago (copiada y adaptada desde editar_perfil_empresa) -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingMetodos">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetodos" aria-expanded="false" aria-controls="collapseMetodos">
+                                            Métodos de Pago
+                                        </button>
+                                    </h2>
+                                    <div id="collapseMetodos" class="accordion-collapse collapse" aria-labelledby="headingMetodos" data-bs-parent="#userAccordion">
+                                        <div class="accordion-body">
+                                            <p class="small text-muted">Agrega o edita tus métodos de pago. Los campos visibles cambian según el tipo.</p>
+
+                                            <div id="metodosPagoContainer">
+                                                <!-- Transferencia -->
+                                                <div class="card mb-2 metodo-pago-item" data-id="{% if transferencia %}{{ transferencia.id_metodo }}{% endif %}">
+                                                    <div class="card-body p-3">
+                                                        <div class="row g-2 align-items-end">
+                                                            <div class="col-md-4">
+                                                                <label class="form-label">Tipo</label>
+                                                                <select class="form-select metodo-tipo" name="metodo_tipo">
+                                                                    <option value="transferencia" selected>Transferencia</option>
+                                                                    <option value="paypal">PayPal</option>
+                                                                    <option value="pago_movil">Pago Móvil</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Instrucciones</label>
+                                                                <input type="text" class="form-control metodo-instrucciones" value="{{ transferencia.instrucciones|default:'' }}">
+                                                            </div>
+                                                            <div class="col-md-2 text-end">
+                                                                <button type="button" class="btn btn-sm btn-success btn-guardar-metodo me-2">Guardar</button>
+                                                                <button type="button" class="btn btn-sm btn-danger btn-eliminar-metodo">Eliminar</button>
+                                                            </div>
+                                                            <div class="col-12 mt-2 campos-metodo">
+                                                                <div class="row">
+                                                                    <div class="col-md-6 campo-transferencia">
+                                                                        <label class="form-label">Nombre del Beneficiario</label>
+                                                                        <input class="form-control metodo-nombre_beneficiario" value="{{ transferencia.nombre_beneficiario|default:'' }}">
+                                                                    </div>
+                                                                    <div class="col-md-6 campo-transferencia campo-pago_movil">
+                                                                        <label class="form-label">Cuenta / Email / Teléfono</label>
+                                                                        <input class="form-control metodo-numero_cuenta" value="{{ transferencia.numero_cuenta|default:'' }}">
+                                                                    </div>
+                                                                    <div class="col-md-6 campo-transferencia campo-pago_movil mt-2">
+                                                                        <label class="form-label">Banco</label>
+                                                                        <input class="form-control metodo-banco" value="{{ transferencia.banco|default:'' }}">
+                                                                    </div>
+                                                                    <div class="col-md-6 campo-transferencia mt-2">
+                                                                        <label class="form-label">Tipo de Cuenta</label>
+                                                                        <input class="form-control metodo-tipo_cuenta" value="{{ transferencia.tipo_cuenta|default:'' }}">
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Pago Móvil -->
+                                                <div class="card mb-2 metodo-pago-item" data-id="{% if pago_movil %}{{ pago_movil.id_metodo }}{% endif %}">
+                                                    <div class="card-body p-3">
+                                                        <div class="row g-2 align-items-end">
+                                                            <div class="col-md-4">
+                                                                <label class="form-label">Tipo</label>
+                                                                <select class="form-select metodo-tipo" name="metodo_tipo">
+                                                                    <option value="transferencia">Transferencia</option>
+                                                                    <option value="paypal">PayPal</option>
+                                                                    <option value="pago_movil" selected>Pago Móvil</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Instrucciones</label>
+                                                                <input type="text" class="form-control metodo-instrucciones" value="{{ pago_movil.instrucciones|default:'' }}">
+                                                            </div>
+                                                            <div class="col-md-2 text-end">
+                                                                <button type="button" class="btn btn-sm btn-success btn-guardar-metodo me-2">Guardar</button>
+                                                                <button type="button" class="btn btn-sm btn-danger btn-eliminar-metodo">Eliminar</button>
+                                                            </div>
+                                                            <div class="col-12 mt-2 campos-metodo">
+                                                                <div class="row">
+                                                                    <div class="col-md-6 campo-pago_movil mt-2">
+                                                                        <label class="form-label">Identificador (Cédula/RIF/Teléfono)</label>
+                                                                        <input class="form-control metodo-identificador" value="{{ pago_movil.identificador|default:'' }}">
+                                                                    </div>
+                                                                    <div class="col-md-6 campo-transferencia campo-pago_movil mt-2">
+                                                                        <label class="form-label">Cuenta / Email / Teléfono</label>
+                                                                        <input class="form-control metodo-numero_cuenta" value="{{ pago_movil.numero_cuenta|default:'' }}">
+                                                                    </div>
+                                                                    <div class="col-md-6 campo-transferencia campo-pago_movil mt-2">
+                                                                        <label class="form-label">Banco</label>
+                                                                        <input class="form-control metodo-banco" value="{{ pago_movil.banco|default:'' }}">
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- PayPal -->
+                                                <div class="card mb-2 metodo-pago-item" data-id="{% if paypal %}{{ paypal.id_metodo }}{% endif %}">
+                                                    <div class="card-body p-3">
+                                                        <div class="row g-2 align-items-end">
+                                                            <div class="col-md-4">
+                                                                <label class="form-label">Tipo</label>
+                                                                <select class="form-select metodo-tipo" name="metodo_tipo">
+                                                                    <option value="transferencia">Transferencia</option>
+                                                                    <option value="paypal" selected>PayPal</option>
+                                                                    <option value="pago_movil">Pago Móvil</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Instrucciones</label>
+                                                                <input type="text" class="form-control metodo-instrucciones" value="{{ paypal.instrucciones|default:'' }}">
+                                                            </div>
+                                                            <div class="col-md-2 text-end">
+                                                                <button type="button" class="btn btn-sm btn-success btn-guardar-metodo me-2">Guardar</button>
+                                                                <button type="button" class="btn btn-sm btn-danger btn-eliminar-metodo">Eliminar</button>
+                                                            </div>
+                                                            <div class="col-12 mt-2 campos-metodo">
+                                                                <div class="row">
+                                                                    <div class="col-md-6 campo-transferencia campo-pago_movil">
+                                                                        <label class="form-label">Cuenta / Email asociado a PayPal</label>
+                                                                        <input class="form-control metodo-numero_cuenta" value="{{ paypal.numero_cuenta|default:'' }}">
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div id="metodosGuardadosList" class="mt-2"></div>
+                                            <div class="mt-3">
+                                                <button type="button" id="btnAgregarMetodo" class="btn btn-outline-primary btn-sm"><i class="fas fa-plus me-1"></i>Agregar Método</button>
+                                            </div>
+
+                                            <input type="hidden" id="metodos_pago_json" name="metodos_pago_json" value="">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-2">
@@ -349,5 +488,198 @@
         });
     });
     </script>
+<!-- Métodos de Pago JS (copiado de editar_perfil_empresa) -->
+<script>
+// Gestión de Métodos de Pago en el formulario
+window.saveMetodoUrl = window.saveMetodoUrl || "{% url 'guardar_metodo_pago_ajax' %}";
+if (!window.csrfToken) {
+    window.csrfToken = (document.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '';
+}
+
+async function guardarMetodoAjax(item) {
+    try {
+        const payload = {
+            id: item.dataset.id || null,
+            tipo: item.querySelector('.metodo-tipo')?.value || '',
+            instrucciones: item.querySelector('.metodo-instrucciones')?.value || '',
+            nombre_beneficiario: item.querySelector('.metodo-nombre_beneficiario')?.value || '',
+            numero_cuenta: item.querySelector('.metodo-numero_cuenta')?.value || '',
+            banco: item.querySelector('.metodo-banco')?.value || '',
+            tipo_cuenta: item.querySelector('.metodo-tipo_cuenta')?.value || '',
+            identificador: item.querySelector('.metodo-identificador')?.value || ''
+        };
+
+        const resp = await fetch(window.saveMetodoUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': window.csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (data && data.success) {
+            if (data.id_metodo) item.dataset.id = data.id_metodo;
+            item.classList.add('metodo-guardado');
+            serializarMetodos();
+            try {
+                item.style.display = 'none';
+                const savedList = document.getElementById('metodosGuardadosList');
+                if (savedList) {
+                    const tipoLabel = (payload.tipo || '').replace('_', ' ');
+                    const account = payload.numero_cuenta || payload.identificador || '';
+                    const entry = document.createElement('div');
+                    entry.className = 'saved-metodo d-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+                    entry.dataset.id = data.id_metodo || '';
+                    entry.innerHTML = `<div><strong>${tipoLabel}</strong>${account ? ' — ' + account : ''}</div><div><button type="button" class="btn btn-sm btn-link ver-metodo">Ver/Editar</button></div>`;
+                    savedList.appendChild(entry);
+                    entry.querySelector('.ver-metodo').addEventListener('click', function () {
+                        item.classList.remove('metodo-guardado');
+                        item.style.display = 'block';
+                        entry.remove();
+                        item.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    });
+                }
+            } catch (err) {
+                console.warn('No se pudo mover el método a la lista guardada', err);
+            }
+
+            Swal.fire({icon: 'success', title: data.message || 'Método guardado', timer: 900, showConfirmButton: false});
+        } else {
+            let extra = '';
+            if (data && data.errors) {
+                extra = Object.values(data.errors).join('\n');
+            }
+            Swal.fire({icon: 'error', title: 'Error', text: ((data && data.message) || 'No se pudo guardar el método') + (extra ? '\n' + extra : '')});
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire({icon: 'error', title: 'Error', text: 'Error de red o servidor al guardar método'});
+    }
+}
+
+function toggleCamposPorTipo(container) {
+    const tipo = container.querySelector('.metodo-tipo')?.value || '';
+    const todosCampos = container.querySelectorAll('.campos-metodo .row > div');
+    todosCampos.forEach(el => {
+        let mostrar = false;
+        if (el.classList.contains('campo-transferencia') && (tipo === 'transferencia' || tipo === 'paypal')) mostrar = true;
+        if (el.classList.contains('campo-pago_movil') && tipo === 'pago_movil') mostrar = true;
+        el.style.display = mostrar ? 'block' : 'none';
+    });
+}
+
+function serializarMetodos() {
+    const container = document.getElementById('metodosPagoContainer');
+    if (!container) return;
+    const items = Array.from(container.querySelectorAll('.metodo-pago-item:not(.metodo-guardado)'));
+    const lista = items.map(item => {
+        const id = item.dataset.id || null;
+        const tipo = item.querySelector('.metodo-tipo')?.value || '';
+        const instrucciones = item.querySelector('.metodo-instrucciones')?.value || '';
+        const nombre_beneficiario = item.querySelector('.metodo-nombre_beneficiario')?.value || '';
+        const numero_cuenta = item.querySelector('.metodo-numero_cuenta')?.value || '';
+        const banco = item.querySelector('.metodo-banco')?.value || '';
+        const tipo_cuenta = item.querySelector('.metodo-tipo_cuenta')?.value || '';
+        const identificador = item.querySelector('.metodo-identificador')?.value || '';
+        return { id: id, tipo: tipo, instrucciones: instrucciones, nombre_beneficiario: nombre_beneficiario, numero_cuenta: numero_cuenta, banco: banco, tipo_cuenta: tipo_cuenta, identificador: identificador };
+    });
+    const hidden = document.getElementById('metodos_pago_json');
+    if (hidden) hidden.value = JSON.stringify(lista);
+}
+
+function crearBloqueMetodo(data) {
+    const div = document.createElement('div');
+    div.className = 'card mb-2 metodo-pago-item';
+    if (data && data.id) div.dataset.id = data.id;
+    div.innerHTML = `
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-select metodo-tipo" name="metodo_tipo">
+                        <option value="transferencia">Transferencia</option>
+                        <option value="paypal">PayPal</option>
+                        <option value="pago_movil">Pago Móvil</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Instrucciones</label>
+                    <input type="text" class="form-control metodo-instrucciones" value="${(data && data.instrucciones) || ''}">
+                </div>
+                <div class="col-md-2 text-end">
+                    <button type="button" class="btn btn-sm btn-success btn-guardar-metodo me-2">Guardar</button>
+                    <button type="button" class="btn btn-sm btn-danger btn-eliminar-metodo">Eliminar</button>
+                </div>
+                <div class="col-12 mt-2 campos-metodo">
+                    <div class="row">
+                        <div class="col-md-6 campo-transferencia">
+                            <label class="form-label">Nombre del Beneficiario</label>
+                            <input class="form-control metodo-nombre_beneficiario" value="${(data && data.nombre_beneficiario) || ''}">
+                        </div>
+                        <div class="col-md-6 campo-transferencia campo-pago_movil">
+                            <label class="form-label">Cuenta / Email / Tlf </label>
+                            <input class="form-control metodo-numero_cuenta" value="${(data && data.numero_cuenta) || ''}">
+                        </div>
+                        <div class="col-md-6 campo-transferencia campo-pago_movil mt-2">
+                            <label class="form-label">Banco</label>
+                            <input class="form-control metodo-banco" value="${(data && data.banco) || ''}">
+                        </div>
+                        <div class="col-md-6 campo-transferencia mt-2">
+                            <label class="form-label">Tipo de Cuenta</label>
+                            <input class="form-control metodo-tipo_cuenta" value="${(data && data.tipo_cuenta) || ''}">
+                        </div>
+                        <div class="col-md-6 campo-pago_movil mt-2">
+                            <label class="form-label">Identificador (Cédula/RIF/Teléfono)</label>
+                            <input class="form-control metodo-identificador" value="${(data && data.identificador) || ''}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    div.querySelector('.metodo-tipo').addEventListener('change', function () { toggleCamposPorTipo(div); });
+    const delBtn = div.querySelector('.btn-eliminar-metodo');
+    if (delBtn) delBtn.addEventListener('click', function () { div.remove(); });
+    const saveBtn = div.querySelector('.btn-guardar-metodo');
+    if (saveBtn) saveBtn.addEventListener('click', function () { guardarMetodoAjax(div); });
+    setTimeout(() => toggleCamposPorTipo(div), 0);
+    return div;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const cont = document.getElementById('metodosPagoContainer');
+    const btnAgregar = document.getElementById('btnAgregarMetodo');
+    if (btnAgregar && cont) {
+        btnAgregar.addEventListener('click', function () {
+            const nuevo = crearBloqueMetodo(null);
+            cont.appendChild(nuevo);
+            nuevo.scrollIntoView({behavior: 'smooth', block: 'center'});
+        });
+    }
+
+    if (cont) {
+        const existentes = cont.querySelectorAll('.metodo-pago-item');
+        existentes.forEach(item => {
+            const select = item.querySelector('.metodo-tipo');
+            const del = item.querySelector('.btn-eliminar-metodo');
+            const save = item.querySelector('.btn-guardar-metodo');
+            if (select) select.addEventListener('change', () => toggleCamposPorTipo(item));
+            if (del) del.addEventListener('click', () => item.remove());
+            if (save) save.addEventListener('click', () => guardarMetodoAjax(item));
+            toggleCamposPorTipo(item);
+        });
+    }
+
+    const form = document.getElementById('editarPerfilForm');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            serializarMetodos();
+        }, {capture: true});
+    }
+});
+</script>
     </body>
     </html>

@@ -4423,11 +4423,32 @@ def perfil_empresa(request):
             serv.primera_imagen = primera_imagen
             servicios_recientes.append(serv)
     
+    # Agregar métodos de pago de la empresa en sesión (si hay una empresa autenticada en sesión)
+    session_metodos_pago = []
+    try:
+        if is_user_authenticated(request) and request.session.get('account_type') == 'empresa':
+            sess_empresa = get_current_user(request)
+            if sess_empresa:
+                from django.db.models import Case, When, Value, IntegerField
+                from .models import MetodoPago
+                # Orden deseado: transferencia, pago_movil, paypal
+                ordering = Case(
+                    When(tipo='transferencia', then=Value(0)),
+                    When(tipo='pago_movil', then=Value(1)),
+                    When(tipo='paypal', then=Value(2)),
+                    default=Value(3),
+                    output_field=IntegerField()
+                )
+                session_metodos_pago = list(MetodoPago.objects.filter(empresa=sess_empresa, activo=True).order_by(ordering, 'fecha_creacion'))
+    except Exception:
+        session_metodos_pago = []
+
     return render(request, 'ecommerce_app/perfil_empresa.html', {
         'user_info': user_info,
         'empresa': empresa_obj,
         'productos_recientes': productos_recientes,
-        'servicios_recientes': servicios_recientes
+        'servicios_recientes': servicios_recientes,
+        'session_metodos_pago': session_metodos_pago
     })
 
 
@@ -6204,9 +6225,21 @@ def perfil_usuario(request):
             usuario_obj = usuario.objects.first()
             
     
+    # Intentar cargar metodos de pago asociados al usuario mostrado (solo activos)
+    metodos_pago = []
+    try:
+        from .models import MetodoPago
+        if usuario_obj:
+            metodos_pago_qs = MetodoPago.objects.filter(usuario=usuario_obj, activo=True)
+            # Convertir a lista simple para pasar al template
+            metodos_pago = list(metodos_pago_qs)
+    except Exception:
+        metodos_pago = []
+
     return render(request, 'ecommerce_app/perfil_usuario.html', {
         'user_info': user_info,
-        'usuario': usuario_obj
+        'usuario': usuario_obj,
+        'metodos_pago': metodos_pago
     })
 
 
@@ -13500,7 +13533,85 @@ def editar_perfil_usuario(request, usuario_id):
                     resp['avatar_chatbot'] = usuario_obj.avatar_chatbot or ''
                 except Exception:
                     resp['avatar_chatbot'] = ''
-                return JsonResponse(resp)
+                    # También procesar metodos de pago si vienen en el formulario (compatibilidad con UI nueva)
+                    metodos_debug_extra = None
+                    try:
+                        metodos_json = request.POST.get('metodos_pago_json')
+                        if metodos_json:
+                            import json
+                            from .models import MetodoPago
+
+                            metodos_procesados = 0
+                            metodos_creados = 0
+                            metodos_actualizados = 0
+                            metodos_eliminados = 0
+
+                            try:
+                                metodos_list = json.loads(metodos_json) if metodos_json else []
+                                if not isinstance(metodos_list, list):
+                                    metodos_list = []
+                            except Exception:
+                                metodos_list = []
+
+                            existentes = MetodoPago.objects.filter(usuario=usuario_obj)
+                            existentes_map = {str(m.id_metodo): m for m in existentes}
+                            recibidos_ids = []
+
+                            for m in metodos_list:
+                                try:
+                                    metodos_procesados += 1
+                                    mid = m.get('id')
+                                    if mid and str(mid) in existentes_map:
+                                        mp = existentes_map[str(mid)]
+                                        metodos_actualizados += 1
+                                    else:
+                                        mp = MetodoPago(usuario=usuario_obj)
+                                        metodos_creados += 1
+
+                                    mp.tipo = m.get('tipo') or (mp.tipo if hasattr(mp, 'tipo') else '')
+                                    mp.activo = True
+                                    mp.instrucciones = m.get('instrucciones') or ''
+                                    mp.nombre_beneficiario = m.get('nombre_beneficiario') or ''
+                                    mp.numero_cuenta = m.get('numero_cuenta') or ''
+                                    mp.banco = m.get('banco') or ''
+                                    mp.tipo_cuenta = m.get('tipo_cuenta') or ''
+                                    mp.identificador = m.get('identificador') or ''
+                                    dato_add = m.get('datos_adicionales')
+                                    if dato_add:
+                                        try:
+                                            mp.datos_adicionales = dato_add
+                                        except Exception:
+                                            mp.datos_adicionales = None
+
+                                    mp.save()
+                                    if mp.id_metodo:
+                                        recibidos_ids.append(mp.id_metodo)
+                                except Exception:
+                                    # continuar con los demás métodos en caso de fallo individual
+                                    logger.exception('Error procesando metodo de pago para usuario')
+
+                            if recibidos_ids:
+                                qs_before = MetodoPago.objects.filter(usuario=usuario_obj)
+                                to_delete_qs = qs_before.exclude(id_metodo__in=recibidos_ids)
+                                metodos_eliminados = to_delete_qs.count()
+                                to_delete_qs.delete()
+
+                            metodos_debug_extra = {
+                                'metodos_procesados': metodos_procesados,
+                                'metodos_creados': metodos_creados,
+                                'metodos_actualizados': metodos_actualizados,
+                                'metodos_eliminados': metodos_eliminados
+                            }
+                    except Exception:
+                        logger.exception('Error procesando metodos_pago_json en editar_perfil_usuario')
+
+                    if metodos_debug_extra:
+                        try:
+                            resp.update(metodos_debug_extra)
+                        except Exception:
+                            pass
+
+                    return JsonResponse(resp)
 
             return redirect('perfil_usuario')
             
@@ -13513,7 +13624,18 @@ def editar_perfil_usuario(request, usuario_id):
             
     else:
         # GET request - mostrar formulario
-        return render(request, 'ecommerce_app/editar_perfil_usuario.html', {'usuario': usuario_obj, 'user_info': user_info})
+        # Preload one MetodoPago per tipo to prefill the template sections (same UX as empresa)
+        try:
+            from .models import MetodoPago
+            transferencia = MetodoPago.objects.filter(usuario=usuario_obj, tipo='transferencia').first()
+            pago_movil = MetodoPago.objects.filter(usuario=usuario_obj, tipo='pago_movil').first()
+            paypal = MetodoPago.objects.filter(usuario=usuario_obj, tipo='paypal').first()
+        except Exception:
+            transferencia = None
+            pago_movil = None
+            paypal = None
+
+        return render(request, 'ecommerce_app/editar_perfil_usuario.html', {'usuario': usuario_obj, 'user_info': user_info, 'transferencia': transferencia, 'pago_movil': pago_movil, 'paypal': paypal})
 
 
 
@@ -13567,6 +13689,94 @@ def editar_perfil_empresa(request, empresa_id):
                 empresa_obj.logo_empresa = request.FILES['logo_empresa']
             
             empresa_obj.save()
+            # Procesar métodos de pago enviados como JSON (mejor logging y feedback)
+            metodos_procesados = 0
+            metodos_creados = 0
+            metodos_actualizados = 0
+            metodos_eliminados = 0
+            metodos_error = None
+            metodos_raw = None
+            try:
+                metodos_json = request.POST.get('metodos_pago_json')
+                if metodos_json:
+                    import json
+                    from .models import MetodoPago
+
+                    metodos_raw = metodos_json[:2000]
+                    try:
+                        metodos_list = json.loads(metodos_json)
+                        if not isinstance(metodos_list, list):
+                            metodos_list = []
+                    except Exception as ex:
+                        metodos_list = []
+                        metodos_error = f'JSON parse error: {str(ex)}'
+
+                    # Mapear métodos existentes por id
+                    existentes = MetodoPago.objects.filter(empresa=empresa_obj)
+                    existentes_map = {str(m.id_metodo): m for m in existentes}
+                    recibidos_ids = []
+
+                    for m in metodos_list:
+                        try:
+                            mid = m.get('id')
+                            if mid and str(mid) in existentes_map:
+                                mp = existentes_map[str(mid)]
+                                metodos_actualizados += 1
+                            else:
+                                mp = MetodoPago(empresa=empresa_obj)
+                                metodos_creados += 1
+
+                            mp.tipo = m.get('tipo') or (mp.tipo if hasattr(mp, 'tipo') else '')
+                            mp.activo = True
+                            mp.instrucciones = m.get('instrucciones') or ''
+                            mp.nombre_beneficiario = m.get('nombre_beneficiario') or ''
+                            mp.numero_cuenta = m.get('numero_cuenta') or ''
+                            mp.banco = m.get('banco') or ''
+                            mp.tipo_cuenta = m.get('tipo_cuenta') or ''
+                            mp.identificador = m.get('identificador') or ''
+                            dato_add = m.get('datos_adicionales')
+                            if dato_add:
+                                try:
+                                    mp.datos_adicionales = dato_add
+                                except Exception:
+                                    mp.datos_adicionales = None
+
+                            mp.save()
+                            metodos_procesados += 1
+                            if mp.id_metodo:
+                                recibidos_ids.append(mp.id_metodo)
+                        except Exception as ex_item:
+                            # Registrar el error pero continuar con los demás
+                            logger.exception(f"Error procesando metodo individual: {ex_item}")
+
+                    # Eliminar métodos que no vinieron en la lista (si aplica)
+                    if recibidos_ids:
+                        qs_before = MetodoPago.objects.filter(empresa=empresa_obj)
+                        to_delete_qs = qs_before.exclude(id_metodo__in=recibidos_ids)
+                        metodos_eliminados = to_delete_qs.count()
+                        to_delete_qs.delete()
+
+            except Exception as ex:
+                metodos_error = str(ex)
+                logger.exception(f"Error procesando metodos_pago_json: {ex}")
+
+            # Adjuntar info de debug a la respuesta AJAX si existe
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                # Preparar campos adicionales en la respuesta (no sensibles)
+                extra = {
+                    'metodos_procesados': metodos_procesados,
+                    'metodos_creados': metodos_creados,
+                    'metodos_actualizados': metodos_actualizados,
+                    'metodos_eliminados': metodos_eliminados,
+                }
+                if metodos_error:
+                    extra['metodos_error'] = metodos_error
+                if metodos_raw:
+                    extra['metodos_raw_preview'] = metodos_raw
+                # Guardar en resp más abajo (añadiremos esto al resp existente)
+                # Para facilidad, lo retornamos en el resp que se genera más abajo
+                # Guardamos en la variable local para usar después
+                metodos_debug_extra = extra
             # Si es AJAX, devolver JSON con datos de éxito y URLs relevantes
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 resp = {'success': True, 'message': 'Perfil de empresa actualizado correctamente.'}
@@ -13579,6 +13789,12 @@ def editar_perfil_empresa(request, empresa_id):
                     resp['avatar_chatbot_empresa'] = empresa_obj.avatar_chatbot_empresa or ''
                 except Exception:
                     resp['avatar_chatbot_empresa'] = ''
+                # Añadir debug info de métodos si existe
+                if 'metodos_debug_extra' in locals():
+                    try:
+                        resp.update(metodos_debug_extra)
+                    except Exception:
+                        pass
                 return JsonResponse(resp)
 
             return redirect('perfil_empresa')
@@ -13593,6 +13809,114 @@ def editar_perfil_empresa(request, empresa_id):
     else:
         # GET request - mostrar formulario
         return render(request, 'ecommerce_app/editar_perfil_empresa.html', {'empresa': empresa_obj, 'user_info': user_info})
+
+
+@require_POST
+def guardar_metodo_pago_ajax(request):
+    """Guarda o actualiza un MetodoPago vía AJAX. Espera campos POST:
+       id (opcional), tipo, instrucciones, nombre_beneficiario, numero_cuenta, banco, tipo_cuenta, identificador
+    """
+    try:
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'message': 'Usuario no autenticado'})
+
+        # Determinar si la sesión es empresa o usuario y usar la FK correspondiente
+        account_type = request.session.get('account_type', 'usuario')
+        empresa_obj = None
+        usuario_obj = None
+        if account_type == 'empresa' and hasattr(current_user, 'id_empresa'):
+            empresa_obj = current_user
+        elif account_type == 'usuario' and hasattr(current_user, 'id_usuario'):
+            usuario_obj = current_user
+        else:
+            return JsonResponse({'success': False, 'message': 'Tipo de cuenta no válido para guardar métodos'})
+
+        # Obtener campos: soportar JSON en el body (fetch con application/json) o form-encoded
+        data = {}
+        try:
+            if request.content_type and 'application/json' in request.content_type:
+                import json
+                data = json.loads(request.body.decode('utf-8') or '{}')
+        except Exception:
+            data = {}
+
+        # Fallback a request.POST si no viene en JSON
+        if not data:
+            data = request.POST
+
+        # Obtener campos
+        mid = data.get('id') or data.get('id_metodo')
+        tipo = data.get('tipo')
+        instrucciones = data.get('instrucciones') or ''
+        nombre_beneficiario = data.get('nombre_beneficiario') or ''
+        numero_cuenta = data.get('numero_cuenta') or ''
+        banco = data.get('banco') or ''
+        tipo_cuenta = data.get('tipo_cuenta') or ''
+        identificador = data.get('identificador') or ''
+
+        # Validaciones por tipo
+        errores = {}
+        if tipo == 'pago_movil':
+            if not identificador or not str(identificador).strip():
+                errores['identificador'] = 'El identificador (Cédula/RIF/Teléfono) es obligatorio para Pago Móvil.'
+            if not banco or not str(banco).strip():
+                errores['banco'] = 'El banco es obligatorio para Pago Móvil.'
+            if not numero_cuenta or not str(numero_cuenta).strip():
+                errores['numero_cuenta'] = 'El número de cuenta es obligatorio para Pago Móvil.'
+
+        # (Opcional) validación general para transferencia
+        if tipo == 'transferencia':
+            if not nombre_beneficiario or not str(nombre_beneficiario).strip():
+                errores['nombre_beneficiario'] = 'El nombre del beneficiario es obligatorio para Transferencia.'
+            if not numero_cuenta or not str(numero_cuenta).strip():
+                errores['numero_cuenta'] = 'El número de cuenta es obligatorio para Transferencia.'
+            if not banco or not str(banco).strip():
+                errores['banco'] = 'El banco es obligatorio para Transferencia.'
+            if not tipo_cuenta or not str(tipo_cuenta).strip():
+                errores['tipo_cuenta'] = 'El tipo de cuenta es obligatorio para Transferencia.'
+
+        if errores:
+            return JsonResponse({'success': False, 'message': 'Faltan campos requeridos', 'errors': errores})
+
+        from .models import MetodoPago
+
+        if mid:
+            try:
+                if empresa_obj:
+                    mp = MetodoPago.objects.get(id_metodo=mid, empresa=empresa_obj)
+                else:
+                    mp = MetodoPago.objects.get(id_metodo=mid, usuario=usuario_obj)
+                creado = False
+            except MetodoPago.DoesNotExist:
+                if empresa_obj:
+                    mp = MetodoPago(empresa=empresa_obj)
+                else:
+                    mp = MetodoPago(usuario=usuario_obj)
+                creado = True
+        else:
+            if empresa_obj:
+                mp = MetodoPago(empresa=empresa_obj)
+            else:
+                mp = MetodoPago(usuario=usuario_obj)
+            creado = True
+
+        if tipo:
+            mp.tipo = tipo
+        mp.instrucciones = instrucciones
+        mp.nombre_beneficiario = nombre_beneficiario
+        mp.numero_cuenta = numero_cuenta
+        mp.banco = banco
+        mp.tipo_cuenta = tipo_cuenta
+        mp.identificador = identificador
+        mp.activo = True
+
+        mp.save()
+
+        return JsonResponse({'success': True, 'message': 'Método guardado', 'id_metodo': mp.id_metodo, 'creado': creado})
+    except Exception as e:
+        logger.exception(f"Error en guardar_metodo_pago_ajax: {e}")
+        return JsonResponse({'success': False, 'message': f'Error guardando método: {str(e)}'})
 
 # =====================================================
 # VISTAS PARA MIS VENTAS (SERVICIOS)
@@ -15959,6 +16283,17 @@ def editar_perfil_empresa(request, empresa_id):
     account_type = request.session.get('account_type', 'empresa')
     user_info = get_user_info_with_avatar(current_user, account_type)
 
+    # Preload one MetodoPago per tipo to prefill the template sections
+    try:
+        from .models import MetodoPago
+        transferencia = MetodoPago.objects.filter(empresa=empresa_obj, tipo='transferencia').first()
+        pago_movil = MetodoPago.objects.filter(empresa=empresa_obj, tipo='pago_movil').first()
+        paypal = MetodoPago.objects.filter(empresa=empresa_obj, tipo='paypal').first()
+    except Exception:
+        transferencia = None
+        pago_movil = None
+        paypal = None
+
     if request.method == 'POST':
         try:
             nombre_empresa = request.POST.get('nombre_empresa')
@@ -15991,6 +16326,97 @@ def editar_perfil_empresa(request, empresa_id):
                 empresa_obj.logo_empresa = request.FILES['logo_empresa']
 
             empresa_obj.save()
+            # Procesar métodos de pago enviados desde el formulario (JSON en hidden input)
+            metodos_procesados = 0
+            metodos_creados = 0
+            metodos_actualizados = 0
+            metodos_eliminados = 0
+            metodos_error = None
+            try:
+                # Esperamos un input oculto llamado metodos_pago_json con un array de objetos
+                metodos_raw = request.POST.get('metodos_pago_json') or ''
+                if metodos_raw:
+                    try:
+                        lista = json.loads(metodos_raw)
+                    except Exception:
+                        lista = []
+
+                    from .models import MetodoPago
+
+                    # IDs entrantes para decidir eliminación de los otros
+                    incoming_ids = set()
+                    incoming_tipos = set()
+
+                    for item in lista:
+                        metodos_procesados += 1
+                        mid = item.get('id') or item.get('id_metodo')
+                        tipo = item.get('tipo') or ''
+                        instrucciones = item.get('instrucciones') or ''
+                        nombre_beneficiario = item.get('nombre_beneficiario') or ''
+                        numero_cuenta = item.get('numero_cuenta') or ''
+                        banco = item.get('banco') or ''
+                        tipo_cuenta = item.get('tipo_cuenta') or ''
+                        identificador = item.get('identificador') or ''
+
+                        if mid:
+                            try:
+                                mp = MetodoPago.objects.get(id_metodo=mid, empresa=empresa_obj)
+                                creado = False
+                            except MetodoPago.DoesNotExist:
+                                mp = MetodoPago(empresa=empresa_obj)
+                                creado = True
+                        else:
+                            # Si no viene id, crear siempre un nuevo registro.
+                            # Esto permite que la empresa tenga varios métodos distintos (por ejemplo
+                            # transferencia, pago_movil y paypal) con sus propios ids, en lugar de
+                            # actualizar por tipo y sobrescribir uno sólo.
+                            mp = MetodoPago(empresa=empresa_obj)
+                            creado = True
+
+                        # Asignar campos
+                        if tipo:
+                            mp.tipo = tipo
+                        mp.instrucciones = instrucciones
+                        mp.nombre_beneficiario = nombre_beneficiario
+                        mp.numero_cuenta = numero_cuenta
+                        mp.banco = banco
+                        mp.tipo_cuenta = tipo_cuenta
+                        mp.identificador = identificador
+                        mp.activo = True
+
+                        mp.save()
+
+                        if creado:
+                            metodos_creados += 1
+                        else:
+                            metodos_actualizados += 1
+
+                        if getattr(mp, 'id_metodo', None):
+                            incoming_ids.add(str(mp.id_metodo))
+                        if mp.tipo:
+                            incoming_tipos.add(mp.tipo)
+
+                    # Eliminar métodos que pertenecen a la empresa pero no están en la lista entrante
+                    # Solo eliminamos cuando el cliente envía IDs (edición/ eliminación explícita).
+                    try:
+                        qs_existentes = MetodoPago.objects.filter(empresa=empresa_obj)
+                        if incoming_ids:
+                            to_delete = qs_existentes.exclude(id_metodo__in=list(incoming_ids))
+                            deleted_count = to_delete.count()
+                            if deleted_count:
+                                to_delete.delete()
+                                metodos_eliminados = deleted_count
+                        else:
+                            # No eliminar nada si el cliente no envió IDs (evita borrar métodos existentes al crear nuevos registros)
+                            metodos_eliminados = 0
+                    except Exception:
+                        # No bloquear el guardado del perfil si falla eliminación
+                        metodos_error = 'Error al limpiar métodos antiguos'
+
+            except Exception as e:
+                logger.exception(f"Error procesando metodos_pago_json: {e}")
+                metodos_error = str(e)
+
             # Si es AJAX, devolver JSON con datos de éxito y URLs relevantes
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 resp = {'success': True, 'message': 'Perfil de empresa actualizado correctamente.'}
@@ -16003,6 +16429,16 @@ def editar_perfil_empresa(request, empresa_id):
                     resp['avatar_chatbot_empresa'] = empresa_obj.avatar_chatbot_empresa or ''
                 except Exception:
                     resp['avatar_chatbot_empresa'] = ''
+
+                # Adjuntar info de metodos
+                resp.update({
+                    'metodos_procesados': metodos_procesados,
+                    'metodos_creados': metodos_creados,
+                    'metodos_actualizados': metodos_actualizados,
+                    'metodos_eliminados': metodos_eliminados,
+                })
+                if metodos_error:
+                    resp['metodos_error'] = metodos_error
                 return JsonResponse(resp)
 
             return redirect('perfil_empresa')
@@ -16011,6 +16447,6 @@ def editar_perfil_empresa(request, empresa_id):
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'message': f'Error al actualizar perfil: {str(e)}'})
             return render(request, 'ecommerce_app/editar_perfil_empresa.html',
-                          {'empresa': empresa_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}'})
+                         {'empresa': empresa_obj, 'user_info': user_info, 'error': f'Error al actualizar perfil: {str(e)}', 'transferencia': transferencia, 'pago_movil': pago_movil, 'paypal': paypal})
     else:
-        return render(request, 'ecommerce_app/editar_perfil_empresa.html', {'empresa': empresa_obj, 'user_info': user_info})
+        return render(request, 'ecommerce_app/editar_perfil_empresa.html', {'empresa': empresa_obj, 'user_info': user_info, 'transferencia': transferencia, 'pago_movil': pago_movil, 'paypal': paypal})

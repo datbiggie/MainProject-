@@ -139,4 +139,5 @@ urlpatterns = [
     # Rutas para editar perfiles
     path('perfil/usuario/editar/<int:usuario_id>/', views.editar_perfil_usuario, name='editar_perfil_usuario'),
     path('perfil/empresa/editar/<int:empresa_id>/', views.editar_perfil_empresa, name='editar_perfil_empresa'),
+    path('perfil/empresa/guardar_metodo_pago_ajax/', views.guardar_metodo_pago_ajax, name='guardar_metodo_pago_ajax'),
 ]

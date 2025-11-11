@@ -1188,4 +1188,112 @@ class comentario(models.Model):
         return f'Comentario {self.id_comentario} por {autor} sobre {objetivo}'
 
 
+class MetodoPago(models.Model):
+    TIPO_CHOICES = [
+        ('transferencia', 'Transferencia Bancaria'),
+        ('paypal', 'PayPal'),
+        ('pago_movil', 'Pago Móvil'),
+    ]
+    
+    # Relaciones con usuario y empresa
+    usuario = models.ForeignKey(
+        'usuario',
+        on_delete=models.CASCADE,
+        related_name='metodos_pago',
+        null=True,
+        blank=True,
+        help_text="Usuario asociado a este método de pago (si aplica)"
+    )
+    
+    empresa = models.ForeignKey(
+        'empresa',
+        on_delete=models.CASCADE,
+        related_name='metodos_pago_empresa',
+        null=True,
+        blank=True,
+        help_text="Empresa asociada a este método de pago (si aplica)"
+    )
+    
+    # Datos principales
+    id_metodo = models.AutoField(primary_key=True)
+    tipo = models.CharField(
+        max_length=15, 
+        choices=TIPO_CHOICES,
+        help_text="Tipo de método de pago"
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text="Indica si este método de pago está disponible"
+    )
+    instrucciones = models.TextField(
+        help_text="Instrucciones detalladas para realizar el pago"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    # Datos para transferencia
+    nombre_beneficiario = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        help_text="Nombre del titular de la cuenta"
+    )
+    numero_cuenta = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True,
+        help_text="Número de cuenta, email o teléfono según el tipo"
+    )
+    banco = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        help_text="Nombre del banco o entidad financiera"
+    )
+    tipo_cuenta = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True,
+        help_text="Tipo de cuenta (ej: Ahorros, Corriente, PayPal, etc.)"
+    )
+    
+    # Para pago móvil
+    identificador = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True,
+        help_text="Cédula, RIF o identificador para pagos móviles"
+    )
+    
+    # Para integración con pasarelas de pago
+    datos_adicionales = models.JSONField(
+        blank=True, 
+        null=True,
+        help_text="Datos adicionales en formato JSON para integraciones futuras"
+    )
 
+    class Meta:
+        verbose_name = 'Método de Pago'
+        verbose_name_plural = 'Métodos de Pago'
+        ordering = ['tipo']
+        db_table = 'metodos_pago'
+        # Asegura que un método de pago esté asociado a un usuario o una empresa, no a ambos
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(usuario__isnull=False, empresa__isnull=True) | 
+                    models.Q(usuario__isnull=True, empresa__isnull=False)
+                ),
+                name='solo_un_tipo_de_propietario'
+            )
+        ]
+
+    def __str__(self):
+        propietario = self.usuario.nombre_usuario if self.usuario else self.empresa.nombre_empresa
+        return f"{self.get_tipo_display()} - {propietario}"
+
+    def save(self, *args, **kwargs):
+        # Validación adicional para asegurar que solo un propietario esté establecido
+        if self.usuario and self.empresa:
+            raise ValueError("Un método de pago no puede estar asociado a un usuario y una empresa al mismo tiempo.")
+        super().save(*args, **kwargs)

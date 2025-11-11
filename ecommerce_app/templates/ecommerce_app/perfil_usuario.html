@@ -83,6 +83,11 @@
             <li><strong style="color:#111;">Email:</strong> <span style="color:#111;">{{ usuario.correo_usuario|default:'-' }}</span></li>
             <li><strong style="color:#111;">Teléfono:</strong> <span style="color:#111;">{{ usuario.telefono_usuario|default:'-' }}</span></li>
             <li><strong style="color:#111;">Fecha de registro:</strong> <span style="color:#111;">{{ usuario.fecha_registro_usuario|date:"d/m/Y"|default:'-' }}</span></li>
+            <li class="mt-3">
+              <button id="openMetodosBtn" class="btn btn-sm btn-outline-primary w-100" type="button">
+                <i class="bi bi-credit-card me-1"></i> Métodos de Pago
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -133,6 +138,57 @@
 </div>
 
 {% endif %}
+
+<!-- Modal: Métodos de Pago -->
+<div class="modal fade" id="metodosModal" tabindex="-1" aria-labelledby="metodosModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="metodosModalLabel">Métodos de Pago — {{ usuario.nombre_usuario|default:'Usuario' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if metodos_pago and metodos_pago|length > 0 %}
+          <div class="list-group">
+            {% for m in metodos_pago %}
+              <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1 text-capitalize">{{ m.tipo|default:'método' }}</h6>
+                  <small class="text-muted">ID: {{ m.id_metodo }}</small>
+                </div>
+                {% if m.instrucciones %}<p class="mb-1"><strong>Instrucciones:</strong> {{ m.instrucciones }}</p>{% endif %}
+                {% if m.tipo == 'transferencia' %}
+                  <p class="mb-1"><strong>Beneficiario:</strong> {{ m.nombre_beneficiario }}</p>
+                  <p class="mb-1"><strong>Cuenta:</strong> {{ m.numero_cuenta }} — <strong>Banco:</strong> {{ m.banco }} — <strong>Tipo:</strong> {{ m.tipo_cuenta }}</p>
+                {% elif m.tipo == 'pago_movil' %}
+                  <p class="mb-1"><strong>Identificador:</strong> {{ m.identificador }}</p>
+                  <p class="mb-1"><strong>Cuenta/Teléfono:</strong> {{ m.numero_cuenta }} — <strong>Banco:</strong> {{ m.banco }}</p>
+                {% elif m.tipo == 'paypal' %}
+                  <p class="mb-1"><strong>Cuenta PayPal:</strong> {{ m.numero_cuenta }}</p>
+                {% else %}
+                  <p class="mb-1">{{ m.datos_adicionales|default:'' }}</p>
+                {% endif %}
+                <div class="mt-2 text-end">
+                  {% if user_info.is_authenticated and not user_info.is_public_profile %}
+                    <a href="{% url 'editar_perfil_usuario' usuario_id=usuario.id_usuario %}#collapseMetodos" class="btn btn-sm btn-outline-secondary">Editar</a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center text-muted">No hay métodos de pago publicados.</div>
+          {% if user_info.is_authenticated and not user_info.is_public_profile %}
+            <div class="text-center mt-3"><a href="{% url 'editar_perfil_usuario' usuario_id=usuario.id_usuario %}#collapseMetodos" class="btn btn-sm btn-primary">Agregar Métodos</a></div>
+          {% endif %}
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 
@@ -256,5 +312,18 @@
    
 
   <script src="{% static 'perfil_empresa/js/rating-system.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const openBtn = document.getElementById('openMetodosBtn');
+      const metodosModalEl = document.getElementById('metodosModal');
+      if (openBtn && metodosModalEl) {
+        const bsModal = new bootstrap.Modal(metodosModalEl, {});
+        openBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          bsModal.show();
+        });
+      }
+    });
+  </script>
   </body>
 </html>
