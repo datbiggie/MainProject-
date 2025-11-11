@@ -118,121 +118,121 @@
 
         <!-- Services List -->
         {% if servicios_pendientes %}
+            <div class="accordion" id="accordionPendientes">
             {% for servicio in servicios_pendientes %}
-            <div class="card sale-card mb-4">
-                <div class="card-header sale-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h6 class="mb-0">
-                                <i class="fas fa-tools me-2"></i>
-                                Solicitud #{{ servicio.id }}
-                            </h6>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge bg-warning">
-                                Pendiente de Cotización
-                            </span>
+                <div class="accordion-item mb-3 sale-card" style="border-radius:12px; overflow:hidden;">
+                    <h2 class="accordion-header" id="heading-pend-{{ servicio.id }}">
+                        <button class="accordion-button collapsed sale-header" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-pend-{{ servicio.id }}" aria-expanded="false" aria-controls="collapse-pend-{{ servicio.id }}" style="border-radius:0;">
+                            <div class="w-100">
+                                <div class="row align-items-center">
+                                    <div class="col-6">
+                                        <h6 class="mb-0 text-white"><i class="fas fa-tools me-2"></i>Solicitud #{{ servicio.id }}</h6>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <span class="badge status-badge bg-warning">Pendiente de Cotización</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="collapse-pend-{{ servicio.id }}" class="accordion-collapse collapse" aria-labelledby="heading-pend-{{ servicio.id }}" data-bs-parent="#accordionPendientes">
+                        <div class="accordion-body">
+                            <!-- Service Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <strong>Fecha de Solicitud:</strong><br>
+                                    <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Fecha y Hora Preferida:</strong><br>
+                                    <span class="text-warning fw-bold">{{ servicio.fecha_requerida|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Servicio:</strong><br>
+                                    <span class="text-info fw-bold">{{ servicio.nombre_servicio }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Categoría:</strong><br>
+                                    <span class="text-muted">{{ servicio.categoria_servicio }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Service Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Tipo de Cliente:</strong><br>
+                                    <span class="badge bg-info">{{ servicio.tipo_cliente|capfirst }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Client Information -->
+                            <div class="client-info">
+                                <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>Nombre:</strong><br>
+                                        <span class="text-muted">{{ servicio.cliente_nombre }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Email:</strong><br>
+                                        <span class="text-muted">{{ servicio.cliente_email }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Teléfono:</strong><br>
+                                        <span class="text-muted">{{ servicio.cliente_telefono|default:"No proporcionado" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Service Details -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Descripción del Servicio Solicitado:</strong><br>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        <span class="text-muted">{{ servicio.descripcion|default:"Sin descripción específica" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if servicio.ubicacion %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Ubicación del Servicio:</strong><br>
+                                    <span class="text-muted">{{ servicio.ubicacion }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Service Images -->
+                            {% if servicio.imagenes %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Imágenes del Servicio:</strong><br>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        {% for imagen in servicio.imagenes %}
+                                        <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Action Buttons -->
+                            <div class="row mt-4">
+                                <div class="col-12 text-center">
+                                    <button type="button" class="btn btn-success btn-lg me-3" onclick="cotizarServicio('{{ servicio.id }}', '{{ servicio.tipo_solicitud }}')" data-bs-toggle="tooltip" data-bs-placement="top" title="Enviar cotización al cliente">
+                                        <i class="fas fa-calculator me-2"></i>Enviar Cotización
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-lg" onclick="rechazarServicio('{{ servicio.id }}', '{{ servicio.tipo_solicitud }}')" data-bs-toggle="tooltip" data-bs-placement="top" title="Rechazar esta solicitud de servicio">
+                                        <i class="fas fa-times-circle me-2"></i>Rechazar Solicitud
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <!-- Service Info -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <strong>Fecha de Solicitud:</strong><br>
-                            <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Fecha y Hora Preferida:</strong><br>
-                            <span class="text-warning fw-bold">{{ servicio.fecha_requerida|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Servicio:</strong><br>
-                            <span class="text-info fw-bold">{{ servicio.nombre_servicio }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Categoría:</strong><br>
-                            <span class="text-muted">{{ servicio.categoria_servicio }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Additional Service Info -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong>Tipo de Cliente:</strong><br>
-                            <span class="badge bg-info">{{ servicio.tipo_cliente|capfirst }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Client Information -->
-                    <div class="client-info">
-                        <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Nombre:</strong><br>
-                                <span class="text-muted">{{ servicio.cliente_nombre }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Email:</strong><br>
-                                <span class="text-muted">{{ servicio.cliente_email }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Teléfono:</strong><br>
-                                <span class="text-muted">{{ servicio.cliente_telefono|default:"No proporcionado" }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Service Details -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Descripción del Servicio Solicitado:</strong><br>
-                            <div class="bg-light p-3 rounded mt-2">
-                                <span class="text-muted">{{ servicio.descripcion|default:"Sin descripción específica" }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if servicio.ubicacion %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Ubicación del Servicio:</strong><br>
-                            <span class="text-muted">{{ servicio.ubicacion }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Service Images -->
-                    {% if servicio.imagenes %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Imágenes del Servicio:</strong><br>
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                {% for imagen in servicio.imagenes %}
-                                <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" 
-                                     style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Action Buttons -->
-                    <div class="row mt-4">
-                        <div class="col-12 text-center">
-                            <button type="button" class="btn btn-success btn-lg me-3" onclick="cotizarServicio('{{ servicio.id }}', '{{ servicio.tipo_solicitud }}')"
-                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Enviar cotización al cliente">
-                                <i class="fas fa-calculator me-2"></i>Enviar Cotización
-                            </button>
-                            <button type="button" class="btn btn-danger btn-lg" onclick="rechazarServicio('{{ servicio.id }}', '{{ servicio.tipo_solicitud }}')"
-                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Rechazar esta solicitud de servicio">
-                                <i class="fas fa-times-circle me-2"></i>Rechazar Solicitud
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
             {% endfor %}
+            </div>
         {% else %}
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">

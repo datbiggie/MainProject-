@@ -3,6 +3,8 @@ function redirectToNotification(notificationElement) {
     const tipo = $(notificationElement).data('tipo');
     const solicitudId = $(notificationElement).data('solicitud-id');
     const pedidoId = $(notificationElement).data('pedido-id');
+    const notificacionId = $(notificationElement).data('id');
+    const tituloNotificacion = $(notificationElement).find('h6').text() || '';
     
     // Debug: mostrar los valores recibidos
     console.log('Datos de notificación:', {
@@ -22,14 +24,19 @@ function redirectToNotification(notificationElement) {
         tipo === 'servicio_aceptado' || tipo === 'servicio_completado') {
         // Actualizaciones de tus propias solicitudes -> ir a gestión de servicios
         redirectUrl = '/ecommerce/gestion_servicio/';
-    } else if (tipo === 'pedido_confirmado') {
-        // Para notificaciones de pedido confirmado llevar siempre a la vista de pedidos confirmados
+    } else if (tipo === 'servicio_pagado' || /pago recibido/i.test(tituloNotificacion)) {
+        // Cuando se recibe el pago por una solicitud, llevar a la vista de servicios confirmados
+        redirectUrl = '/ecommerce/servicios_ventas_confirmadas/';
+    } else if (tipo === 'pedido_confirmado' || tipo === 'venta_confirmada') {
+        // Para notificaciones de pedido/venta confirmada llevar a la vista de pedidos confirmados
+        // Nota: para empresas la vista usa el tipo 'venta_confirmada' en backend
         redirectUrl = '/ecommerce/pedidos_confirmados/';
     } else if (tipo === 'nuevo_pedido' || tipo === 'pago') {
         if (pedidoId) {
-            // Redireccionar a mis pedidos o mis ventas según el tipo de usuario
+            // Redireccionar a mis pedidos o ventas pendientes según el tipo de usuario
             if (window.accountType === 'empresa') {
-                redirectUrl = '/ecommerce/mis_ventas/';
+                // La ruta correcta en el proyecto es /ecommerce/ventas_pendientes/
+                redirectUrl = '/ecommerce/ventas_pendientes/';
             } else {
                 redirectUrl = '/ecommerce/mis_pedidos/';
             }
@@ -38,7 +45,28 @@ function redirectToNotification(notificationElement) {
     
     // Realizar la redirección si se encontró una URL válida
     if (redirectUrl) {
-        window.location.href = redirectUrl;
+        // Si la notificación está sin leer, marcarla como leída antes de redirigir (no bloquear la navegación)
+        if (notificacionId) {
+            const esEmpresa = window.accountType === 'empresa';
+            $.ajax({
+                url: marcarNotificacionUrl,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    'notificacion_id': notificacionId,
+                    'es_empresa': esEmpresa
+                }),
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).always(function() {
+                // Navegar aunque falle la petición de marcado
+                window.location.href = redirectUrl;
+            });
+        } else {
+            window.location.href = redirectUrl;
+        }
     } else {
         console.warn('No se pudo determinar la URL de redirección para esta notificación');
     }

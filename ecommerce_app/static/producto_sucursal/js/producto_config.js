@@ -565,11 +565,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (editProductoForm) {
             console.log('Formulario encontrado, agregando event listener');
-            
-            // Remover el onsubmit por defecto
-            editProductoForm.onsubmit = null;
-            
-            editProductoForm.addEventListener('submit', function(e) {
+
+            // Evitar agregar el listener más de una vez (otro archivo también lo puede añadir)
+            if (editProductoForm.dataset.listenerAdded) {
+                console.log('Listener de submit ya agregado previamente — omitiendo registro duplicado');
+            } else {
+                // Marcar como agregado para futuras comprobaciones
+                editProductoForm.dataset.listenerAdded = '1';
+
+                // Remover el onsubmit por defecto
+                editProductoForm.onsubmit = null;
+
+                editProductoForm.addEventListener('submit', function(e) {
                 console.log('Evento submit capturado');
                 e.preventDefault();
                 e.stopPropagation();
@@ -678,7 +685,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false; // Prevenir envío adicional
             });
             
-            console.log('Event listener agregado al formulario');
+                console.log('Event listener agregado al formulario');
+            }
         } else {
             console.error('❌ No se encontró el formulario editProductoForm');
         }

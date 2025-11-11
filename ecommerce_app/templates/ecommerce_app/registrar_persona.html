@@ -100,7 +100,7 @@
   <div class="formbold-form-wrapper">
     
 
-    <form action="" method="POST" enctype="multipart/form-data">
+    <form action="" method="POST" enctype="multipart/form-data" autocomplete="off">
       {% csrf_token %}
 
       <div class="formbold-form-title">
@@ -126,32 +126,31 @@
           <div class="accordion-body">
 
             <div class="formbold-input-flex">
-        <div>
-          <label for="nombre_usuario" class="formbold-form-label">Nombre</label>
-          <input type="text" name="nombre_usuario" id="nombre_usuario" class="formbold-form-input" required
-          />
+          <div>
+            <label for="nombre_usuario" class="formbold-form-label">Nombre</label>
+            <input type="text" name="nombre_usuario" id="nombre_usuario" class="formbold-form-input" required autocomplete="given-name" value="" />
+          </div>
+          <div>
+            <label for="apellido" class="formbold-form-label"> Apellido </label>
+            <input type="text" name="apellido" id="apellido" class="formbold-form-input" autocomplete="family-name" value="" />
+          </div>
         </div>
-        <div>
-          <label for="apellido" class="formbold-form-label"> Apellido </label>
-          <input type="text" name="apellido" id="apellido" class="formbold-form-input" />
-        </div>
-      </div>
 
       <div class="formbold-input-flex">
         <div>
           <label for="email" class="formbold-form-label"> Correo Electrónico </label>
-          <input type="email" name="email" id="email" class="formbold-form-input" />
+          <input type="email" name="email" id="email" class="formbold-form-input" autocomplete="email" value="" />
         </div>
         <div>
           <label for="password" class="formbold-form-label"> Contraseña </label>
-          <input type="password" name="password" id="password" class="formbold-form-input" />
+          <input type="password" name="password" id="password" class="formbold-form-input" autocomplete="new-password" value="" />
         </div>
       </div>
 
       <div class="formbold-input-flex">
-        <div class="date-input-container">
+          <div class="date-input-container">
           <label for="fecha_nacimiento" class="formbold-form-label">Fecha de Nacimiento</label>
-          <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="formbold-form-input" placeholder="Selecciona tu fecha de nacimiento" />
+          <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="formbold-form-input" placeholder="Selecciona tu fecha de nacimiento" autocomplete="bday" value="" />
         </div>
         <div>
           <label for="telefono" class="formbold-form-label">
@@ -167,6 +166,8 @@
             minlength="11"
             placeholder="xxxx xxxxxxx"
             title="Ingresa exactamente 11 dígitos numéricos (ej: 04249692650)"
+            autocomplete="tel"
+            value=""
           />
         </div>
       </div>

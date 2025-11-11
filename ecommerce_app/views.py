@@ -19,7 +19,7 @@ from .models import producto_empresa, servicio_empresa, producto_sucursal, servi
 def get_user_info_with_avatar(current_user, account_type, empresa_nombre=None):
     """Genera el diccionario user_info con el campo avatar_chatbot incluido"""
     if account_type == 'empresa':
-        # Las empresas almacenan el avatar en el campo `avatar_chatbot_empresa`.
+            # Las empresas almacenan el avatar en el campo `avatar_chatbot_empresa` y en `avatar_chatbot`.
         avatar = None
         try:
             avatar = getattr(current_user, 'avatar_chatbot_empresa', None) or getattr(current_user, 'avatar_chatbot', None)
@@ -667,6 +667,7 @@ def api_filtrar_servicios(request):
                     'descripcion_servicio_empresa': serv.descripcion_servicio_empresa or '',
                     'imagen_url': imagen_url,
                     'categoria_servicio': serv.id_categoria_servicios_fk.nombre_categoria_serv_empresa if serv.id_categoria_servicios_fk else '',
+                    'categoria_servicio_id': serv.id_categoria_servicios_fk.id_categoria_serv_empresa if serv.id_categoria_servicios_fk else '',
                     'caracteristicas_generales_empresa': '',
                     'sucursales_asignadas': sucursales_asignadas,
                     'serial': idx
@@ -688,6 +689,7 @@ def api_filtrar_servicios(request):
                     'descripcion_servicio_usuario': serv.descripcion_servicio_usuario or '',
                     'imagen_url': imagen_url,
                     'categoria_servicio': serv.id_categoria_servicios_fk.nombre_categoria_serv_usuario if serv.id_categoria_servicios_fk else '',
+                    'categoria_servicio_id': serv.id_categoria_servicios_fk.id_categoria_serv_usuario if serv.id_categoria_servicios_fk else '',
                     'caracteristicas_generales_usuario': '',
                     'precio_servicio_usuario': serv.precio_servicio_usuario or 0,
                     'estatus_servicio_usuario': serv.estatus_servicio_usuario or 'Activo',
@@ -1517,6 +1519,18 @@ def registrar_persona(request):
                 'message': 'Por favor ingrese un email válido.'
             })
 
+        # Verificar si el email ya está registrado (en usuarios o empresas)
+        try:
+            if usuario.objects.filter(correo_usuario__iexact=email).exists() or empresa.objects.filter(correo_empresa__iexact=email).exists():
+                logger.info(f"Intento de registro con email ya existente: {email}")
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Este correo ya tiene una cuenta asociada.'
+                })
+        except Exception as e:
+            # No bloquear el flujo si hay un error inesperado al comprobar duplicados
+            logger.debug(f"No se pudo verificar existencia de email: {e}")
+
         # Validar longitud mínima de contraseña
         if len(password) < 6:
             logger.warning("Contraseña demasiado corta")
@@ -1614,17 +1628,18 @@ def registrar_empresa(request):
     if request.method == 'POST':
         try:
             logger.info(f"Datos recibidos: {request.POST}")
-            nombre_empresa = request.POST.get('nombre_empresa')
-            correo_empresa = request.POST.get('correo_empresa')
-            password_empresa = request.POST.get('password_empresa')
-            confirm_password = request.POST.get('confirm_password')
-            descripcion_empresa = request.POST.get('descripcion_empresa')
+            # Normalizar y sanear entradas para evitar issues con espacios/case
+            nombre_empresa = (request.POST.get('nombre_empresa') or '').strip()
+            correo_empresa = (request.POST.get('correo_empresa') or '').strip().lower()
+            password_empresa = request.POST.get('password_empresa') or ''
+            confirm_password = request.POST.get('confirm_password') or ''
+            descripcion_empresa = (request.POST.get('descripcion_empresa') or '').strip()
             logo_empresa = request.FILES.get('logo_empresa')
             pais_empresa = request.POST.get('pais_empresa')
             estado_empresa = request.POST.get('estado_empresa')
             tipo_empresa = request.POST.get('tipo_empresa')
             sector_empresa = request.POST.get('sector_empresa')
-            direccion_empresa = request.POST.get('direccion_empresa')
+            direccion_empresa = (request.POST.get('direccion_empresa') or '').strip()
             
             # Avatar del chatbot
             avatar_option = request.POST.get('avatar_option', 'avatars/Cartoon Style Robot.jpg')
@@ -1636,6 +1651,19 @@ def registrar_empresa(request):
             else:
                 # Usar la opción seleccionada (ruta del avatar predefinido)
                 avatar_chatbot_empresa = avatar_option
+
+            # Validar que se haya subido el logo de la empresa
+            if not logo_empresa:
+                logger.warning("Logo de empresa no proporcionado en registro de empresa")
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El logo de la empresa es obligatorio.'
+                    })
+                else:
+                    return render(request, 'ecommerce_app/registrar_empresa.html', {
+                        'error_message': 'El logo de la empresa es obligatorio.'
+                    })
 
             # Validar que todos los campos estén completos
             if not nombre_empresa or not correo_empresa or not password_empresa or not confirm_password or not descripcion_empresa or not pais_empresa or not estado_empresa or not tipo_empresa or not direccion_empresa:
@@ -1663,8 +1691,8 @@ def registrar_empresa(request):
                         'error_message': 'Las contraseñas no coinciden.'
                     })
 
-            # Validar que el correo no exista en la tabla usuario
-            if usuario.objects.filter(correo_usuario=correo_empresa).exists():
+            # Validar que el correo no exista en la tabla usuario (case-insensitive)
+            if usuario.objects.filter(correo_usuario__iexact=correo_empresa).exists():
                 logger.warning(f"El correo {correo_empresa} ya existe en la tabla usuario")
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1677,7 +1705,7 @@ def registrar_empresa(request):
                     })
 
             # Validar que el correo no exista en la tabla empresa
-            if empresa.objects.filter(correo_empresa=correo_empresa).exists():
+            if empresa.objects.filter(correo_empresa__iexact=correo_empresa).exists():
                 logger.warning(f"El correo {correo_empresa} ya existe en la tabla empresa")
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -1687,6 +1715,19 @@ def registrar_empresa(request):
                 else:
                     return render(request, 'ecommerce_app/registrar_empresa.html', {
                         'error_message': 'Este correo ya está registrado como empresa.'
+                    })
+
+            # Validar que el nombre de la empresa no exista (case-insensitive)
+            if nombre_empresa and empresa.objects.filter(nombre_empresa__iexact=nombre_empresa).exists():
+                logger.warning(f"El nombre de empresa {nombre_empresa} ya existe en la tabla empresa")
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'El nombre de la empresa ya está registrado.'
+                    })
+                else:
+                    return render(request, 'ecommerce_app/registrar_empresa.html', {
+                        'error_message': 'El nombre de la empresa ya está registrado.'
                     })
 
             # Validar longitud mínima de descripción
@@ -3718,7 +3759,6 @@ def servicio_config_funcion(request):
         return redirect('/ecommerce/iniciar_sesion')
 
     account_type = request.session.get('account_type', 'usuario')
-    
     if account_type == 'empresa':
         # Para empresas, current_user ya es la empresa
         empresa_obj = current_user
@@ -3731,18 +3771,19 @@ def servicio_config_funcion(request):
         }
         # Filtrar servicios por empresa actual
         servicios_all = servicio_empresa.objects.filter(id_empresa_fk=empresa_obj)
-        categoria_servicio_all = categoria_servicio_empresa.objects.filter(id_empresa_fk=empresa_obj)
-        
+        # Incluir tanto las categorías propias de la empresa como las genéricas (generico='s')
+        categoria_servicio_all = categoria_servicio_empresa.objects.filter(Q(id_empresa_fk=empresa_obj) | Q(generico='s'))
+
         # Agregar la primera imagen de cada servicio y las sucursales asignadas
         servicios_con_imagenes = []
         for serv in servicios_all:
             primera_imagen = imagen_servicio_empresa.objects.filter(id_servicio_fk=serv).first()
             serv.primera_imagen = primera_imagen
-            
+
             # Obtener sucursales donde está asignado este servicio
             sucursales_asignadas = servicio_sucursal.objects.filter(id_servicio_fk=serv).select_related('id_sucursal_fk')
             serv.sucursales_asignadas = [ss.id_sucursal_fk for ss in sucursales_asignadas]
-            
+
             servicios_con_imagenes.append(serv)
     else:
         # Para usuarios, usar servicios de usuario
@@ -3755,8 +3796,9 @@ def servicio_config_funcion(request):
         }
         # Filtrar servicios por usuario actual
         servicios_all = servicio_usuario.objects.filter(id_usuario_fk=current_user)
-        categoria_servicio_all = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
-        
+        # Incluir tanto las categorías propias del usuario como las categorías genéricas (si existen)
+        categoria_servicio_all = categoria_servicio_usuario.objects.filter(Q(id_usuario_fk=current_user) | Q(generico='s'))
+
         # Agregar la primera imagen de cada servicio
         servicios_con_imagenes = []
         for serv in servicios_all:
@@ -3764,10 +3806,42 @@ def servicio_config_funcion(request):
             serv.primera_imagen = primera_imagen
             servicios_con_imagenes.append(serv)
     
+    # Calcular estadísticas de servicios en el servidor para evitar discrepancias
+    try:
+        total_servicios = len(servicios_con_imagenes)
+        servicios_activos = 0
+        servicios_inactivos = 0
+
+        # Para cada servicio, intentar inferir su estado a partir de asignaciones en sucursales
+        for serv in servicios_con_imagenes:
+            try:
+                # Buscar asignaciones en sucursales relacionadas a este servicio
+                asignaciones = servicio_sucursal.objects.filter(id_servicio_fk=serv)
+                if asignaciones.exists():
+                    # Si alguna asignación está activa, consideramos el servicio como activo
+                    if asignaciones.filter(estatus_servicio_sucursal__iexact='Activo').exists():
+                        servicios_activos += 1
+                    else:
+                        # Ninguna asignación activa => marcamos como inactivo
+                        servicios_inactivos += 1
+                else:
+                    # Si no hay asignaciones en sucursales, asumimos que el servicio está activo por defecto
+                    servicios_activos += 1
+            except Exception:
+                # En caso de error al inspeccionar asignaciones, no bloqueamos la vista: contar como inactivo
+                servicios_inactivos += 1
+    except Exception:
+        total_servicios = len(servicios_con_imagenes)
+        servicios_activos = total_servicios
+        servicios_inactivos = 0
+
     return render(request, 'ecommerce_app/servicio_config.html', {
         'servicio_all': servicios_con_imagenes,
         'categoria_servicio_all': categoria_servicio_all,
-        'user_info': user_info
+        'user_info': user_info,
+        'total_servicios': total_servicios,
+        'servicios_activos': servicios_activos,
+        'servicios_inactivos': servicios_inactivos
     })
 
 
@@ -7299,11 +7373,14 @@ def agregar_al_carrito(request):
                         detalle_existente.cantidad_deta_carrito_prod_empresa * producto_info['precio']
                     )
                     detalle_existente.save()
-                    
-                    # Incrementar stock reservado
-                    producto_usuario_obj = producto_info['objeto']
-                    producto_usuario_obj.stock_reservado_usuario += cantidad
-                    producto_usuario_obj.save()
+
+                    # Incrementar stock reservado (producto de sucursal)
+                    try:
+                        producto_sucursal_obj = producto_info['objeto']
+                        producto_sucursal_obj.stock_reservado_sucursal += cantidad
+                        producto_sucursal_obj.save(update_fields=['stock_reservado_sucursal'])
+                    except Exception:
+                        logger.exception('No se pudo actualizar stock_reservado_sucursal al aumentar cantidad detalle (empresa)')
                 else:
                     # Crear nuevo detalle
                     detalle_compra_producto_empresa.objects.create(
@@ -7343,6 +7420,13 @@ def agregar_al_carrito(request):
                         detalle_existente.cantidad_deta_carrito_prod_empresa * producto_info['precio']
                     )
                     detalle_existente.save()
+                    # Incrementar stock reservado para producto usuario (si ya existía detalle)
+                    try:
+                        producto_usuario_obj = producto_info['objeto']
+                        producto_usuario_obj.stock_reservado_usuario += cantidad
+                        producto_usuario_obj.save(update_fields=['stock_reservado_usuario'])
+                    except Exception:
+                        logger.exception('No se pudo actualizar stock_reservado_usuario al aumentar cantidad detalle (empresa->usuario)')
                 else:
                     # Crear nuevo detalle
                     detalle_compra_producto_empresa.objects.create(
@@ -7419,6 +7503,13 @@ def agregar_al_carrito(request):
                         detalle_existente.cantidad_deta_carrito_prod_usuario * producto_info['precio']
                     )
                     detalle_existente.save()
+                    # Incrementar stock reservado para producto de sucursal (usuario comprando a sucursal)
+                    try:
+                        producto_sucursal_obj = producto_info['objeto']
+                        producto_sucursal_obj.stock_reservado_sucursal += cantidad
+                        producto_sucursal_obj.save(update_fields=['stock_reservado_sucursal'])
+                    except Exception:
+                        logger.exception('No se pudo actualizar stock_reservado_sucursal al aumentar cantidad detalle (usuario->sucursal)')
                 else:
                     # Crear nuevo detalle
                     detalle_compra_producto_usuario.objects.create(
@@ -7429,6 +7520,13 @@ def agregar_al_carrito(request):
                         precio_original_deta_carrito_prod_usuario=producto_info['precio'],
                         subtotal_deta_carrito_prod_usuario=cantidad * producto_info['precio']
                     )
+                    # Incrementar stock reservado para nuevo detalle (producto sucursal)
+                    try:
+                        producto_sucursal_obj = producto_info['objeto']
+                        producto_sucursal_obj.stock_reservado_sucursal += cantidad
+                        producto_sucursal_obj.save(update_fields=['stock_reservado_sucursal'])
+                    except Exception:
+                        logger.exception('No se pudo actualizar stock_reservado_sucursal al crear detalle (usuario->sucursal)')
             
             elif producto_info['tipo'] == 'usuario':
                 # Verificar si ya existe en el carrito
@@ -7453,6 +7551,13 @@ def agregar_al_carrito(request):
                         detalle_existente.cantidad_deta_carrito_prod_usuario * producto_info['precio']
                     )
                     detalle_existente.save()
+                    # Incrementar stock reservado para producto usuario
+                    try:
+                        producto_usuario_obj = producto_info['objeto']
+                        producto_usuario_obj.stock_reservado_usuario += cantidad
+                        producto_usuario_obj.save(update_fields=['stock_reservado_usuario'])
+                    except Exception:
+                        logger.exception('No se pudo actualizar stock_reservado_usuario al aumentar cantidad detalle (usuario->usuario)')
                 else:
                     # Crear nuevo detalle
                     detalle_compra_producto_usuario.objects.create(
@@ -7463,6 +7568,13 @@ def agregar_al_carrito(request):
                         precio_original_deta_carrito_prod_usuario=producto_info['precio'],
                         subtotal_deta_carrito_prod_usuario=cantidad * producto_info['precio']
                     )
+                    # Incrementar stock reservado para nuevo detalle (producto usuario)
+                    try:
+                        producto_usuario_obj = producto_info['objeto']
+                        producto_usuario_obj.stock_reservado_usuario += cantidad
+                        producto_usuario_obj.save(update_fields=['stock_reservado_usuario'])
+                    except Exception:
+                        logger.exception('No se pudo actualizar stock_reservado_usuario al crear detalle (usuario->usuario)')
             
             # Actualizar total del carrito
             recalcular_total_carrito(carrito, 'usuario')
@@ -7560,10 +7672,39 @@ def actualizar_cantidad_carrito(request):
                         'message': 'Producto no encontrado en el carrito'
                     }, status=404)
             
-            # Actualizar la cantidad y recalcular subtotal
-            detalle.cantidad_deta_carrito_prod_empresa = int(nueva_cantidad)
-            detalle.subtotal_deta_carrito_prod_empresa = detalle.cantidad_deta_carrito_prod_empresa * detalle.precio_unit_deta_carrito_prod_empresa
-            detalle.save()
+            # Ajustar stock reservado según la diferencia entre nueva y vieja cantidad
+            try:
+                old_qty = int(detalle.cantidad_deta_carrito_prod_empresa or 0)
+                new_qty = int(nueva_cantidad)
+                delta = new_qty - old_qty
+
+                # Si el detalle corresponde a un producto de sucursal
+                if detalle.id_fk_producto_sucursal_empresa:
+                    prod = producto_sucursal.objects.select_for_update().get(pk=detalle.id_fk_producto_sucursal_empresa.pk)
+                    if delta > 0:
+                        available = prod.stock_producto_sucursal - prod.stock_reservado_sucursal
+                        if delta > available:
+                            return JsonResponse({'success': False, 'message': 'Stock insuficiente para la actualización'}, status=400)
+                    prod.stock_reservado_sucursal = max(0, prod.stock_reservado_sucursal + delta)
+                    prod.save(update_fields=['stock_reservado_sucursal'])
+
+                # Si el detalle corresponde a un producto de usuario
+                elif detalle.idproducto_fk_usuario:
+                    prod = producto_usuario.objects.select_for_update().get(pk=detalle.idproducto_fk_usuario.pk)
+                    if delta > 0:
+                        available = prod.stock_producto_usuario - prod.stock_reservado_usuario
+                        if delta > available:
+                            return JsonResponse({'success': False, 'message': 'Stock insuficiente para la actualización'}, status=400)
+                    prod.stock_reservado_usuario = max(0, prod.stock_reservado_usuario + delta)
+                    prod.save(update_fields=['stock_reservado_usuario'])
+
+                # Actualizar la cantidad y subtotal del detalle
+                detalle.cantidad_deta_carrito_prod_empresa = new_qty
+                detalle.subtotal_deta_carrito_prod_empresa = detalle.cantidad_deta_carrito_prod_empresa * detalle.precio_unit_deta_carrito_prod_empresa
+                detalle.save()
+            except Exception as e:
+                logger.exception('Error al ajustar stock reservado al actualizar cantidad (empresa)')
+                return JsonResponse({'success': False, 'message': 'Error al actualizar cantidad'}, status=500)
             
             # Recalcular el total del carrito
             recalcular_total_carrito(carrito, 'empresa')
@@ -7600,10 +7741,39 @@ def actualizar_cantidad_carrito(request):
                         'message': 'Producto no encontrado en el carrito'
                     }, status=404)
             
-            # Actualizar la cantidad y recalcular subtotal
-            detalle.cantidad_deta_carrito_prod_usuario = int(nueva_cantidad)
-            detalle.subtotal_deta_carrito_prod_usuario = detalle.cantidad_deta_carrito_prod_usuario * detalle.precio_unit_deta_carrito_prod_usuario
-            detalle.save()
+            # Ajustar stock reservado según la diferencia entre nueva y vieja cantidad
+            try:
+                old_qty = int(detalle.cantidad_deta_carrito_prod_usuario or 0)
+                new_qty = int(nueva_cantidad)
+                delta = new_qty - old_qty
+
+                # Si el detalle corresponde a un producto de sucursal
+                if detalle.id_fk_producto_sucursal_empresa:
+                    prod = producto_sucursal.objects.select_for_update().get(pk=detalle.id_fk_producto_sucursal_empresa.pk)
+                    if delta > 0:
+                        available = prod.stock_producto_sucursal - prod.stock_reservado_sucursal
+                        if delta > available:
+                            return JsonResponse({'success': False, 'message': 'Stock insuficiente para la actualización'}, status=400)
+                    prod.stock_reservado_sucursal = max(0, prod.stock_reservado_sucursal + delta)
+                    prod.save(update_fields=['stock_reservado_sucursal'])
+
+                # Si el detalle corresponde a un producto de usuario
+                elif detalle.idproducto_fk_usuario:
+                    prod = producto_usuario.objects.select_for_update().get(pk=detalle.idproducto_fk_usuario.pk)
+                    if delta > 0:
+                        available = prod.stock_producto_usuario - prod.stock_reservado_usuario
+                        if delta > available:
+                            return JsonResponse({'success': False, 'message': 'Stock insuficiente para la actualización'}, status=400)
+                    prod.stock_reservado_usuario = max(0, prod.stock_reservado_usuario + delta)
+                    prod.save(update_fields=['stock_reservado_usuario'])
+
+                # Actualizar la cantidad y subtotal del detalle
+                detalle.cantidad_deta_carrito_prod_usuario = new_qty
+                detalle.subtotal_deta_carrito_prod_usuario = detalle.cantidad_deta_carrito_prod_usuario * detalle.precio_unit_deta_carrito_prod_usuario
+                detalle.save()
+            except Exception as e:
+                logger.exception('Error al ajustar stock reservado al actualizar cantidad (usuario)')
+                return JsonResponse({'success': False, 'message': 'Error al actualizar cantidad'}, status=500)
             
             # Recalcular el total del carrito
             recalcular_total_carrito(carrito, 'usuario')
@@ -7681,6 +7851,27 @@ def eliminar_del_carrito(request):
                     id_deta_carrito_prod_empresa=detalle_id,
                     id_fk_carritocompra_empresa=carrito
                 )
+                # Antes de eliminar, ajustar el stock reservado si aplica
+                try:
+                    # Si el detalle está asociado a una sucursal (producto_sucursal)
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        producto = detalle.id_fk_producto_sucursal_empresa
+                        cantidad = detalle.cantidad_deta_carrito_prod_empresa or 0
+                        new_reserved = max(0, producto.stock_reservado_sucursal - cantidad)
+                        producto.stock_reservado_sucursal = new_reserved
+                        producto.save(update_fields=['stock_reservado_sucursal'])
+                        logger.info(f"Stock reservado sucursal actualizado: {producto.id_producto_sucursal} - reservado ahora: {new_reserved}")
+                    # Si el detalle está asociado a un producto de usuario
+                    elif detalle.idproducto_fk_usuario:
+                        producto_u = detalle.idproducto_fk_usuario
+                        cantidad = detalle.cantidad_deta_carrito_prod_empresa or 0
+                        new_reserved = max(0, producto_u.stock_reservado_usuario - cantidad)
+                        producto_u.stock_reservado_usuario = new_reserved
+                        producto_u.save(update_fields=['stock_reservado_usuario'])
+                        logger.info(f"Stock reservado usuario actualizado: {producto_u.id_producto_usuario} - reservado ahora: {new_reserved}")
+                except Exception as e:
+                    logger.error(f"Error al actualizar stock reservado antes de eliminar detalle empresa {detalle_id}: {str(e)}")
+
                 detalle.delete()
                 print(f"[DEBUG] Detalle de empresa eliminado exitosamente: {detalle_id}")
                 
@@ -7718,6 +7909,25 @@ def eliminar_del_carrito(request):
                     id_deta_carrito_prod_usuario=detalle_id,
                     id_fk_carritocompra_usuario=carrito
                 )
+                # Antes de eliminar, ajustar el stock reservado si aplica
+                try:
+                    if detalle.id_fk_producto_sucursal_empresa:
+                        producto = detalle.id_fk_producto_sucursal_empresa
+                        cantidad = detalle.cantidad_deta_carrito_prod_usuario or 0
+                        new_reserved = max(0, producto.stock_reservado_sucursal - cantidad)
+                        producto.stock_reservado_sucursal = new_reserved
+                        producto.save(update_fields=['stock_reservado_sucursal'])
+                        logger.info(f"Stock reservado sucursal actualizado: {producto.id_producto_sucursal} - reservado ahora: {new_reserved}")
+                    elif detalle.idproducto_fk_usuario:
+                        producto_u = detalle.idproducto_fk_usuario
+                        cantidad = detalle.cantidad_deta_carrito_prod_usuario or 0
+                        new_reserved = max(0, producto_u.stock_reservado_usuario - cantidad)
+                        producto_u.stock_reservado_usuario = new_reserved
+                        producto_u.save(update_fields=['stock_reservado_usuario'])
+                        logger.info(f"Stock reservado usuario actualizado: {producto_u.id_producto_usuario} - reservado ahora: {new_reserved}")
+                except Exception as e:
+                    logger.error(f"Error al actualizar stock reservado antes de eliminar detalle usuario {detalle_id}: {str(e)}")
+
                 detalle.delete()
                 print(f"[DEBUG] Detalle de usuario eliminado exitosamente: {detalle_id}")
                 
@@ -8713,14 +8923,37 @@ def notificaciones(request):
         
         # Obtener ventas pendientes como notificaciones
         ventas_pendientes = obtener_ventas_pendientes_como_notificaciones(current_user, account_type)
-        
-        # Combinar notificaciones regulares con ventas pendientes
+
+        # Build set of pedido numbers from ventas_pendientes to avoid duplicate notifications
+        ventas_pedidos_nums = set()
+        for vp in ventas_pendientes:
+            try:
+                num = vp.get('numero_pedido')
+                if num:
+                    ventas_pedidos_nums.add(num)
+            except Exception:
+                continue
+
+        # Combinar notificaciones regulares con ventas pendientes, omitiendo duplicados
         todas_notificaciones = []
-        
-        # Agregar notificaciones regulares
+
+        # Agregar notificaciones regulares (omitir 'nuevo_pedido' que ya aparece en ventas_pendientes)
         for notif in notificaciones_list:
-            # Incluir las referencias al pedido (si existen) para que la plantilla pueda
-            # construir correctamente el atributo data-pedido-id y la lógica de redirección
+            # obtener número de pedido asociado a la notificación (si existe)
+            notif_pedido_num = None
+            if account_type == 'empresa':
+                pedido_fk = getattr(notif, 'id_pedido_empresa_fk', None)
+            else:
+                pedido_fk = getattr(notif, 'id_pedido_usuario_fk', None)
+
+            if pedido_fk:
+                notif_pedido_num = getattr(pedido_fk, 'numero_pedido', None)
+
+            # Si la notificación es tipo 'nuevo_pedido' y ya existe una venta pendiente para el mismo pedido,
+            # la omitimos para evitar duplicados en la lista de notificaciones.
+            if getattr(notif, 'tipo_notificacion', '') == 'nuevo_pedido' and notif_pedido_num in ventas_pedidos_nums:
+                continue
+
             todas_notificaciones.append({
                 'id_notificacion': notif.id_notificacion_empresa if account_type == 'empresa' else notif.id_notificacion_usuario,
                 'tipo_notificacion': notif.tipo_notificacion,
@@ -8730,14 +8963,11 @@ def notificaciones(request):
                 'fecha_creacion': notif.fecha_creacion,
                 'fecha_leida': notif.fecha_leida,
                 'es_venta_pendiente': False,
-                # Pasamos las FK originales (pueden ser None). El template accede a
-                # notificacion.id_pedido_usuario_fk.id_pedido_usuario o
-                # notificacion.id_pedido_empresa_fk.id_pedido_empresa según corresponda.
                 'id_pedido_usuario_fk': getattr(notif, 'id_pedido_usuario_fk', None),
                 'id_pedido_empresa_fk': getattr(notif, 'id_pedido_empresa_fk', None)
             })
-        
-        # Agregar ventas pendientes
+
+        # Agregar ventas pendientes (después de las notificaciones regulares filtradas)
         todas_notificaciones.extend(ventas_pendientes)
         
         # Ordenar todas las notificaciones por fecha de creación (más recientes primero)
@@ -8909,9 +9139,18 @@ def actualizar_estado_servicio_usuario(request):
             titulo = "Estado de Servicio Actualizado"
             mensaje = f"El estado de tu servicio ha cambiado a {nuevo_estado}."
         
+        # Mapear tipos a notificaciones concretas para que coincidan con TIPOS_NOTIFICACION
+        tipo_map_usuario = {
+            'cotizada': 'servicio_cotizado',
+            'aceptada': 'servicio_aceptado',
+            'completada': 'servicio_completado',
+            'rechazada': 'pedido_rechazado'
+        }
+        tipo_notif = tipo_map_usuario.get(nuevo_estado, 'servicio_cotizado')
+
         crear_notificacion_usuario(
             usuario=cliente,
-            tipo_notificacion='cambio_estado_servicio',
+            tipo_notificacion=tipo_notif,
             titulo=titulo,
             mensaje=mensaje,
             solicitud_servicio=solicitud
@@ -9110,9 +9349,20 @@ def actualizar_estado_servicio_empresa(request):
             titulo = "Estado de Servicio Actualizado"
             mensaje = f"El estado de su servicio ha cambiado a {nuevo_estado}."
         
+        # Mapear tipos a notificaciones concretas para empresas. Algunas claves pueden
+        # no existir exactamente en TIPOS_NOTIFICACION de la empresa; ajustamos a valores
+        # cercanos para mantener compatibilidad.
+        tipo_map_empresa = {
+            'cotizada': 'solicitud_servicio',
+            'aceptada': 'servicio_pagado',
+            'completada': 'servicio_pagado',
+            'rechazada': 'venta_rechazada'
+        }
+        tipo_notif_emp = tipo_map_empresa.get(nuevo_estado, 'solicitud_servicio')
+
         crear_notificacion_empresa(
             empresa=cliente,
-            tipo_notificacion='cambio_estado_servicio',
+            tipo_notificacion=tipo_notif_emp,
             titulo=titulo,
             mensaje=mensaje,
             solicitud_servicio=solicitud
@@ -12336,6 +12586,8 @@ def pedidos_confirmados(request):
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                        # Producto perteneciente a empresa -> no hay usuario propietario
+                        usuario_nombre = None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
                         sucursal = "Sin sucursal"
@@ -12344,6 +12596,11 @@ def pedidos_confirmados(request):
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                        # Intentar obtener nombre del usuario propietario del producto (si existe)
+                        try:
+                            usuario_nombre = detalle.idproducto_fk_usuario.id_usuario_fk.nombre_usuario if detalle.idproducto_fk_usuario.id_usuario_fk else None
+                        except Exception:
+                            usuario_nombre = None
                     else:
                         nombre_producto = "Producto no disponible"
                         sucursal = "Sin sucursal"
@@ -12357,7 +12614,8 @@ def pedidos_confirmados(request):
                         'subtotal': float(detalle.subtotal_detalle_pedido),
                         'imagen': imagen_url,
                         'sucursal': sucursal,
-                        'empresa': empresa
+                        'empresa': empresa,
+                        'usuario': usuario_nombre
                     })
                 
                 pedidos_historial.append({
@@ -12403,6 +12661,8 @@ def pedidos_confirmados(request):
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                        # Producto de empresa -> no usuario propietario
+                        usuario_nombre = None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
                         sucursal = "Sin sucursal"
@@ -12411,12 +12671,17 @@ def pedidos_confirmados(request):
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                        try:
+                            usuario_nombre = detalle.idproducto_fk_usuario.id_usuario_fk.nombre_usuario if detalle.idproducto_fk_usuario.id_usuario_fk else None
+                        except Exception:
+                            usuario_nombre = None
                     else:
                         nombre_producto = "Producto no disponible"
                         sucursal = "Sin sucursal"
                         empresa = "Sin empresa"
                         imagen_url = None
-                    
+                        usuario_nombre = None
+
                     detalles_list.append({
                         'nombre_producto': nombre_producto,
                         'cantidad': detalle.cantidad_detalle_pedido,
@@ -12424,7 +12689,8 @@ def pedidos_confirmados(request):
                         'subtotal': float(detalle.subtotal_detalle_pedido),
                         'imagen': imagen_url,
                         'sucursal': sucursal,
-                        'empresa': empresa
+                        'empresa': empresa,
+                        'usuario': usuario_nombre
                     })
                 
                 pedidos_historial.append({
@@ -12494,6 +12760,7 @@ def pedidos_rechazados(request):
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                        usuario_nombre = None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
                         sucursal = "Sin sucursal"
@@ -12502,12 +12769,17 @@ def pedidos_rechazados(request):
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                        try:
+                            usuario_nombre = detalle.idproducto_fk_usuario.id_usuario_fk.nombre_usuario if detalle.idproducto_fk_usuario.id_usuario_fk else None
+                        except Exception:
+                            usuario_nombre = None
                     else:
                         nombre_producto = "Producto no disponible"
                         sucursal = "Sin sucursal"
                         empresa = "Sin empresa"
                         imagen_url = None
-                    
+                        usuario_nombre = None
+
                     detalles_list.append({
                         'nombre_producto': nombre_producto,
                         'cantidad': detalle.cantidad_detalle_pedido,
@@ -12515,7 +12787,8 @@ def pedidos_rechazados(request):
                         'subtotal': float(detalle.subtotal_detalle_pedido),
                         'imagen': imagen_url,
                         'sucursal': sucursal,
-                        'empresa': empresa
+                        'empresa': empresa,
+                        'usuario': usuario_nombre
                     })
                 
                 pedidos_historial.append({
@@ -12561,6 +12834,7 @@ def pedidos_rechazados(request):
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                        usuario_nombre = None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
                         sucursal = "Sin sucursal"
@@ -12569,12 +12843,17 @@ def pedidos_rechazados(request):
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                        try:
+                            usuario_nombre = detalle.idproducto_fk_usuario.id_usuario_fk.nombre_usuario if detalle.idproducto_fk_usuario.id_usuario_fk else None
+                        except Exception:
+                            usuario_nombre = None
                     else:
                         nombre_producto = "Producto no disponible"
                         sucursal = "Sin sucursal"
                         empresa = "Sin empresa"
                         imagen_url = None
-                    
+                        usuario_nombre = None
+
                     detalles_list.append({
                         'nombre_producto': nombre_producto,
                         'cantidad': detalle.cantidad_detalle_pedido,
@@ -12582,7 +12861,8 @@ def pedidos_rechazados(request):
                         'subtotal': float(detalle.subtotal_detalle_pedido),
                         'imagen': imagen_url,
                         'sucursal': sucursal,
-                        'empresa': empresa
+                        'empresa': empresa,
+                        'usuario': usuario_nombre
                     })
                 
                 pedidos_historial.append({
@@ -12652,6 +12932,7 @@ def pedidos_pendientes(request):
                             id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                        usuario_nombre = None
                     elif detalle.idproducto_fk_usuario:
                         nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
                         sucursal = "Sin sucursal"
@@ -12660,12 +12941,17 @@ def pedidos_pendientes(request):
                             id_producto_fk=detalle.idproducto_fk_usuario
                         ).first()
                         imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                        try:
+                            usuario_nombre = detalle.idproducto_fk_usuario.id_usuario_fk.nombre_usuario if detalle.idproducto_fk_usuario.id_usuario_fk else None
+                        except Exception:
+                            usuario_nombre = None
                     else:
                         nombre_producto = "Producto no disponible"
                         sucursal = "Sin sucursal"
                         empresa = "Sin empresa"
                         imagen_url = None
-                    
+                        usuario_nombre = None
+
                     detalles_list.append({
                         'nombre_producto': nombre_producto,
                         'cantidad': detalle.cantidad_detalle_pedido,
@@ -12673,7 +12959,8 @@ def pedidos_pendientes(request):
                         'subtotal': float(detalle.subtotal_detalle_pedido),
                         'imagen': imagen_url,
                         'sucursal': sucursal,
-                        'empresa': empresa
+                        'empresa': empresa,
+                        'usuario': usuario_nombre
                     })
                 
                 pedidos_historial.append({
@@ -12705,55 +12992,76 @@ def pedidos_pendientes(request):
             ).order_by('-fecha_pedido')
             
             for pedido in pedidos_usuario:
-                # Obtener detalles del pedido
-                detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido)
-                
-                detalles_list = []
-                for detalle in detalles:
-                    if detalle.id_fk_producto_sucursal_empresa:
-                        nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
-                        sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
-                        empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
-                        imagen = imagen_producto_empresa.objects.filter(
-                            id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
-                        ).first()
-                        imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
-                    elif detalle.idproducto_fk_usuario:
-                        nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
-                        sucursal = "Sin sucursal"
-                        empresa = "Sin empresa"
-                        imagen = imagen_producto_usuario.objects.filter(
-                            id_producto_fk=detalle.idproducto_fk_usuario
-                        ).first()
-                        imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
-                    else:
-                        nombre_producto = "Producto no disponible"
-                        sucursal = "Sin sucursal"
-                        empresa = "Sin empresa"
-                        imagen_url = None
-                    
-                    detalles_list.append({
-                        'nombre_producto': nombre_producto,
-                        'cantidad': detalle.cantidad_detalle_pedido,
-                        'precio_unitario': float(detalle.precio_unitario_pedido),
-                        'subtotal': float(detalle.subtotal_detalle_pedido),
-                        'imagen': imagen_url,
-                        'sucursal': sucursal,
-                        'empresa': empresa
+                try:
+                    # Obtener detalles del pedido
+                    detalles = detalle_pedido_usuario.objects.filter(id_pedido_fk=pedido)
+
+                    detalles_list = []
+                    for detalle in detalles:
+                        try:
+                            usuario_nombre = None
+                            if detalle.id_fk_producto_sucursal_empresa:
+                                nombre_producto = detalle.id_fk_producto_sucursal_empresa.id_producto_fk.nombre_producto_empresa
+                                sucursal = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.nombre_sucursal if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk else "Sin sucursal"
+                                empresa = detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk.nombre_empresa if detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk and detalle.id_fk_producto_sucursal_empresa.id_sucursal_fk.id_empresa_fk else "Sin empresa"
+                                imagen = imagen_producto_empresa.objects.filter(
+                                    id_producto_fk=detalle.id_fk_producto_sucursal_empresa.id_producto_fk
+                                ).first()
+                                imagen_url = imagen.ruta_imagen_producto_empresa.url if imagen else None
+                            elif detalle.idproducto_fk_usuario:
+                                nombre_producto = detalle.idproducto_fk_usuario.nombre_producto_usuario
+                                sucursal = "Sin sucursal"
+                                empresa = "Sin empresa"
+                                imagen = imagen_producto_usuario.objects.filter(
+                                    id_producto_fk=detalle.idproducto_fk_usuario
+                                ).first()
+                                imagen_url = imagen.ruta_imagen_producto_usuario.url if imagen else None
+                                try:
+                                    usuario_nombre = detalle.idproducto_fk_usuario.id_usuario_fk.nombre_usuario if detalle.idproducto_fk_usuario.id_usuario_fk else None
+                                except Exception:
+                                    usuario_nombre = None
+                            else:
+                                nombre_producto = "Producto no disponible"
+                                sucursal = "Sin sucursal"
+                                empresa = "Sin empresa"
+                                imagen_url = None
+                                usuario_nombre = None
+
+                            detalles_list.append({
+                                'nombre_producto': nombre_producto,
+                                'cantidad': detalle.cantidad_detalle_pedido,
+                                'precio_unitario': float(detalle.precio_unitario_pedido),
+                                'subtotal': float(detalle.subtotal_detalle_pedido),
+                                'imagen': imagen_url,
+                                'sucursal': sucursal,
+                                'empresa': empresa,
+                                'usuario': usuario_nombre
+                            })
+                        except Exception as e_det:
+                            # Loguear error de detalle y continuar
+                            import traceback as _tb_det
+                            logger.error(f"Error procesando detalle de pedido {getattr(pedido,'numero_pedido', '?')}: {e_det}")
+                            logger.error(_tb_det.format_exc())
+                            continue
+
+                    pedidos_historial.append({
+                        'numero_pedido': pedido.numero_pedido,
+                        'fecha_pedido': pedido.fecha_pedido,
+                        'estado_pedido': pedido.estado_pedido,
+                        'total_pedido': float(pedido.total_pedido),
+                        'metodo_pago': pedido.metodo_pago,
+                        'direccion_entrega': pedido.direccion_envio,
+                        'notas_pedido': pedido.notas_pedido,
+                        'detalles': detalles_list,
+                        'tipo_pedido': 'usuario',
+                        'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None
                     })
-                
-                pedidos_historial.append({
-                    'numero_pedido': pedido.numero_pedido,
-                    'fecha_pedido': pedido.fecha_pedido,
-                    'estado_pedido': pedido.estado_pedido,
-                    'total_pedido': float(pedido.total_pedido),
-                    'metodo_pago': pedido.metodo_pago,
-                    'direccion_entrega': pedido.direccion_envio,
-                    'notas_pedido': pedido.notas_pedido,
-                    'detalles': detalles_list,
-                    'tipo_pedido': 'usuario',
-                    'comprobante_pago_url': pedido.comprobante_pago.url if pedido.comprobante_pago else None
-                })
+                except Exception as e_ped:
+                    import traceback as _tb_ped
+                    logger.error(f"Error procesando pedido {getattr(pedido,'numero_pedido', '?')}: {e_ped}")
+                    logger.error(_tb_ped.format_exc())
+                    # continuar con el siguiente pedido en lugar de fallar toda la vista
+                    continue
         
         context = {
             'user_info': user_info,
@@ -12765,8 +13073,11 @@ def pedidos_pendientes(request):
         return render(request, 'ecommerce_app/pedidos_pendientes.html', context)
         
     except Exception as e:
+        import traceback
         logger.error(f"Error en función pedidos_pendientes: {str(e)}")
-        return redirect('/ecommerce/carrito')
+        logger.error(traceback.format_exc())
+        # No redirigimos silenciosamente al carrito para facilitar el debug; redirigimos al índice
+        return redirect('/ecommerce/index/')
 
 
 # API para obtener atributos asociados a una categoría
@@ -12813,29 +13124,48 @@ def api_obtener_atributos_categoria(request):
         if not categoria_id:
             return JsonResponse({'error': 'ID de categoría requerido'}, status=400)
         
-        # Obtener atributos según el tipo de cuenta
-        if account_type == 'empresa':
-            # Para empresas, buscar en categoria_empresa
-            logger.info(f"Buscando atributos para empresa - categoria_empresa_id={categoria_id}")
+        # Optional explicit 'tipo' query param to disambiguate category origin (empresa|usuario)
+        tipo_param = request.GET.get('tipo')
+
+        # Obtener atributos según el tipo solicitado o según el tipo de cuenta
+        if tipo_param == 'empresa':
+            logger.info(f"Buscando atributos (request.tipo=empresa) - categoria_empresa_id={categoria_id}")
             atributos_categoria = CategoriaAtributo.objects.filter(
                 categoria_empresa_id=categoria_id
             ).select_related('atributo').order_by('orden', 'fecha_asociacion')
-            logger.info(f"Encontrados {atributos_categoria.count()} atributos para empresa")
-        else:
-            # Para usuarios, buscar en categoria_usuario
-            logger.info(f"Buscando atributos para usuario - categoria_usuario_id={categoria_id}")
+            logger.info(f"Encontrados {atributos_categoria.count()} atributos para empresa (forced)")
+
+        elif tipo_param == 'usuario':
+            logger.info(f"Buscando atributos (request.tipo=usuario) - categoria_usuario_id={categoria_id}")
             atributos_categoria = CategoriaAtributo.objects.filter(
                 categoria_usuario_id=categoria_id
             ).select_related('atributo').order_by('orden', 'fecha_asociacion')
-            logger.info(f"Encontrados {atributos_categoria.count()} atributos para usuario")
-            
-            # Si no hay atributos para usuario, intentar buscar en empresa
-            if atributos_categoria.count() == 0:
-                logger.warning(f"No se encontraron atributos en categoria_usuario. Intentando en categoria_empresa...")
+            logger.info(f"Encontrados {atributos_categoria.count()} atributos para usuario (forced)")
+
+        else:
+            # Backwards-compatible behavior: use account_type from session
+            if account_type == 'empresa':
+                # Para empresas, buscar en categoria_empresa
+                logger.info(f"Buscando atributos para empresa - categoria_empresa_id={categoria_id}")
                 atributos_categoria = CategoriaAtributo.objects.filter(
                     categoria_empresa_id=categoria_id
                 ).select_related('atributo').order_by('orden', 'fecha_asociacion')
-                logger.info(f"Encontrados {atributos_categoria.count()} atributos en categoria_empresa")
+                logger.info(f"Encontrados {atributos_categoria.count()} atributos para empresa")
+            else:
+                # Para usuarios, buscar en categoria_usuario
+                logger.info(f"Buscando atributos para usuario - categoria_usuario_id={categoria_id}")
+                atributos_categoria = CategoriaAtributo.objects.filter(
+                    categoria_usuario_id=categoria_id
+                ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+                logger.info(f"Encontrados {atributos_categoria.count()} atributos para usuario")
+                
+                # Si no hay atributos para usuario, intentar buscar en empresa (compatibility fallback)
+                if atributos_categoria.count() == 0:
+                    logger.warning(f"No se encontraron atributos en categoria_usuario. Intentando en categoria_empresa...")
+                    atributos_categoria = CategoriaAtributo.objects.filter(
+                        categoria_empresa_id=categoria_id
+                    ).select_related('atributo').order_by('orden', 'fecha_asociacion')
+                    logger.info(f"Encontrados {atributos_categoria.count()} atributos en categoria_empresa")
         
         # Construir la lista de atributos
         atributos_list = []
@@ -14113,6 +14443,11 @@ def cotizar_servicio(request):
                 
                 solicitud.save()
                 solicitud_actualizada = True
+                # Notificar al solicitante que la solicitud ha sido cotizada
+                try:
+                    notificar_servicio_cotizado(solicitud, presupuesto_decimal)
+                except Exception as e:
+                    logger.error(f"Error al notificar servicio cotizado (usuario): {str(e)}")
                 
             except solicitud_servicio_usuario.DoesNotExist:
                 pass
@@ -14152,6 +14487,11 @@ def cotizar_servicio(request):
                 
                 solicitud.save()
                 solicitud_actualizada = True
+                # Notificar al solicitante que la solicitud ha sido cotizada
+                try:
+                    notificar_servicio_cotizado(solicitud, presupuesto_decimal)
+                except Exception as e:
+                    logger.error(f"Error al notificar servicio cotizado (empresa): {str(e)}")
                 
             except solicitud_servicio_empresa.DoesNotExist:
                 pass
@@ -14548,6 +14888,48 @@ def procesar_pago_servicio(request):
         solicitud.estado = 'pagada'
         solicitud.save()
 
+        # Notificar al proveedor que la solicitud fue pagada/confirmada
+        try:
+            proveedor_usuario = None
+            proveedor_empresa = None
+            # solicitud puede ser instancia de solicitud_servicio_usuario o solicitud_servicio_empresa
+            if hasattr(solicitud, 'id_servicio_usuario_fk') and solicitud.id_servicio_usuario_fk:
+                # proveedor es un usuario (dueño del servicio)
+                proveedor_usuario = getattr(solicitud.id_servicio_usuario_fk, 'id_usuario_fk', None)
+            if hasattr(solicitud, 'id_servicio_sucursal_fk') and solicitud.id_servicio_sucursal_fk:
+                # proveedor es una empresa (sucursal -> empresa)
+                suc = getattr(solicitud.id_servicio_sucursal_fk, 'id_sucursal_fk', None)
+                proveedor_empresa = getattr(suc, 'id_empresa_fk', None) if suc else None
+
+            titulo_prov = f"Solicitud #{getattr(solicitud, 'id_solicitud_servicio_usuario', getattr(solicitud, 'id_solicitud_servicio_empresa', ''))} - Pago recibido"
+            mensaje_prov = f"La solicitud de servicio ha sido pagada por el cliente. Revisa los detalles y procede con la prestación del servicio."
+
+            if proveedor_usuario:
+                try:
+                    crear_notificacion_usuario(
+                        usuario=proveedor_usuario,
+                        tipo_notificacion='servicio_aceptado',
+                        titulo=titulo_prov,
+                        mensaje=mensaje_prov,
+                        solicitud_servicio=solicitud
+                    )
+                except Exception as e:
+                    logger.error(f"Error creando notificación usuario proveedor (pago): {str(e)}")
+
+            if proveedor_empresa:
+                try:
+                    crear_notificacion_empresa(
+                        empresa=proveedor_empresa,
+                        tipo_notificacion='servicio_pagado',
+                        titulo=titulo_prov,
+                        mensaje=mensaje_prov,
+                        solicitud_servicio=solicitud
+                    )
+                except Exception as e:
+                    logger.error(f"Error creando notificación empresa proveedor (pago): {str(e)}")
+        except Exception as e:
+            logger.error(f"Error al notificar proveedor sobre pago de solicitud: {str(e)}")
+
         return JsonResponse({'success': True, 'message': 'Pago procesado correctamente. Queda pendiente de confirmación.'})
     except Exception as e:
         import traceback
@@ -14940,6 +15322,28 @@ def reporte_productos(request):
         return redirect('/ecommerce/index/')
 
 
+@require_login
+def reporte_servicios(request):
+    """
+    Vista principal para el reporte de servicios (renderiza la plantilla de servicios)
+    """
+    try:
+        current_user = get_current_user(request)
+        if not current_user:
+            return redirect('/ecommerce/iniciar_sesion/')
+        
+        account_type = request.session.get('account_type', 'usuario')
+        user_info = get_user_info_with_avatar(current_user, account_type)
+        context = {
+            'user_info': user_info,
+            'account_type': account_type,
+        }
+        return render(request, 'ecommerce_app/reporte_servicios.html', context)
+    except Exception as e:
+        logger.error(f"Error en reporte_servicios: {str(e)}")
+        return redirect('/ecommerce/index/')
+
+
 @require_http_methods(["GET"])
 def api_obtener_datos_reporte_productos(request):
     """
@@ -15222,6 +15626,243 @@ def api_obtener_datos_reporte_productos(request):
         logger.error(f"Error en api_obtener_datos_reporte_productos: {str(e)}")
         logger.error(traceback.format_exc())
         return JsonResponse({'success': False, 'error': f'Error al obtener datos del reporte: {str(e)}'})
+    
+
+
+@require_http_methods(["GET"])
+def api_obtener_datos_reporte_servicios(request):
+    """
+    API para obtener datos del reporte de servicios.
+    Implementación dedicada para servicios: agrupa solicitudes de servicio (usuario/empresa) por servicio,
+    calcula cantidad, ingresos estimados (usa presupuesto_cotizacion cuando esté disponible) y devuelve
+    la estructura que espera el frontend de `reporte_servicios.js`.
+    """
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Q
+
+        current_user = get_current_user(request)
+        if not current_user:
+            return JsonResponse({'success': False, 'error': 'Usuario no autenticado'})
+
+        account_type = request.session.get('account_type', 'usuario')
+
+        # Parámetros de filtro
+        fecha_inicio = request.GET.get('fecha_inicio')
+        fecha_fin = request.GET.get('fecha_fin')
+        tipo_reporte = request.GET.get('tipo_reporte', 'mensual')
+        sucursal_id = request.GET.get('sucursal_id')
+        categoria_id = request.GET.get('categoria_id')
+
+        # Normalizar fechas (similar a productos)
+        if tipo_reporte == 'semanal':
+            fecha_fin_dt = timezone.now()
+            fecha_inicio_dt = fecha_fin_dt - timedelta(days=7)
+        elif tipo_reporte == 'mensual':
+            fecha_fin_dt = timezone.now()
+            fecha_inicio_dt = fecha_fin_dt - timedelta(days=30)
+        elif tipo_reporte == 'trimestral':
+            fecha_fin_dt = timezone.now()
+            fecha_inicio_dt = fecha_fin_dt - timedelta(days=90)
+        else:
+            # personalizado
+            try:
+                fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d') if fecha_inicio else (timezone.now() - timedelta(days=30))
+                fecha_inicio_dt = timezone.make_aware(fecha_inicio_dt)
+            except Exception:
+                fecha_inicio_dt = timezone.now() - timedelta(days=30)
+            try:
+                fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d') if fecha_fin else timezone.now()
+                fecha_fin_dt = timezone.make_aware(fecha_fin_dt.replace(hour=23, minute=59, second=59))
+            except Exception:
+                fecha_fin_dt = timezone.now()
+
+        # Estados que consideramos como 'prestado' / cobrado
+        estados_validos = ['pagada', 'completada']
+
+        # Recolectar solicitudes que entran en el rango
+        solicitudes_qs = []
+        # Solicitudes de usuarios (realizadas por usuarios a proveedores que pueden ser empresas o usuarios)
+        solicitudes_usuario = solicitud_servicio_usuario.objects.filter(fecha_solicitud__range=[fecha_inicio_dt, fecha_fin_dt], estado__in=estados_validos)
+        solicitudes_empresa = solicitud_servicio_empresa.objects.filter(fecha_solicitud__range=[fecha_inicio_dt, fecha_fin_dt], estado__in=estados_validos)
+
+        # Filtrar por propietario (empresa o usuario) según el account_type
+        def solicitud_pertenece_a_usuario(solicitud, user, account_type_check):
+            """Devuelve True si la solicitud está asociada a los servicios del `user` según account_type_check."""
+            try:
+                if account_type_check == 'empresa':
+                    # Verificar si la solicitud referencia un servicio de sucursal perteneciente a la empresa
+                    svc_suc = getattr(solicitud, 'id_servicio_sucursal_fk', None)
+                    if svc_suc:
+                        suc = getattr(svc_suc, 'id_sucursal_fk', None)
+                        if suc and getattr(suc, 'id_empresa_fk', None) == user:
+                            return True
+                        # También revisar si la FK del servicio apunta a una empresa
+                        svc_emp = getattr(svc_suc, 'id_servicio_fk', None)
+                        if svc_emp and getattr(svc_emp, 'id_empresa_fk', None) == user:
+                            return True
+                    # Revisar si la solicitud referencia directamente un servicio_empresa
+                    svc_emp_direct = getattr(solicitud, 'id_servicio_usuario_fk', None)
+                    if svc_emp_direct:
+                        # servicio usuario/empresa puede tener id_empresa_fk
+                        if getattr(svc_emp_direct, 'id_empresa_fk', None) == user:
+                            return True
+                else:
+                    # Para usuario, verificar si el servicio pertenece al usuario
+                    svc_user = getattr(solicitud, 'id_servicio_usuario_fk', None)
+                    if svc_user and getattr(svc_user, 'id_usuario_fk', None) == user:
+                        return True
+                    # También si el servicio está en servicio_empresa pero vinculado a un usuario (poco probable)
+                    svc_suc = getattr(solicitud, 'id_servicio_sucursal_fk', None)
+                    if svc_suc:
+                        svc_emp = getattr(svc_suc, 'id_servicio_fk', None)
+                        if svc_emp and getattr(svc_emp, 'id_empresa_fk', None) == user:
+                            return True
+            except Exception:
+                return False
+            return False
+
+        # Construir lista combinada de solicitudes que pertenezcan al current_user según account_type
+        solicitudes = []
+        for s in solicitudes_usuario:
+            # Para solicitudes_usuario, la prestación la da un usuario (id_servicio_usuario_fk) o una sucursal (id_servicio_sucursal_fk)
+            if account_type == 'empresa':
+                if solicitud_pertenece_a_usuario(s, current_user, 'empresa'):
+                    solicitudes.append(s)
+            else:
+                if solicitud_pertenece_a_usuario(s, current_user, 'usuario'):
+                    solicitudes.append(s)
+
+        for s in solicitudes_empresa:
+            if account_type == 'empresa':
+                if solicitud_pertenece_a_usuario(s, current_user, 'empresa'):
+                    solicitudes.append(s)
+            else:
+                if solicitud_pertenece_a_usuario(s, current_user, 'usuario'):
+                    solicitudes.append(s)
+
+        # Agregar todas las categorías y sucursales para poblar selects
+        categorias = []
+        if account_type == 'empresa':
+            categorias_qs = categoria_servicio_empresa.objects.filter(id_empresa_fk=current_user)
+            categorias = [{'id': c.id_categoria_serv_empresa, 'nombre': c.nombre_categoria_serv_empresa} for c in categorias_qs]
+            sucursales_qs = sucursal.objects.filter(id_empresa_fk=current_user)
+            sucursales = [{'id': s.id_sucursal, 'nombre': s.nombre_sucursal} for s in sucursales_qs]
+        else:
+            categorias_qs = categoria_servicio_usuario.objects.filter(id_usuario_fk=current_user)
+            categorias = [{'id': c.id_categoria_serv_usuario, 'nombre': c.nombre_categoria_serv_usuario} for c in categorias_qs]
+            sucursales = []
+
+        # Agregar posible filtro de sucursal/categoría (si fueron enviados)
+        if sucursal_id:
+            try:
+                sucursal_id = int(sucursal_id)
+            except Exception:
+                sucursal_id = None
+        if categoria_id:
+            try:
+                categoria_id = int(categoria_id)
+            except Exception:
+                categoria_id = None
+
+        # Agregamos un mapeo por nombre de servicio
+        servicios_dict = {}
+
+        for s in solicitudes:
+            try:
+                nombre = resolve_service_name_strict(s) or resolve_service_name_from_solicitud(s) or 'Servicio desconocido'
+                # Aplicar filtros por sucursal (si aplica)
+                if sucursal_id:
+                    svc_suc = getattr(s, 'id_servicio_sucursal_fk', None)
+                    if not svc_suc or getattr(svc_suc.id_sucursal_fk, 'id_sucursal', None) != sucursal_id:
+                        continue
+
+                # Filtrar por categoría si la solicitud referencia un servicio con categoría
+                if categoria_id:
+                    svc_obj = getattr(s, 'id_servicio_usuario_fk', None) or getattr(s, 'id_servicio_sucursal_fk', None)
+                    cat_ok = True
+                    try:
+                        # intentar leer categoría en varios caminos
+                        cat_id = None
+                        if hasattr(svc_obj, 'id_categoria_servicios_fk') and getattr(svc_obj, 'id_categoria_servicios_fk'):
+                            cat_id = getattr(svc_obj, 'id_categoria_servicios_fk').id_categoria_serv_empresa if hasattr(getattr(svc_obj, 'id_categoria_servicios_fk'), 'id_categoria_serv_empresa') else getattr(svc_obj, 'id_categoria_servicios_fk')
+                        if cat_id and int(cat_id) != categoria_id:
+                            cat_ok = False
+                    except Exception:
+                        cat_ok = True
+                    if not cat_ok:
+                        continue
+
+                precio = 0.0
+                try:
+                    precio = float(getattr(s, 'presupuesto_cotizacion', 0) or 0)
+                except Exception:
+                    precio = 0.0
+
+                if nombre in servicios_dict:
+                    servicios_dict[nombre]['cantidad'] += 1
+                    servicios_dict[nombre]['ingresos'] += precio
+                else:
+                    servicios_dict[nombre] = {
+                        'nombre': nombre,
+                        'cantidad': 1,
+                        'ingresos': precio,
+                        'precio_promedio': precio,
+                        'num_prestaciones': 1
+                    }
+            except Exception:
+                continue
+
+        # Calcular precios promedio y convertir a listas ordenadas
+        todos_servicios = []
+        for nombre, obj in servicios_dict.items():
+            if obj['cantidad'] > 0:
+                obj['precio_promedio'] = round((obj['ingresos'] / obj['cantidad']) if obj['cantidad'] else 0, 2)
+            else:
+                obj['precio_promedio'] = 0
+            todos_servicios.append(obj)
+
+        servicios_mas_prestados = sorted(todos_servicios, key=lambda x: x['cantidad'], reverse=True)
+        servicios_menos_prestados = sorted(todos_servicios, key=lambda x: x['cantidad'])
+
+        # Servicios sin prestaciones: obtener lista de servicios del propietario y restar los que tuvieron movimiento
+        servicios_sin_movimiento = []
+        try:
+            if account_type == 'empresa':
+                servicios_propios = servicio_empresa.objects.filter(id_empresa_fk=current_user)
+                # incluir servicios asociados a sucursales
+                servicios_suc = servicio_sucursal.objects.filter(id_sucursal_fk__id_empresa_fk=current_user)
+                # Construir conjunto de nombres
+                nombres_propios = set([s.nombre_servicio_empresa for s in servicios_propios] + [s.id_servicio_fk.nombre_servicio_empresa for s in servicios_suc if s.id_servicio_fk])
+            else:
+                servicios_propios = servicio_usuario.objects.filter(id_usuario_fk=current_user)
+                nombres_propios = set([s.nombre_servicio_usuario for s in servicios_propios])
+
+            nombres_con_movimiento = set([s['nombre'] for s in todos_servicios])
+            sin_mov = nombres_propios - nombres_con_movimiento
+            for n in sin_mov:
+                # buscar objeto de servicio para mostrar estado/precio si es posible
+                servicios_sin_movimiento.append({'nombre': n, 'estado': 'Activo', 'precio': 0})
+        except Exception:
+            servicios_sin_movimiento = []
+
+        # Responder con la estructura esperada por el frontend
+        return JsonResponse({'success': True, 'data': {
+            'servicios_mas_prestados': servicios_mas_prestados,
+            'servicios_menos_prestados': servicios_menos_prestados,
+            'servicios_sin_prestaciones': servicios_sin_movimiento,
+            'todos_servicios': todos_servicios,
+            'sucursales': sucursales,
+            'categorias': categorias,
+            'fecha_inicio': fecha_inicio_dt.strftime('%Y-%m-%d'),
+            'fecha_fin': fecha_fin_dt.strftime('%Y-%m-%d')
+        }})
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en api_obtener_datos_reporte_servicios: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': f'Error al obtener datos del reporte de servicios: {str(e)}'})
 
 
 

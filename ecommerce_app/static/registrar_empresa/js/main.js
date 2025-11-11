@@ -52,8 +52,9 @@ $(document).ready(function() {
         }
     });
     
-    // Abrir la primera sección por defecto
-    $('.accordion-section').first().addClass('active');
+    // Por defecto NO abrir ninguna sección del acordeón al cargar la página
+    // (Secciones se abren solo al hacer click en su header)
+    // $('.accordion-section').first().addClass('active');
 
     // Inicializar Select2 para estados
     $('#state').select2({
@@ -399,6 +400,21 @@ function loadAvatars() {
 // Función para abrir el modal
 function openAvatarModal() {
     const modal = document.getElementById('avatarModal');
+    if (!modal) return;
+
+    // Move modal to document.body to avoid positioning issues when ancestors have transforms
+    if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    // Compute header height (fixed top bar) to avoid overlapping it
+    const header = document.querySelector('.top-bar-ecommerce');
+    const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+
+    // Set a safe padding so the modal content stays visible and centered relative to viewport
+    modal.style.paddingTop = Math.max(10, headerHeight + 10) + 'px';
+    modal.style.paddingBottom = '10px';
+
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
     loadAvatars();
@@ -407,7 +423,12 @@ function openAvatarModal() {
 // Función para cerrar el modal
 function closeAvatarModal() {
     const modal = document.getElementById('avatarModal');
+    if (!modal) return;
+
     modal.classList.remove('show');
+    // cleanup inline styles we added
+    modal.style.removeProperty('padding-top');
+    modal.style.removeProperty('padding-bottom');
     document.body.style.overflow = 'auto';
 }
 

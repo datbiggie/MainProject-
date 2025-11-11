@@ -128,143 +128,148 @@
 
         <!-- Services List -->
         {% if servicios_cotizados %}
+            <div class="accordion" id="accordionServicios">
             {% for servicio in servicios_cotizados %}
-            <div class="card sale-card mb-4">
-                <div class="card-header sale-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h6 class="mb-0">
-                                <i class="fas fa-tools me-2"></i>
-                                Servicio #{{ servicio.id }}
-                            </h6>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="badge status-badge" style="background-color: #6f42c1;">
-                                <i class="fas fa-calculator me-1"></i>Cotizada
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Service Info -->
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <strong>Fecha de Solicitud:</strong><br>
-                            <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Fecha Cotización:</strong><br>
-                            <span class="text-purple fw-bold">{{ servicio.fecha_cotizacion|date:"d/m/Y H:i" }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Servicio:</strong><br>
-                            <span class="text-info fw-bold">{{ servicio.nombre_servicio }}</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Categoría:</strong><br>
-                            <span class="text-muted">{{ servicio.categoria_servicio }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Cotización Info -->
-                    <div class="cotizacion-info">
-                        <h6 class="mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Información de la Cotización</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Presupuesto Cotizado:</strong><br>
-                                <span class="text-success fw-bold fs-5">${{ servicio.presupuesto_cotizacion|floatformat:2 }}</span>
+                <div class="accordion-item mb-3 sale-card" style="border-radius:12px; overflow:hidden;">
+                    <h2 class="accordion-header" id="heading-{{ servicio.id }}">
+                        <button class="accordion-button collapsed sale-header" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ servicio.id }}" aria-expanded="false" aria-controls="collapse-{{ servicio.id }}" style="border-radius:0;">
+                            <div class="w-100">
+                                <div class="row align-items-center">
+                                    <div class="col-6">
+                                        <h6 class="mb-0 text-white"><i class="fas fa-tools me-2"></i>Servicio #{{ servicio.id }}</h6>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <span class="badge status-badge" style="background-color: #6f42c1;">
+                                            <i class="fas fa-calculator me-1"></i>Cotizada
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <strong>Fecha y Hora Requerida:</strong><br>
-                                <span class="text-warning fw-bold">{{ servicio.fecha_requerida|date:"d/m/Y H:i" }}</span>
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ servicio.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ servicio.id }}" data-bs-parent="#accordionServicios">
+                        <div class="accordion-body">
+                            <!-- Service Info -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <strong>Fecha de Solicitud:</strong><br>
+                                    <span class="text-muted">{{ servicio.fecha_solicitud|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Fecha Cotización:</strong><br>
+                                    <span class="text-purple fw-bold">{{ servicio.fecha_cotizacion|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Servicio:</strong><br>
+                                    <span class="text-info fw-bold">{{ servicio.nombre_servicio }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Categoría:</strong><br>
+                                    <span class="text-muted">{{ servicio.categoria_servicio }}</span>
+                                </div>
                             </div>
-                        </div>
-                        {% if servicio.descripcion_cotizacion %}
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <strong>Descripción de la Cotización:</strong><br>
-                                <div class="bg-white p-3 rounded mt-2">
-                                    <span class="text-muted">{{ servicio.descripcion_cotizacion }}</span>
+                            
+                            <!-- Cotización Info -->
+                            <div class="cotizacion-info">
+                                <h6 class="mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Información de la Cotización</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Presupuesto Cotizado:</strong><br>
+                                        <span class="text-success fw-bold fs-5">${{ servicio.presupuesto_cotizacion|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Fecha y Hora Requerida:</strong><br>
+                                        <span class="text-warning fw-bold">{{ servicio.fecha_requerida|date:"d/m/Y H:i" }}</span>
+                                    </div>
+                                </div>
+                                {% if servicio.descripcion_cotizacion %}
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <strong>Descripción de la Cotización:</strong><br>
+                                        <div class="bg-white p-3 rounded mt-2">
+                                            <span class="text-muted">{{ servicio.descripcion_cotizacion }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if servicio.archivo_cotizacion %}
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <strong>Archivo de Cotización:</strong><br>
+                                        <a href="{{ servicio.archivo_cotizacion.url }}" target="_blank" class="btn btn-outline-purple btn-sm mt-2">
+                                            <i class="fas fa-download me-2"></i>Descargar Cotización
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Client Information -->
+                            <div class="client-info">
+                                <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>Nombre:</strong><br>
+                                        <span class="text-muted">{{ servicio.cliente_nombre }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Email:</strong><br>
+                                        <span class="text-muted">{{ servicio.cliente_email }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Teléfono:</strong><br>
+                                        <span class="text-muted">{{ servicio.cliente_telefono|default:"No proporcionado" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Service Details -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Descripción del Servicio Solicitado:</strong><br>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        <span class="text-muted">{{ servicio.descripcion|default:"Sin descripción específica" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if servicio.ubicacion %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Ubicación del Servicio:</strong><br>
+                                    <span class="text-muted">{{ servicio.ubicacion }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Service Images -->
+                            {% if servicio.imagenes %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <strong>Imágenes del Servicio:</strong><br>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        {% for imagen in servicio.imagenes %}
+                                        <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" 
+                                             style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Status Display -->
+                            <div class="row mt-4">
+                                <div class="col-12 text-center">
+                                    <span class="badge fs-6 p-3" style="background-color: #6f42c1;">
+                                        <i class="fas fa-clock me-2"></i>Esperando Respuesta del Cliente
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
-                        {% if servicio.archivo_cotizacion %}
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <strong>Archivo de Cotización:</strong><br>
-                                <a href="{{ servicio.archivo_cotizacion.url }}" target="_blank" class="btn btn-outline-purple btn-sm mt-2">
-                                    <i class="fas fa-download me-2"></i>Descargar Cotización
-                                </a>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Client Information -->
-                    <div class="client-info">
-                        <h6 class="mb-3"><i class="fas fa-user-circle me-2"></i>Información del Cliente</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Nombre:</strong><br>
-                                <span class="text-muted">{{ servicio.cliente_nombre }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Email:</strong><br>
-                                <span class="text-muted">{{ servicio.cliente_email }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Teléfono:</strong><br>
-                                <span class="text-muted">{{ servicio.cliente_telefono|default:"No proporcionado" }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Service Details -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Descripción del Servicio Solicitado:</strong><br>
-                            <div class="bg-light p-3 rounded mt-2">
-                                <span class="text-muted">{{ servicio.descripcion|default:"Sin descripción específica" }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if servicio.ubicacion %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Ubicación del Servicio:</strong><br>
-                            <span class="text-muted">{{ servicio.ubicacion }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Service Images -->
-                    {% if servicio.imagenes %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Imágenes del Servicio:</strong><br>
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                {% for imagen in servicio.imagenes %}
-                                <img src="{{ imagen.imagen.url }}" alt="Imagen del servicio" class="service-image" 
-                                     style="cursor: pointer;" onclick="showImageModal('{{ imagen.imagen.url }}', 'Imagen del servicio')">
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Status Display -->
-                    <div class="row mt-4">
-                        <div class="col-12 text-center">
-                            <span class="badge fs-6 p-3" style="background-color: #6f42c1;">
-                                <i class="fas fa-clock me-2"></i>Esperando Respuesta del Cliente
-                            </span>
-                        </div>
                     </div>
                 </div>
-            </div>
             {% endfor %}
+            </div>
         {% else %}
             <!-- Empty State -->
             <div class="card shadow" style="border-radius: 12px; border: none;">

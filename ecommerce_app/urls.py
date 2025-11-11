@@ -127,6 +127,9 @@ urlpatterns = [
     path('api/obtener_datos_reporte/', views.api_obtener_datos_reporte, name='api_obtener_datos_reporte'),
     path('reporte_productos/', views.reporte_productos, name='reporte_productos'),
     path('api/obtener_datos_reporte_productos/', views.api_obtener_datos_reporte_productos, name='api_obtener_datos_reporte_productos'),
+    # Reporte de servicios
+    path('reporte_servicios/', views.reporte_servicios, name='reporte_servicios'),
+    path('api/obtener_datos_reporte_servicios/', views.api_obtener_datos_reporte_servicios, name='api_obtener_datos_reporte_servicios'),
 
     # Password reset flow
     path('recuperar_clave/', views.recuperar_clave, name='recuperar_clave'),

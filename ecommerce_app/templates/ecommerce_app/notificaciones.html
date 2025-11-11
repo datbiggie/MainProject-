@@ -174,8 +174,8 @@
         document.head.appendChild(authMeta);
     </script>
     
-    <!-- JavaScript específico para notificaciones -->
-    <script src="{% static 'ecommerce_app/js/notificaciones.js' %}"></script>
+    <!-- JavaScript específico para notificaciones (cache-bust con timestamp) -->
+    <script src="{% static 'ecommerce_app/js/notificaciones.js' %}?v={% now "U" %}"></script>
     
     <!-- El JavaScript de notificaciones se incluye automáticamente desde barra_superior_index.html -->
 </body>

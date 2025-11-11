@@ -102,8 +102,8 @@ function initializeModalEvents() {
 }
 
 // ========================= Atributos Dinámicos =========================
-function cargarAtributosDinamicos(categoriaId, productId = null) {
-    console.log('🔄 cargarAtributosDinamicos llamada con:', categoriaId, productId);
+function cargarAtributosDinamicos(categoriaId, productId = null, tipo = null) {
+    console.log('🔄 cargarAtributosDinamicos llamada con:', categoriaId, productId, 'tipo:', tipo);
     console.log('🔍 Tipo de usuario actual:', userType);
     const atributosAccordion = document.getElementById('edit-atributos-accordion');
     
@@ -115,8 +115,13 @@ function cargarAtributosDinamicos(categoriaId, productId = null) {
         return;
     }
     
-    console.log('🌐 Haciendo fetch a:', `/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`);
-    fetch(`/ecommerce/api/obtener_atributos_categoria/?categoria_id=${categoriaId}`, {
+    // Build URL with optional tipo param to disambiguate empresa vs usuario categories
+    let url = `/ecommerce/api/obtener_atributos_categoria/?categoria_id=${encodeURIComponent(categoriaId)}`;
+    if (tipo && tipo.trim()) {
+        url += `&tipo=${encodeURIComponent(tipo)}`;
+    }
+    console.log('🌐 Haciendo fetch a:', url);
+    fetch(url, {
         method: 'GET',
         headers: {
             'X-CSRFToken': getCsrfToken(),
@@ -376,8 +381,17 @@ function populateEditForm(data) {
     console.log('Categoría seleccionada:', categoriaId);
     console.log('Data categoria:', data.categoria);
     if (categoriaId) {
-        console.log('Cargando atributos para categoría:', categoriaId, 'producto:', data.id);
-        cargarAtributosDinamicos(categoriaId, data.id);
+        // Try to detect tipo from the selected option in the select
+        const categoriaSelect = document.getElementById('edit_categoria');
+        let opcionTipo = null;
+        if (categoriaSelect) {
+            const opt = categoriaSelect.options[categoriaSelect.selectedIndex];
+            if (opt && opt.dataset && opt.dataset.tipo) {
+                opcionTipo = opt.dataset.tipo;
+            }
+        }
+        console.log('Cargando atributos para categoría:', categoriaId, 'producto:', data.id, 'usando tipo:', opcionTipo || userType);
+        cargarAtributosDinamicos(categoriaId, data.id, opcionTipo || userType);
     } else {
         console.log('No se puede cargar atributos - categoriaId no encontrado');
     }
@@ -427,7 +441,14 @@ function handleCategoriaChange(event) {
                 
                 // Cargar los nuevos atributos de la categoría seleccionada (sin valores previos)
                 console.log('🔄 Cargando nuevos atributos para categoría:', categoriaId);
-                cargarAtributosDinamicos(categoriaId, null);
+                // Detectar tipo desde la opción seleccionada
+                const select = document.getElementById('edit_categoria');
+                let opcionTipo = null;
+                if (select) {
+                    const opt = select.options[select.selectedIndex];
+                    if (opt && opt.dataset && opt.dataset.tipo) opcionTipo = opt.dataset.tipo;
+                }
+                cargarAtributosDinamicos(categoriaId, null, opcionTipo || userType);
                 
                 // Actualizar la categoría anterior
                 categoriaAnteriorId = categoriaId;
@@ -443,10 +464,17 @@ function handleCategoriaChange(event) {
                 }
             }
         });
-    } else {
+        } else {
         console.log('ℹ️ Cargando atributos sin confirmación (producto nuevo o primera carga)');
+        // Detectar tipo desde la opción seleccionada
+        const select = document.getElementById('edit_categoria');
+        let opcionTipo = null;
+        if (select) {
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.dataset && opt.dataset.tipo) opcionTipo = opt.dataset.tipo;
+        }
         // Si es un producto nuevo o no cambió realmente la categoría, simplemente cargar los atributos
-        cargarAtributosDinamicos(categoriaId, currentProductId);
+        cargarAtributosDinamicos(categoriaId, currentProductId, opcionTipo || userType);
         categoriaAnteriorId = categoriaId;
     }
 }
@@ -672,24 +700,32 @@ function initializeImagePreview() {
 function initializeFormSubmission() {
     const form = document.getElementById('editProductoForm');
     if (!form) return;
-    
+
+    // Avoid adding multiple submit listeners if another script already attached one
+    if (form.dataset.listenerAdded) {
+        console.log('initializeFormSubmission: submit listener already added elsewhere — skipping');
+        return;
+    }
+    // Mark as added so other scripts can detect and avoid duplicate listeners
+    form.dataset.listenerAdded = '1';
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Validar formulario
         if (!validateForm()) {
             return;
         }
-        
+
         // Mostrar loading
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
         submitBtn.disabled = true;
-        
+
         // Crear FormData
         const formData = new FormData(form);
-        
+
         // Enviar formulario
         fetch(form.action, {
             method: 'POST',

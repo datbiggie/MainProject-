@@ -69,6 +69,47 @@
         .product-price { font-weight:700; color:#0b1220; }
         </style>
     
+    <!-- Reglas responsive adicionales -->
+    <style>
+    /* Responsive adjustments para servicio_config */
+    @media (max-width: 991px) {
+        .container { max-width: 100% !important; padding: 0 16px; }
+        .stats-container { flex-direction: column; gap:10px; }
+        .stats-card { width:100%; }
+        .product-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px; }
+        .product-image-container { width:80px; height:80px; }
+        .product-number { left:8px; top:8px; font-size:11px; padding:4px 6px; }
+        .product-card { padding:12px; }
+        .modern-product-wrapper { align-items:center; }
+        .product-content { padding-left:8px; }
+        .product-actions { margin-top:6px; }
+        .file-upload-wrapper { max-width: 100%; }
+        .modal-dialog.modal-lg { max-width: 900px; }
+    }
+
+    @media (max-width: 575px) {
+        /* Móviles: apilar la card (imagen arriba, contenido debajo) */
+        .modern-product-wrapper { display:flex; flex-direction:column; align-items:flex-start; gap:10px; }
+        .product-image-container { width:100%; height:160px; border-radius:8px; }
+        .product-image { width:100%; height:100%; object-fit:cover; }
+        .product-content { padding-left:0; width:100%; }
+        .product-actions { width:100%; display:flex; justify-content:flex-start; gap:8px; }
+        .product-grid { grid-template-columns: 1fr; }
+        .stats-container { gap:8px; }
+        /* Modal adaptativo en móvil: usar ancho casi completo */
+        .modal-dialog.modal-lg { width:95% !important; max-width:95% !important; margin:0 auto; }
+        .modal-content { border-radius:10px; }
+        .file-upload-container { display:flex; flex-direction:column; gap:8px; }
+        .file-upload-placeholder { display:flex; align-items:center; gap:8px; }
+        .product-number { position:relative; left:auto; top:auto; }
+    }
+
+    /* Pequeñas mejoras en tablets estrechas */
+    @media (min-width: 576px) and (max-width: 767px) {
+        .product-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    </style>
+
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
    
@@ -211,6 +252,7 @@
                                         data-id="{{ servicio.id_servicio_empresa }}"
                                         data-nombre="{{ servicio.nombre_servicio_empresa }}"
                                         data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_empresa|default:'' }}"
+                                        data-categoria-id="{{ servicio.id_categoria_servicios_fk.id_categoria_serv_empresa|default:'' }}"
                                         data-descripcion="{{ servicio.descripcion_servicio_empresa|default:'' }}"
                                         data-caracteristicas="{{ servicio.caracteristicas_generales_servicio_empresa|default:'' }}"
                                         data-precio="{{ servicio.precio_servicio_empresa|default:'' }}"
@@ -243,6 +285,9 @@
                                 <button class="action-btn btn-delete" data-id="{{ servicio.id_servicio_empresa }}" data-nombre="{{ servicio.nombre_servicio_empresa }}" data-tooltip="Eliminar servicio">
                                     <i class="lni lni-trash-can"></i>
                                 </button>
+                                <button class="action-btn btn-assign-branch" data-id="{{ servicio.id_servicio_empresa }}" data-nombre="{{ servicio.nombre_servicio_empresa }}" data-tooltip="Asignar por sucursal">
+                                    <i class="lni lni-package"></i>
+                                </button>
                             </div>
                         {% elif user_info.tipo == 'sucursal' %}
                             <!-- Información del Servicio para Sucursal -->
@@ -259,6 +304,7 @@
                                         data-id="{{ servicio.id_servicio_sucursal }}"
                                         data-nombre="{{ servicio.nombre_servicio_sucursal }}"
                                         data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_sucursal|default:'' }}"
+                                        data-categoria-id="{{ servicio.id_categoria_servicios_fk.id_categoria_serv_sucursal|default:'' }}"
                                         data-descripcion="{{ servicio.descripcion_servicio_sucursal|default:'' }}"
                                         data-precio="{{ servicio.precio_servicio_sucursal|default:'0' }}"
                                         data-estatus="{{ servicio.estatus_servicio_sucursal|default:'Activo' }}"
@@ -269,6 +315,9 @@
                                 </button>
                                 <button class="action-btn btn-delete" data-id="{{ servicio.id_servicio_sucursal }}" data-nombre="{{ servicio.nombre_servicio_sucursal }}" data-tooltip="Eliminar servicio">
                                     <i class="lni lni-trash-can"></i>
+                                </button>
+                                <button class="action-btn btn-assign-branch" data-id="{{ servicio.id_servicio_sucursal }}" data-nombre="{{ servicio.nombre_servicio_sucursal }}" data-tooltip="Asignar por sucursal">
+                                    <i class="lni lni-map-marker"></i>
                                 </button>
                             </div>
                         {% else %}
@@ -290,6 +339,7 @@
                                         data-id="{{ servicio.id_servicio_usuario }}"
                                         data-nombre="{{ servicio.nombre_servicio_usuario }}"
                                         data-categoria="{{ servicio.id_categoria_servicios_fk.nombre_categoria_serv_usuario|default:'' }}"
+                                        data-categoria-id="{{ servicio.id_categoria_servicios_fk.id_categoria_serv_usuario|default:'' }}"
                                         data-descripcion="{{ servicio.descripcion_servicio_usuario|default:'' }}"
                                         data-precio="{{ servicio.precio_servicio_usuario|default:'0' }}"
                                         data-estatus="{{ servicio.estatus_servicio_usuario|default:'Activo' }}"
@@ -470,26 +520,231 @@
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     try {
-        const cards = document.querySelectorAll('.product-card');
-        const total = cards.length;
-        let active = 0;
-        cards.forEach(c => {
-            const s = (c.querySelector('.service-status') || {innerText:''}).innerText.trim().toLowerCase();
-            if (s === 'activo' || s === 'active' || s === '1' || s === 'true') active += 1;
-        });
-        const inactive = total - active;
-
+        // Si el servidor ya inyectó valores numéricos en las cards de estadística, no sobrescribimos.
         const totalEl = document.querySelector('.stats-card.stats-card-total .stats-number');
         const activeEl = document.querySelector('.stats-card.stats-card-active .stats-number');
         const inactiveEl = document.querySelector('.stats-card.stats-card-inactive .stats-number');
-        if (totalEl) totalEl.innerText = total;
-        if (activeEl) activeEl.innerText = active;
-        if (inactiveEl) inactiveEl.innerText = inactive;
+
+        const hasServerValues = (el) => {
+            if (!el) return false;
+            const t = el.innerText && el.innerText.trim();
+            if (!t) return false;
+            return !isNaN(parseInt(t.replace(/[^0-9\-]/g, ''), 10));
+        };
+
+        if (!hasServerValues(totalEl) && !hasServerValues(activeEl) && !hasServerValues(inactiveEl)) {
+            const cards = document.querySelectorAll('.product-card');
+            const total = cards.length;
+            let active = 0;
+            cards.forEach(c => {
+                const s = (c.querySelector('.service-status') || {innerText:''}).innerText.trim().toLowerCase();
+                if (s === 'activo' || s === 'active' || s === '1' || s === 'true') active += 1;
+            });
+            const inactive = total - active;
+
+            if (totalEl) totalEl.innerText = total;
+            if (activeEl) activeEl.innerText = active;
+            if (inactiveEl) inactiveEl.innerText = inactive;
+        }
     } catch (err) {
         console.warn('Error calculating servicio stats:', err);
     }
 });
 </script>
+
+<!-- Modal Servicios Sucursal (similar a productosSucursalModal, adaptado) -->
+<div id="serviciosSucursalModal" class="modal fade">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Agregar servicio a la sucursal</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAgregarServicioSucursalFromService">
+                    {% csrf_token %}
+                    <input type="hidden" id="inputServicioIdModal" name="servicio_id" value="">
+                    <div class="mb-3">
+                        <label class="form-label">Sucursales</label>
+                        <div id="sucursalesContainerFromService" class="border rounded p-2" style="max-height:200px; overflow:auto;">
+                            {% if sucursales_empresa %}
+                                {% for s in sucursales_empresa %}
+                                    <div class="branch-item">
+                                        <input class="form-check-input sucursal-checkbox branch-checkbox" type="checkbox" value="{{ s.id_sucursal }}" id="sucursal_service_check_{{ s.id_sucursal }}">
+                                        <label class="branch-label" for="sucursal_service_check_{{ s.id_sucursal }}">
+                                            <span class="branch-checkbox-custom" aria-hidden="true"></span>
+                                            <span class="branch-name">{{ s.nombre_sucursal }}</span>
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div id="sucursalesFallbackMessageService">Cargando sucursales...</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-text">Selecciona una o varias sucursales donde quieras asignar el servicio.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Servicio</label>
+                        <input type="text" id="inputServicioNombreModal" class="form-control" readonly>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputStockFromService" class="form-label">Stock (opcional)</label>
+                            <input type="number" class="form-control" id="inputStockFromService" name="stock" min="0" placeholder="Ingrese stock">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputPrecioFromService" class="form-label">Precio (opcional)</label>
+                            <input type="number" class="form-control" id="inputPrecioFromService" name="precio" min="0" step="0.01" placeholder="Ingrese precio">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="submit" class="btn btn-primary" form="formAgregarServicioSucursalFromService">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Manejar apertura del modal desde botones .btn-assign-branch (servicios)
+document.addEventListener('DOMContentLoaded', function() {
+    function cargarSucursalesEnModalServicio(servicioId) {
+        const container = document.getElementById('sucursalesContainerFromService');
+        if (!container) return;
+        if (container.querySelectorAll('.sucursal-checkbox').length > 0) return; // ya cargadas
+
+        let url = '/ecommerce/api/sucursales_disponibles/';
+        if (servicioId) {
+            url += '?servicio_id=' + encodeURIComponent(servicioId);
+        }
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(resp => resp.json())
+            .then(data => {
+                if (!data || !Array.isArray(data.sucursales)) {
+                    container.innerHTML = '<div class="text-danger">No se pudieron cargar sucursales</div>';
+                    return;
+                }
+                container.innerHTML = '';
+                data.sucursales.forEach(s => {
+                    const id = s.id || s.id_sucursal || '';
+                    const nombre = s.nombre || s.nombre_sucursal || 'Sucursal';
+                    const div = document.createElement('div');
+                    div.className = 'branch-item';
+                    div.innerHTML = `<input class="form-check-input sucursal-checkbox branch-checkbox" type="checkbox" value="${id}" id="sucursal_service_${id}">` +
+                                    `<label class="branch-label" for="sucursal_service_${id}"><span class="branch-checkbox-custom" aria-hidden="true"></span><span class="branch-name">${nombre}</span></label>`;
+                    container.appendChild(div);
+                });
+            })
+            .catch(err => {
+                console.error('No se pudieron cargar sucursales vía AJAX (servicio):', err);
+                container.innerHTML = '<div class="text-muted">No se pudieron cargar sucursales</div>';
+            });
+    }
+
+    document.querySelectorAll('.btn-assign-branch').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const servicioId = this.getAttribute('data-id');
+            const servicioNombre = this.getAttribute('data-nombre') || '';
+
+            const inputId = document.getElementById('inputServicioIdModal');
+            const inputNombre = document.getElementById('inputServicioNombreModal');
+            if (inputId) inputId.value = servicioId;
+            if (inputNombre) inputNombre.value = servicioNombre;
+
+            const sucursalesContainer = document.getElementById('sucursalesContainerFromService');
+            if (sucursalesContainer) {
+                sucursalesContainer.innerHTML = '<div class="text-muted">Cargando sucursales...</div>';
+            }
+            cargarSucursalesEnModalServicio(servicioId);
+
+            // Reset campos opcionales
+            const stock = document.getElementById('inputStockFromService'); if (stock) stock.value = '';
+            const precio = document.getElementById('inputPrecioFromService'); if (precio) precio.value = '';
+
+            // Mostrar modal (Bootstrap 5)
+            var modalEl = document.getElementById('serviciosSucursalModal');
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        });
+    });
+
+    // Envío del formulario (intento de guardar asignación para servicios)
+    const form = document.getElementById('formAgregarServicioSucursalFromService');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const servicioId = document.getElementById('inputServicioIdModal').value;
+            const stock = document.getElementById('inputStockFromService').value;
+            const precio = document.getElementById('inputPrecioFromService').value;
+
+            const checkedBoxes = Array.from(document.querySelectorAll('#sucursalesContainerFromService .sucursal-checkbox')).filter(ch => ch.checked);
+            const selectedSucursalIds = checkedBoxes.map(ch => ch.value);
+
+            if (!selectedSucursalIds.length) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Debe seleccionar al menos una sucursal', confirmButtonColor: '#3b82f6' });
+                return;
+            }
+            if (!servicioId) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Servicio no válido', confirmButtonColor: '#3b82f6' });
+                return;
+            }
+
+            const baseData = {
+                servicio_id: servicioId,
+                stock: stock,
+                precio: precio,
+                csrfmiddlewaretoken: document.querySelector('input[name="csrfmiddlewaretoken"]')?.value
+            };
+
+            // Enviar petición por cada sucursal seleccionada
+            const promises = selectedSucursalIds.map(sucursalId => {
+                const fd = new FormData();
+                Object.keys(baseData).forEach(k => { if (baseData[k] !== undefined) fd.append(k, baseData[k]); });
+                fd.set('sucursal_id', sucursalId);
+
+                return fetch('/ecommerce/api/guardar_producto_servicio_sucursal/', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: fd
+                }).then(async r => {
+                    const contentType = r.headers.get('content-type') || '';
+                    if (!r.ok) {
+                        const text = await r.text();
+                        throw new Error('HTTP ' + r.status + ': ' + text.substring(0, 400));
+                    }
+                    if (contentType.indexOf('application/json') === -1) {
+                        const text = await r.text();
+                        throw new Error('Respuesta no JSON: ' + text.substring(0, 400));
+                    }
+                    return r.json();
+                });
+            });
+
+            Promise.all(promises).then(results => {
+                const allSuccess = results.every(res => res && res.success);
+                if (allSuccess) {
+                    Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Servicio asignado a las sucursales seleccionadas', confirmButtonColor: '#3b82f6' }).then(() => {
+                        var modalEl = document.getElementById('serviciosSucursalModal');
+                        var modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                        setTimeout(function(){ location.reload(); }, 800);
+                    });
+                } else {
+                    const messages = results.filter(r => r && !r.success).map(r => r.message || 'Error');
+                    Swal.fire({ icon: 'error', title: 'Error', text: messages.join('\n') || 'Error al asignar servicio', confirmButtonColor: '#3b82f6' });
+                }
+            }).catch(err => {
+                console.error(err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al enviar la solicitud', confirmButtonColor: '#3b82f6' });
+            });
+        });
+    }
+});
+</script>
+
 </body>
 
 </html>

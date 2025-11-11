@@ -123,15 +123,15 @@
     
    <!-- <img src="your-image-url-here.jpg">-->
 
-  <form id="empresaForm" action="" method="POST" enctype="multipart/form-data">
+  <form id="empresaForm" action="" method="POST" enctype="multipart/form-data" autocomplete="off">
         {% csrf_token %}
 
       <div class="formbold-form-title">
         <h2 class="" style="text-align: center;">Registrarse Empresa</h2>
         <p style="text-align: center; color: #666; margin-top: 10px;">Completa la información de tu empresa</p>
       </div>
-      <!-- SECCIÓN 1: INFORMACIÓN BÁSICA -->
-      <div class="accordion-section active">
+  <!-- SECCIÓN 1: INFORMACIÓN BÁSICA -->
+  <div class="accordion-section">
         <div class="accordion-header">
           <div class="accordion-title">
             <div class="accordion-icon">
@@ -158,6 +158,7 @@
             name="nombre_empresa"
             id="firstname"
             class="formbold-form-input" required
+            autocomplete="organization" value=""
           />
         </div>
         <div>
@@ -172,6 +173,8 @@
             minlength="11"
             placeholder="xxxx xxxxxxx"
             title="Ingresa exactamente 11 dígitos numéricos"
+            autocomplete="tel"
+            value=""
           />
         </div>
       </div>
@@ -187,11 +190,13 @@
             id="direccion_empresa"
             class="formbold-form-input"
             placeholder="Dirección de la empresa..."
+            autocomplete="street-address"
+            value=""
           />
         </div>
         <div>
           <label for="pais_empresa" class="formbold-form-label"> País </label>
-          <input type="text" name="pais_empresa" id="country" class="formbold-form-input" value="Venezuela" readonly />
+          <input type="text" name="pais_empresa" id="country" class="formbold-form-input" value="Venezuela" readonly autocomplete="country" />
         </div>
       </div>
 
@@ -337,6 +342,8 @@
             id="correo_empresa"
             class="formbold-form-input"
             required
+            autocomplete="email"
+            value=""
           />
         </div>
       </div>
@@ -350,6 +357,8 @@
             id="password_empresa"
             class="formbold-form-input"
             required
+            autocomplete="new-password"
+            value=""
           />
         </div>
         <div>
@@ -360,6 +369,8 @@
             id="confirm_password"
             class="formbold-form-input"
             required
+            autocomplete="new-password"
+            value=""
           />
         </div>
       </div>
@@ -399,6 +410,7 @@
               class="formbold-form-input file-input"
               accept="image/*"
               onchange="previewImage(this)"
+              required
             />
             <div class="file-upload-placeholder">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

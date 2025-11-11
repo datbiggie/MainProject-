@@ -349,9 +349,11 @@
                                                         <option value="">Seleccione una categoría</option>
                                                         {% for categoria in categoria_producto_all  %}
                                                             {% if user_info.tipo == 'empresa' %}
-                                                                <option value="{{ categoria.id_categoria_prod_empresa }}">{{ categoria.nombre_categoria_prod_empresa }}</option>
+                                                                <option value="{{ categoria.id_categoria_prod_empresa }}" data-tipo="empresa">{{ categoria.nombre_categoria_prod_empresa }}</option>
+                                                            {% elif user_info.tipo == 'sucursal' %}
+                                                                <option value="{{ categoria.id_categoria_prod_empresa }}" data-tipo="empresa">{{ categoria.nombre_categoria_prod_sucursal }}</option>
                                                             {% else %}
-                                                                <option value="{{ categoria.id_categoria_prod_usuario }}">{{ categoria.nombre_categoria_prod_usuario }}</option>
+                                                                <option value="{{ categoria.id_categoria_prod_usuario }}" data-tipo="usuario">{{ categoria.nombre_categoria_prod_usuario }}</option>
                                                             {% endif %}
                                                         {% endfor %}
                                                     </select>

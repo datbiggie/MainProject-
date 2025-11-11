@@ -341,11 +341,24 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
             if (selectCategoria) {
                 console.log('Valor de categoría obtenido:', categoria);
                 console.log('Opciones disponibles en el select:');
+                // Priorizar data-categoria-id si está presente (valor de la option)
+                const categoriaId = btn.getAttribute('data-categoria-id');
+                if (categoriaId) {
+                    // Intentar seleccionar por value directamente
+                    const optionByValue = Array.from(selectCategoria.options).find(opt => opt.value.trim() === categoriaId.trim());
+                    if (optionByValue) {
+                        selectCategoria.value = categoriaId.trim();
+                        console.log('✅ Categoría asignada por ID:', categoriaId);
+                    } else {
+                        console.log('⚠️ data-categoria-id proporcionado pero no coincide con ningún value del select:', categoriaId);
+                    }
+                }
                 for (let i = 0; i < selectCategoria.options.length; i++) {
                     console.log(`Opción ${i}: value="${selectCategoria.options[i].value}", text="${selectCategoria.options[i].text}"`);
                 }
                 
-                if (categoria) {
+                // Si no se asignó por ID anteriormente, intentar asignar por texto/valor
+                if (!categoriaId && categoria) {
                     let categoriaEncontrada = false;
                     for (let i = 0; i < selectCategoria.options.length; i++) {
                         // Comparación más robusta: trim y comparación case-insensitive
@@ -365,7 +378,7 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
                         console.log('❌ No se encontró coincidencia para la categoría:', categoria);
                     }
                 } else {
-                    console.log('❌ No se encontró valor de categoría en data-categoria');
+                    console.log('❌ No se encontró valor de categoría en data-categoria ni data-categoria-id');
                 }
             } else {
                 console.log('❌ Campo edit_categoria_servicio no encontrado');
@@ -558,6 +571,7 @@ function cargarImagenesExistentesServicio(idServicio, userType) {
                                                 data-descripcion="${servicioDescripcion || ''}"
                                                 data-caracteristicas="${servicioCaracteristicas || ''}"
                                                 data-categoria="${servicio.categoria || ''}"
+                                                data-categoria-id="${servicio.categoria_servicio_id || ''}"
                                                 data-imagen="${servicio.imagen_url || ''}"
                                                 data-user-type="${userType}"${additionalAttributes}
                                                 data-tooltip="Editar servicio">
