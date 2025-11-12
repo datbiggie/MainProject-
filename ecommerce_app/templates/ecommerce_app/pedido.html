@@ -141,7 +141,15 @@
                             <!-- Formulario de Pago del Vendedor -->
                             <div class="col-lg-4">
                                 <div class="payment-section">
-                                    <h6 class="text-muted mb-3"><i class="fas fa-credit-card me-2"></i>Método de Pago</h6>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="text-muted mb-0"><i class="fas fa-credit-card me-2"></i>Método de Pago</h6>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm btn-view-methods" 
+                                                data-vendor-type="{% if vendedor_clave|slice:":7" == "usuario" %}usuario{% else %}sucursal{% endif %}"
+                                                data-vendor-id="{{ primer_producto.vendedor_id }}"
+                                                data-vendor-name="{{ primer_producto.vendedor_nombre }}">
+                                            <i class="fas fa-eye me-1"></i> Ver Métodos de Pago
+                                        </button>
+                                    </div>
                                     <form class="vendor-form" data-vendor-id="{{ primer_producto.vendedor_id }}" data-vendor-type="{% if vendedor_clave|slice:":7" == "usuario" %}usuario{% else %}sucursal{% endif %}">
                                         <div class="mb-3">
                                             <select class="form-select" name="metodo_pago" required>
@@ -350,7 +358,114 @@
         }
     </script>
  
-    <script src="{% static 'pedido/js/pedido.js' %}"></script>
+        <!-- Modal para mostrar Métodos de Pago según tipo de vendedor -->
+        <div class="modal fade" id="paymentMethodsModal" tabindex="-1" aria-labelledby="paymentMethodsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="paymentMethodsModalLabel">Métodos de Pago</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="payment-methods-container">
+                            <!-- Rellenado dinámicamente -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // URL de la API para obtener métodos de pago (resuelta por Django URL name)
+            window.apiMetodosUrl = "{% url 'api_metodos_pago' %}";
+
+            // Handler para mostrar métodos reales obtenidos desde el backend
+            document.addEventListener('click', function(e){
+                const btn = e.target.closest('.btn-view-methods');
+                if(!btn) return;
+
+                const vendorType = btn.getAttribute('data-vendor-type');
+                const vendorName = btn.getAttribute('data-vendor-name') || '';
+                const vendorId = btn.getAttribute('data-vendor-id') || '';
+                const container = document.getElementById('payment-methods-container');
+                const modalTitle = document.getElementById('paymentMethodsModalLabel');
+                modalTitle.textContent = `Métodos de Pago - ${vendorName}`;
+
+                // Mostrar spinner de carga
+                container.innerHTML = '<div class="text-center py-3">Cargando métodos de pago...</div>';
+
+                // Llamada al endpoint para obtener métodos del vendedor
+                const url = `${window.apiMetodosUrl}?tipo=${encodeURIComponent(vendorType)}&vendor_id=${encodeURIComponent(vendorId)}`;
+
+                fetch(url, { credentials: 'same-origin' })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if(!data || !data.success){
+                            container.innerHTML = `<div class="text-danger">No se pudieron cargar los métodos de pago.</div>`;
+                            return;
+                        }
+
+                        const metodos = data.metodos || [];
+                        if(metodos.length === 0){
+                            container.innerHTML = `<div class="text-muted">Este vendedor no tiene métodos de pago registrados.</div>`;
+                            return;
+                        }
+
+                        container.innerHTML = metodos.map(m => (
+                            `<div class="method-item d-flex justify-content-between align-items-start py-2 border-bottom">
+                                <div>
+                                    <strong>${m.tipo ? m.tipo.charAt(0).toUpperCase() + m.tipo.slice(1) : 'Método'}</strong>
+                                    <div class="small text-muted mt-1">${(m.instrucciones || '').replace(/\n/g, '<br>')}</div>
+                                    <div class="small text-muted mt-1">${m.numero_cuenta ? 'Cuenta/Contacto: ' + m.numero_cuenta : ''}</div>
+                                </div>
+                                <div class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary select-method" data-method="${m.tipo}" data-vendor-id="${vendorId}">Seleccionar</button>
+                                </div>
+                            </div>`
+                        )).join('');
+
+                        // Attach click listeners to 'Seleccionar' buttons
+                        document.querySelectorAll('#payment-methods-container .select-method').forEach(function(el){
+                            el.addEventListener('click', function(){
+                                const method = this.getAttribute('data-method');
+                                const vid = this.getAttribute('data-vendor-id');
+                                // Encontrar el select dentro del formulario del vendor y asignar el valor
+                                const select = document.querySelector(`.vendor-form[data-vendor-id="${vid}"] select[name="metodo_pago"]`);
+                                if(select){
+                                    // Intentar seleccionar por valor; si no existe, agregar opción
+                                    let option = select.querySelector(`option[value="${method}"]`);
+                                    if(!option){
+                                        option = document.createElement('option');
+                                        option.value = method;
+                                        option.textContent = method;
+                                        select.appendChild(option);
+                                    }
+                                    select.value = method;
+                                    const evt = new Event('change', {bubbles:true});
+                                    select.dispatchEvent(evt);
+                                }
+                                // Cerrar modal
+                                const modalEl = document.getElementById('paymentMethodsModal');
+                                const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                                modalInstance.hide();
+                            });
+                        });
+                    })
+                    .catch(err => {
+                        console.error('Error obteniendo métodos de pago:', err);
+                        container.innerHTML = `<div class="text-danger">Error cargando métodos de pago.</div>`;
+                    });
+
+                const modalEl = document.getElementById('paymentMethodsModal');
+                const modal = bootstrap.Modal.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(modalEl) : (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl));
+                modal.show();
+            });
+        </script>
+
+        <script src="{% static 'pedido/js/pedido.js' %}"></script>
     
 
 </body>

@@ -482,7 +482,7 @@
       </div>
     </footer>
 
-    <!-- Modal: Métodos de Pago (muestra métodos de la empresa en sesión ordenados) -->
+  <!-- Modal: Métodos de Pago (muestra métodos de la empresa visitada; si no hay, usa los métodos de la empresa en sesión) -->
     <div class="modal fade" id="metodosPagoModal" tabindex="-1" aria-labelledby="metodosPagoModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -491,7 +491,38 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
           <div class="modal-body">
-            {% if session_metodos_pago and session_metodos_pago|length > 0 %}
+            {% comment %} Preferir métodos del perfil visitado (metodos_pago). Si no existen, usar session_metodos_pago como fallback. {% endcomment %}
+            {% if metodos_pago and metodos_pago|length > 0 %}
+              <div class="list-group">
+                {% for metodo in metodos_pago %}
+                  <div class="list-group-item mb-2">
+                    <h6 class="mb-1">
+                      {% if metodo.tipo == 'transferencia' %}Transferencia{% elif metodo.tipo == 'pago_movil' %}Pago Móvil{% elif metodo.tipo == 'paypal' %}PayPal{% else %}{{ metodo.get_tipo_display }}{% endif %}
+                    </h6>
+                    <ul class="small mb-0">
+                      {% if metodo.tipo == 'transferencia' %}
+                        <li><strong>Tipo:</strong> Transferencia</li>
+                        {% if metodo.numero_cuenta %}<li><strong>Número de cuenta:</strong> {{ metodo.numero_cuenta }}</li>{% endif %}
+                        {% if metodo.banco %}<li><strong>Banco:</strong> {{ metodo.banco }}</li>{% endif %}
+                        {% if metodo.tipo_cuenta %}<li><strong>Tipo de cuenta:</strong> {{ metodo.tipo_cuenta }}</li>{% endif %}
+                      {% elif metodo.tipo == 'pago_movil' %}
+                        <li><strong>Tipo:</strong> Pago Móvil</li>
+                        {% if metodo.identificador %}<li><strong>Identificador:</strong> {{ metodo.identificador }}</li>{% endif %}
+                        {% if metodo.numero_cuenta %}<li><strong>Cuenta:</strong> {{ metodo.numero_cuenta }}</li>{% endif %}
+                        {% if metodo.banco %}<li><strong>Banco:</strong> {{ metodo.banco }}</li>{% endif %}
+                      {% elif metodo.tipo == 'paypal' %}
+                        <li><strong>Tipo:</strong> PayPal</li>
+                        {% if metodo.numero_cuenta %}<li><strong>Cuenta:</strong> {{ metodo.numero_cuenta }}</li>{% endif %}
+                      {% else %}
+                        <li><strong>Tipo:</strong> {{ metodo.get_tipo_display }}</li>
+                        {% if metodo.numero_cuenta %}<li><strong>Cuenta / Número:</strong> {{ metodo.numero_cuenta }}</li>{% endif %}
+                        {% if metodo.banco %}<li><strong>Banco:</strong> {{ metodo.banco }}</li>{% endif %}
+                      {% endif %}
+                    </ul>
+                  </div>
+                {% endfor %}
+              </div>
+            {% elif session_metodos_pago and session_metodos_pago|length > 0 %}
               <div class="list-group">
                 {% for metodo in session_metodos_pago %}
                   <div class="list-group-item mb-2">
@@ -522,7 +553,7 @@
                 {% endfor %}
               </div>
             {% else %}
-              <p class="text-muted">No hay métodos de pago configurados para la empresa en sesión.</p>
+              <p class="text-muted">No hay métodos de pago configurados para esta empresa.</p>
             {% endif %}
           </div>
           <div class="modal-footer">

@@ -4443,12 +4443,30 @@ def perfil_empresa(request):
     except Exception:
         session_metodos_pago = []
 
+    # Obtener métodos de pago del perfil de la empresa que se está viendo (si aplica)
+    metodos_pago = []
+    try:
+        if empresa_obj:
+            from django.db.models import Case, When, Value, IntegerField
+            from .models import MetodoPago
+            ordering = Case(
+                When(tipo='transferencia', then=Value(0)),
+                When(tipo='pago_movil', then=Value(1)),
+                When(tipo='paypal', then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField()
+            )
+            metodos_pago = list(MetodoPago.objects.filter(empresa=empresa_obj, activo=True).order_by(ordering, 'fecha_creacion'))
+    except Exception:
+        metodos_pago = []
+
     return render(request, 'ecommerce_app/perfil_empresa.html', {
         'user_info': user_info,
         'empresa': empresa_obj,
         'productos_recientes': productos_recientes,
         'servicios_recientes': servicios_recientes,
-        'session_metodos_pago': session_metodos_pago
+        'session_metodos_pago': session_metodos_pago,
+        'metodos_pago': metodos_pago
     })
 
 
@@ -6360,6 +6378,71 @@ def list_avatars(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@require_GET
+def api_metodos_pago(request):
+    """API que devuelve los métodos de pago activos de un vendedor.
+
+    Parámetros GET:
+    - tipo: 'usuario' o 'sucursal' (sucursal -> métodos de la empresa propietaria)
+    - vendor_id: id numérica del vendedor (id_usuario o id_sucursal según tipo)
+    """
+    tipo = request.GET.get('tipo')
+    vendor_id = request.GET.get('vendor_id') or request.GET.get('id')
+
+    if not tipo or not vendor_id:
+        return JsonResponse({'success': False, 'message': 'Parámetros faltantes (tipo, vendor_id)'} , status=400)
+
+    try:
+        from .models import MetodoPago, sucursal, empresa, usuario
+        metodos = []
+
+        if tipo == 'usuario':
+            try:
+                usuario_obj = usuario.objects.get(id_usuario=int(vendor_id))
+                qs = MetodoPago.objects.filter(usuario=usuario_obj, activo=True).order_by('tipo', 'fecha_creacion')
+            except Exception:
+                qs = MetodoPago.objects.none()
+
+        else:
+            # Soportar 'sucursal' o 'empresa' para obtener la empresa dueña
+            empresa_obj = None
+            if tipo == 'sucursal':
+                try:
+                    suc = sucursal.objects.get(id_sucursal=int(vendor_id))
+                    empresa_obj = suc.id_empresa_fk
+                except Exception:
+                    empresa_obj = None
+            elif tipo == 'empresa':
+                try:
+                    empresa_obj = empresa.objects.get(id_empresa=int(vendor_id))
+                except Exception:
+                    empresa_obj = None
+
+            if empresa_obj:
+                qs = MetodoPago.objects.filter(empresa=empresa_obj, activo=True).order_by('tipo', 'fecha_creacion')
+            else:
+                qs = MetodoPago.objects.none()
+
+        # Serializar resultados
+        for m in qs:
+            metodos.append({
+                'id_metodo': getattr(m, 'id_metodo', None),
+                'tipo': m.tipo,
+                'instrucciones': m.instrucciones,
+                'nombre_beneficiario': m.nombre_beneficiario,
+                'numero_cuenta': m.numero_cuenta,
+                'banco': m.banco,
+                'tipo_cuenta': m.tipo_cuenta,
+                'identificador': m.identificador,
+                'datos_adicionales': m.datos_adicionales
+            })
+
+        return JsonResponse({'success': True, 'metodos': metodos})
+    except Exception as e:
+        logger.exception(f"api_metodos_pago error: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 def prueba(request):
     return render(request, 'ecommerce_app/prueba.html')
