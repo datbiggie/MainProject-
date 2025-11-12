@@ -219,16 +219,33 @@ function procesarPedidoIndividual(vendorId, vendorType, vendorName, metodoPago, 
         tieneComprobante: !!archivoComprobante
     });
     
-    // Encontrar el botón y mostrar estado de carga
-    const boton = document.querySelector(`[data-vendor-id="${vendorId}"]`);
+    // Encontrar el botón concreto (priorizar el botón individual) y mostrar estado de carga
+    let boton = document.querySelector(`button.btn-finalizar-individual[data-vendor-id="${vendorId}"]`);
+    if (!boton) {
+        // Fallback: buscar cualquier elemento con ese data-vendor-id
+        boton = document.querySelector(`[data-vendor-id="${vendorId}"]`);
+    }
+
+    if (!boton) {
+        console.error('No se encontró el botón para vendorId:', vendorId);
+        Swal.fire({
+            title: 'Error',
+            text: 'No se encontró el botón de finalizar para este vendedor. Por favor, recargue la página e inténtelo de nuevo.',
+            icon: 'error',
+            confirmButtonColor: '#d33'
+        });
+        return;
+    }
+
     const spinner = boton.querySelector('.spinner-border');
     const btnText = boton.querySelector('.btn-text');
-    const orderStatus = boton.closest('.vendor-form').querySelector('.order-status');
-    
-    // Mostrar estado de carga
+    const vendorForm = boton.closest('.vendor-form');
+    const orderStatus = vendorForm ? vendorForm.querySelector('.order-status') : null;
+
+    // Mostrar estado de carga (con comprobaciones)
     boton.disabled = true;
-    spinner.classList.remove('d-none');
-    btnText.textContent = 'Procesando...';
+    if (spinner) spinner.classList.remove('d-none');
+    if (btnText) btnText.textContent = 'Procesando...';
     
     // Crear FormData para envío
     const formData = new FormData();
@@ -300,43 +317,52 @@ function procesarPedidoIndividual(vendorId, vendorType, vendorName, metodoPago, 
             
             if (!data.redirect_url) {
                 // Mostrar estado de éxito
-                boton.classList.remove('btn-success');
-                boton.classList.add('btn-outline-success');
-                btnText.textContent = '¡Procesado!';
-                spinner.classList.add('d-none');
-                
-                // Mostrar mensaje de éxito
-                orderStatus.classList.remove('d-none');
-                if (data.pedidos && data.pedidos.length > 0) {
-                    orderStatus.querySelector('.order-id').textContent = `Pedido #${data.pedidos[0].id}`;
-                } else {
-                    orderStatus.querySelector('.order-id').textContent = `Pedido procesado`;
+                if (boton) {
+                    boton.classList.remove('btn-success');
+                    boton.classList.add('btn-outline-success');
                 }
-                
-                // Deshabilitar el formulario
-                const inputs = form.querySelectorAll('select, input, button');
-                inputs.forEach(input => {
-                    if (input !== boton) {
-                        input.disabled = true;
+                if (btnText) btnText.textContent = '¡Procesado!';
+                if (spinner) spinner.classList.add('d-none');
+
+                // Mostrar mensaje de éxito
+                if (orderStatus) {
+                    orderStatus.classList.remove('d-none');
+                    const orderIdEl = orderStatus.querySelector('.order-id');
+                    if (orderIdEl) {
+                        if (data.pedidos && data.pedidos.length > 0) {
+                            orderIdEl.textContent = `Pedido #${data.pedidos[0].id}`;
+                        } else {
+                            orderIdEl.textContent = `Pedido procesado`;
+                        }
                     }
-                });
+                }
+
+                // Deshabilitar el formulario
+                if (form) {
+                    const inputs = form.querySelectorAll('select, input, button');
+                    inputs.forEach(input => {
+                        if (input !== boton) {
+                            input.disabled = true;
+                        }
+                    });
+                }
                 
                 console.log('Pedido procesado exitosamente para vendedor:', vendorName);
             }
         } else {
             // Manejar error
-            boton.disabled = false;
-            spinner.classList.add('d-none');
-            btnText.textContent = 'Finalizar Pedido';
+            if (boton) boton.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+            if (btnText) btnText.textContent = 'Finalizar Pedido';
             alert('Error al procesar el pedido: ' + (data.error || 'Error desconocido'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
         // Manejar error
-        boton.disabled = false;
-        spinner.classList.add('d-none');
-        btnText.textContent = 'Finalizar Pedido';
+        if (boton) boton.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (btnText) btnText.textContent = 'Finalizar Pedido';
         alert('Error de conexión al procesar el pedido. Por favor, inténtelo de nuevo.');
     });
 }
